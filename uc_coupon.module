@@ -1,0 +1,631 @@
+<?php
+
+// $Id$
+
+/**
+ *
+ * Developed for the UberCart Drupal Shopping Cart System
+ * Code by Blake Lucchesi
+ * www.boldsource.com
+ * blake@boldsource.com
+ * 
+ * Send any suggestions and feedback to the above address.
+ */
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function uc_coupon_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/store/customers/coupon',
+      'title' => t('Active Coupons'),
+      'description' => t('Manage Store Coupons'),
+      'callback' => 'uc_coupon_display',
+      'callback arguments' => array('active'),
+      'access' => user_access('view store coupons'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+    $items[] = array(
+  	  'path' => 'admin/store/reports/coupon',
+  	  'title' => t('Coupon Usage Reports'),
+  	  'callback' => 'uc_coupon_reports',
+  	  'access' => user_access('view reports'),
+  	  'type' => MENU_NORMAL_ITEM,
+    );
+    $items[] = array(
+      'path' => 'admin/store/customers/coupon/list',
+      'title' => t('Active Coupons'),
+      'description' => t('Manage Store Coupons'),
+      'callback' => 'uc_coupon_display',
+      'callback arguments' => array('active'),
+      'access' => user_access('view store coupons'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+    );
+    $items[] = array(
+      'path' => 'admin/store/customers/coupon/inactive',
+      'title' => t('View Inactive Coupons'),
+      'description' => t('View inactive coupons'),
+      'callback' => 'uc_coupon_display',
+      'callback arguments' => array('inactive'),
+      'access' => user_access('view store coupons'),      
+      'type' => MENU_LOCAL_TASK,
+    );
+    
+    $items[] = array(
+  	  'path' => 'admin/store/customers/coupon/add',
+  	  'title' => t('Add New Coupon'),
+  	  'description' => t('Add a New coupon'),
+  	  'callback' => 'drupal_get_form',
+  	  'callback arguments' => array('uc_coupon_add_form', 'add'),
+  	  'access' => user_access('manage store coupons'),
+  	  'type' => MENU_LOCAL_TASK,
+  	  'weight' => 10,
+  	);
+	}
+	else {
+    $items[] = array(
+  	  'path' => 'admin/store/customers/coupon/' . arg(4) . '/edit',
+  	  'title' => t('Edit Coupon'),
+  	  'description' => t('Edit a currently existing coupon'),
+  	  'callback' => 'drupal_get_form',
+  	  'callback arguments' => array('uc_coupon_add_form', 'edit', arg(4)),
+  	  'access' => user_access('manage store coupons'),
+  	  'type' => MENU_DYNAMIC_ITEM,
+	  );
+  	$items[] = array(
+  	  'path' => 'admin/store/customers/coupon/' . arg(4) . '/delete',
+  	  'title' => t('Delete Coupon'),
+  	  'description' => t('Delete a coupon'),
+  	  'callback' => 'drupal_get_form',
+  	  'callback arguments' => array('uc_coupon_delete_confirm', arg(4)),
+  	  'access' => user_access('manage store coupons'),
+  	  'type' => MENU_DYNAMIC_ITEM,
+  	);
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm()
+ */
+function uc_coupon_perm() {
+  return array('1' => 'view store coupons', '2' => 'manage store coupons', '3' => 'coupon wholesale pricing', '4' => 'view reports');
+}
+
+
+/**
+ * Display a brief over view of system coupons
+ *
+ * @param $view_type
+ *   pass in an argument to filter out active/inactive coupons
+ */
+function uc_coupon_display($view_type = 'active') {
+	  
+  $query = "SELECT * FROM {uc_coupons}";
+  switch ($view_type) {
+  	case 'inactive':
+  	  $query .= " WHERE status = '0'";
+  	  break;
+  	case 'active':
+  	  $query .= " WHERE status = '1'";
+  	  break;
+  }
+
+  $query .=	" ORDER BY status DESC";
+  $result = db_query($query);
+  $rows = array();
+  while ($row = db_fetch_object($result)) {
+    if ($row->type == 'percentage') {
+	    $value = $row->value . '%';
+	  }
+	  else {
+	    $value = '$' . $row->value;
+	  }
+    $rows[] = array($row->name, $row->code, $value, format_date($row->valid_until, 'custom', 'm/d/Y'), l(t('edit'), "admin/store/customers/coupon/$row->cid/edit") . ' ' . l(t('delete'),"admin/store/customers/coupon/$row->cid/delete"));
+	}
+
+  $header = array(array('data' => 'Name', 'width' => '230'), 'Code', array('data' => 'Value', 'width' => '60'), array('data' => 'Valid Until', 'width' => 100), array('data' => 'Ops', 'width' => 50));
+  $output .= theme('table',$header, $rows, array('width' => '100%'));
+  if ($output == null) {
+    $output = "<p>There are currently no coupons in the system.</p>";
+  }
+	return $output;
+}
+
+
+
+/**
+ *  Form builder for product attributes.
+ */
+function uc_coupon_add_form($action, $cid = null) {
+
+  if ($action == 'edit') {
+		// If the action is edit, we load the coupon from the database with default values
+		$value = uc_coupon_load($cid);
+		// Set a form variable that holds the coupon id
+		$form['cid'] = array('#type' => 'value',
+		  '#value' => $value->cid,
+		);
+		// Format the date from the database timestamp
+		$value->valid_until = format_date($value->valid_until, 'custom', 'm/d/Y');
+	
+		// Format the roles database values to set the chosen ones as defaults
+		$permissions = $value->roles;
+		$allowed_users = explode(',', $value->users);
+  }
+  else {
+		$value->valid_until = format_date(time(), 'custom', 'm/d/Y');
+		$permissions = 1;
+  }
+
+  $form['name'] = array('#type' => 'textfield',
+    '#title' => t('Coupon Name'),
+		'#default_value' => $value->name,
+    '#weight' => 0,
+		'#required' => true,
+  );
+  $form['code'] = array('#type' => 'textfield',
+    '#title' => t('Coupon Code'),
+    '#default_value' => $value->code,
+		'#size' => 25,
+    '#weight' => 3,
+		'#required' => true,
+  );
+
+  $form['status'] = array('#type' => 'checkbox',
+    '#title' => t('Active'),
+		'#description' => t('Check to enable the coupon, uncheck to disable the coupon.'),
+		'#default_value' => $value->status,
+    '#weight' => 4,
+  );
+
+  $form['type'] = array('#type' => 'select',
+		'#default_value' => $value->type,
+		'#options' => array(
+		  'percentage' => 'Percentage',
+		  'price' => 'Price'),
+    '#title' => t('Discount Value Type'),
+    '#weight' => 5,
+  );
+
+  $form['value'] = array('#type' => 'textfield',
+    '#title' => t('Value'),
+		'#default_value' => $value->value,
+		'#size' => 25,
+		'#description' => t('Enter values without symbols, for 15%, enter "15" and choose Percentage as the Coupon Type. <br>' . 
+		  'For shipping discounts enter "full" for a full shipping deduction, or a value for the dollar value to subtract'),
+		'#required' => true,
+    '#weight' => 6,
+  );
+
+	$form['minimum_order'] = array('#type' => 'textfield',
+		'#default_value' => $value->minimum_order,
+		'#title' => t('Minimum Order Amount'),
+		'#size' => 25,
+		'#description' => t('A minimum order value for the coupon to be used.  (0 means no minimum order value)'),
+		'#weight' => 7,
+	);
+
+  $form['valid_until'] = array('#type' => 'textfield', 
+		'#title' => t('Experiation Date'), 
+		'#default_value' => $value->valid_until,
+		'#attributes' => array('class' => 'jscalendar'),
+		'#jscalendar_ifFormat' => '%m/%d/%Y',
+		// Don't show time.
+	    '#jscalendar_showsTime' => 'false',
+		'#weight' => 9,
+  );
+
+ $form['max_uses'] = array('#type' => 'textfield',
+    '#title' => t('Maximum Number of Redemptions'),
+		'#default_value' => $value->max_uses,
+		'#description' => 'Enter "0" for no maximum number of redemptions',
+		'#size' => 25,
+    '#weight' => 11,
+  );
+ $form['users'] = array('#type' => 'select',
+		'#multiple' => TRUE,
+		'#title' => t('Allowed Users'),
+		'#default_value' => $allowed_users,
+		'#options' => uc_coupon_load_users(),
+		'#description' => 'Users who can use this coupon',
+		'#weight' => 13,
+  );
+  $form['roles'] = array('#type' => 'radios',
+    '#title' => 'Allowed Permissions',
+    '#description' => 'Select the groups who are able to use this coupon',
+		'#default_value' => $permissions,
+		'#options' => array(
+		  '1' => 'Both Wholesale and Retail',
+			'2' => 'Wholesale Buyers Only',
+			'3' => 'Retail Buyers Only'),
+		'#required' => true,
+  	'#weight' => 15,
+  );
+
+  $form['cancel'] = array('#type' => 'item',
+		'#value' => l(t('Cancel and return to Coupon Listing'), 'admin/store/customers/coupon'),
+		'#weight' => 20,
+  );
+  $form['op'] = array('#type' => 'submit',
+    '#value' => t('Submit'),
+    '#weight' => 21,
+  );
+  return $form;
+}
+
+/**
+ * Validate the coupon form
+ */
+function uc_coupon_add_form_validate($form_id, $form) {
+	// check to ensure a unique coupon code 
+	$result = db_result(db_query("SELECT name, code FROM {uc_coupons} WHERE code = '%s' AND cid <> %d", $form['code'], $form['cid']));
+	if ($result) {
+		form_set_error($form['code'], t('Code already used by coupon: %name.', array('%name' => $result->name)));
+	}
+}
+
+/**
+ * Insert/Update coupon
+ */
+function uc_coupon_add_form_submit($form_id, $form) {
+  // Translate the date textfield into a timestamp for the database
+  $form['valid_until'] = strtotime($form['valid_until']);
+  // Catch the roles array variables and set them up for insertion to database
+  $users = '';
+  foreach ($form['users'] as $key => $user_id) {
+    if (is_numeric($user_id) && $key > 0 && $user_id > 0) {
+	    $users .= $user_id . ',';
+	  }
+  }
+  
+  // If the forms coupon id is not set then we try to insert a new coupon
+  if (!isset($form['cid'])) {
+		if (db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, users, roles, minimum_order) VALUES ('%s', '%s', '%d', '%s', '%d', '%d', '%d', '%s', '%s', %d)", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $users, $form['roles'], $form['minimum_order'])) {
+      $message = "New coupon {$form['name']} added succesfully";
+  	}
+  	else {
+  	  $message = "Sorry coupon could not be added. Try again";
+  	}
+  }
+  else {
+    // Otherwise we try to update the coupon with matching coupon id
+	  if (db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %d, type = '%s', status = %d, valid_until = %d, max_uses = %d, users = '%s', roles = '%s', minimum_order = %d WHERE cid = %d", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $users, $form['roles'], $form['minimum_order'], $form['cid'])) {
+      $message = "Coupon updated succssfully";
+	  }
+	  else {
+		  $message = "Coupon could not be updated. Try again.";
+	  }
+  }
+  drupal_set_message($message);
+  drupal_goto("admin/store/customers/coupon");
+}
+
+
+/**
+ * Load all users in the system
+ */
+function uc_coupon_load_users() {
+	
+	$user_array = db_query("SELECT uid, name FROM {users} ORDER BY name ASC");
+	while ($users = db_fetch_object($user_array)) {
+		$user_return[$users->uid] = $users->name;
+	}
+	return $user_return;
+}
+
+
+
+/**
+ * Load a coupon into the form for editing
+ */
+function uc_coupon_load($cid) {
+  $object = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE cid = '$cid'"));
+  if ($object == '') {
+	  drupal_set_message("Sorry coupon $cid does not exist.  Choose another coupon to edit or create a new one");
+	  drupal_goto('admin/store/customers/coupon');
+  }
+  return $object;
+}
+
+/**
+ * Delete confirm
+ */
+
+function uc_coupon_delete_confirm($cid) {
+ $form['cid'] = array('#type' => 'value', '#value' => $cid);
+  return confirm_form($form, 
+	  t('Confirm Deletion of Coupon %cid', array('%cid' => $cid)),
+	  'admin/store/customers/coupon', 
+	  t('Deleting this coupon will remove all records of past uses as well.'),
+    t('Delete'),
+    t('Cancel')
+  );
+}
+
+
+/**
+ * Delete coupon
+ */
+function uc_coupon_delete_confirm_submit($form_id, $form) {
+	
+	$coupon_id = $form['cid'];
+	$query = "DELETE FROM {uc_coupons} WHERE cid = '" . $coupon_id . "'";
+	if (db_query($query)) {
+		drupal_set_message("Coupon deleted successfully");
+	}
+	else {
+		drupal_set_message("Error deleting coupon");
+	}
+	drupal_goto('admin/store/customers/coupon');
+}
+
+/**
+ * COUPON VALIDATION CALLBACK
+ * arg1 = code;  pass in the coupon code entered at the checkout screen
+ * arg2 = order_total; pass in the total checkout amount, used for minimum order amount
+ */
+
+function uc_coupon_validate($code, $order) {
+  //  Get the code passed in from the coupon code form
+  $today = time();
+
+  // the following query grabs a result with a matching code that has a valid date and is marked as active
+  $coupon_data = db_fetch_object(db_query("SELECT code, cid, value, type, max_uses, users, roles, minimum_order FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, $today));
+
+  if ($coupon_data) {
+		$coupon_result->valid = false;
+		//  CHECK MAX USES
+		if ($coupon_data->max_uses > 0) {
+			  $result = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id WHERE uo.order_status > 0 AND uco.cid = %d", $coupon_data->cid));
+			  $coupon_used = $result;				
+			  // Now that we have how many times it has been used we can check against its max uses
+			if ($coupon_used >= $coupon_data->max_uses) {
+				return $coupon_result;
+			}
+		}
+		
+		//  CHECK MINIMUM PURCHASE VALUE
+		$cart_total = uc_order_get_total($order, TRUE);  // this is also used below in the percentage discount calculation
+	
+		if ($coupon_data->minimum_order > 0 && $coupon_data->minimum_order > $cart_total) {
+			return $coupon_result;
+		}
+		
+		//  CHECK USER ID
+		if ($coupon_data->users != '') {
+			global $user;
+			$users = explode(',', $coupon_data->users);
+			// Important to match the data by type as well, using the third parameter = true
+			// if not used then users with id = 0 will result in true for any check
+			if (!in_array($user->uid, $users, true)) {
+			  return $coupon_result;
+			}
+		}
+	
+		// CHECK USER PERMISSIONS
+		// 1 - both wholesale and retail any user
+		// 2 - wholesale only -> users with 'coupon wholesale pricing'
+		// 3 - retail only -> users without 'coupon wholesale pricing'
+		if ($coupon_data->roles > 1) {
+		  if ($coupon_data->roles == 2) {
+			  if (!user_access('coupon wholesale pricing')) {
+				  return $coupon_result;
+			  } 
+		  }
+		  else if ($coupon_data->roles == 3) {
+			  if (user_access('coupon wholesale pricing')) {
+				  return $coupon_result;
+			  }
+		  }
+		}
+		$coupon_result->valid = true;
+		$coupon_result->code = $coupon_data->code;
+		$coupon_result->cid = $coupon_data->cid;
+
+		if ($coupon_data->type == 'percentage') {
+			$coupon_result->amount = $cart_total * $coupon_data->value / 100;
+		}
+		else if ($coupon_data->type == 'price') {
+			$coupon_result->amount = $coupon_data->value;
+		}
+
+  }
+  else {
+		// The coupon was not found, inactive, or is expired in the list of coupons
+		$coupon_result->valid = false;
+  }
+	return $coupon_result;
+}
+
+
+/**
+ * hook_order_pane() - show a pane just above the order total that allows shoppers to enter a coupon
+ * for a discount
+ */
+function uc_coupon_checkout_pane() {
+  $panes[] = array('id' => 'coupon',
+    'callback' => 'uc_checkout_pane_coupon',
+    'title' => t('Coupon Discount'),
+    'desc' => t('Allows shoppers to add coupons to their orders for discounts.'),
+    'weight' => 5,
+	  'process' => true,
+  );
+  return $panes;
+}
+
+/**
+ * Used to display a form in the checkout process so that customers
+ * can enter discount coupons.
+ */
+
+function uc_checkout_pane_coupon($op, $arg1, $arg2) {
+	switch ($op) {
+		case 'view':
+		  // Initiate a new pane object
+		  $pane = uc_cart_checkout_new_pane('coupon');
+		  // Input to enter coupon code
+		  $pane->fields['pane']['coupon'] = uc_textfield(t('Coupon Code'), $arg1->couponCode, FALSE, FALSE, 14);			  
+		  $pane->fields['pane']['next'] = uc_cart_checkout_next_button($pane->id, $pane->next);
+		  return $pane;
+		case 'process':
+	  	$arg1->coupon = check_plain($arg2['pane']['coupon']);
+	  	return true;
+	}
+
+}
+function uc_coupon_order($op, $arg1, $arg2) {
+  switch($op) {
+  	case 'save': 
+			//  Check to see if a coupon code was entered
+			if ($arg1->coupon != '') {
+				$coupon_result = uc_coupon_validate($arg1->coupon, $arg1);
+				if($coupon_result->valid) {
+					// If we received a result from the database then it means there is a coupon in the table with that code
+					// we then must validate the coupon with our validation function.  It will return data about the coupon to insert into the order table
+					db_query("UPDATE {uc_coupons_orders} SET cid = %d, oid = %d, code = '%s', value = %f WHERE oid = %d", $coupon_result->cid, $arg1->order_id, $coupon_result->code, $coupon_result->amount, $arg1->order_id);
+					if (db_affected_rows() == 0) {
+						db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $coupon_result->cid, $arg1->order_id, $coupon_result->code, $coupon_result->amount);
+					}
+					db_query("UPDATE {uc_order_line_items} SET title = 'Coupon Discount: \'%s\'', amount = -%f, weight = 0 WHERE order_id = %d AND type ='coupon'", $coupon_result->code, $coupon_result->amount, $arg1->order_id);
+					if (db_affected_rows() == 0) {
+						db_query("INSERT INTO {uc_order_line_items} (order_id, type, title, amount, weight) VALUES (%d, 'coupon', 'Coupon Discount: \'%s\'', -%f, 0)", $arg1->order_id, $coupon_result->code, $coupon_result->amount);
+					}			
+				}
+				else {
+					// display errors if the coupon returns invalid
+					db_query("DELETE FROM {uc_coupons_orders} WHERE oid = %d", $arg1->order_id);
+					db_query("DELETE FROM {uc_order_line_items} WHERE order_id = %d", $arg1->order_id);
+					drupal_set_message('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.  Click the back button at the bottom of this form to try a new coupon.', 'error');
+			  }
+		  }
+      break;
+		case 'load':	
+		  $coupon_result = db_fetch_object(db_query("SELECT cid, oid, value, code FROM {uc_coupons_orders} WHERE oid = %d", $arg1->order_id));
+			if ($coupon_result) {
+				$arg1->coupon = $coupon_result->code;
+				$arg1->couponValue = $coupon_result->value; //"SET THE VALUE";
+				$arg1->couponNumber = $coupon_result->cid;
+			} 
+			break;
+ 	}
+}
+
+function uc_coupon_value($order_id) {
+	$coupon_result = db_fetch_object(db_query("SELECT cid, oid, value, code FROM {uc_coupons_orders} WHERE oid = %d", $order_id));
+	if ($coupon_result) {
+		return $coupon_result->value;		
+	}
+	else {
+		return false;
+	}
+}
+
+function uc_coupon_line_item() {
+  $items[] = array(
+    'id' => 'coupon',
+    'title' => t('Coupon Discount'),
+    'weight' => 2,
+    'default' => FALSE,
+    'stored' => TRUE,
+    'add_list' => TRUE,
+    'calculated' => TRUE,
+    'callback' => 'uc_line_item_coupon',
+  );
+
+  return $items;
+}
+
+
+function uc_coupon_reports_form($start = null, $end = null) {
+  $form['start'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Start Date'),
+    '#default_value' => date('m/d/Y', $start),
+    '#attributes' => array('class' => 'jscalendar'),
+		'#jscalendar_ifFormat' => '%m/%d/%Y',
+		// Don't show time.
+	    '#jscalendar_showsTime' => 'false',
+    '#prefix' => '<div style="float:left; width: 200px">',
+    '#suffix' => '</div>',
+    '#weight' => '1'
+  );
+  $form['end'] = array(
+    '#type' => 'textfield',
+    '#title' => t('End Date'),
+    '#default_value' => date('m/d/Y', $end),
+		'#attributes' => array('class' => 'jscalendar'),
+		'#jscalendar_ifFormat' => '%m/%d/%Y',
+		// Don't show time.
+	    '#jscalendar_showsTime' => 'false',
+    '#prefix' => '<div style="float:left; width: 200px">',
+    '#suffix' => '</div>',
+    '#weight' => '2'
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Display Report'),
+    '#prefix' => '<br style="clear:both" />',
+    '#weight' => '3'
+  );
+  return $form;
+}
+
+/**
+ * Handle form submit and assign variables
+ */
+function uc_coupon_reports_form_submit($form_id, $form_values){
+ drupal_goto('admin/store/reports/coupon/'. strtotime($form_values['start']) .'/'. strtotime($form_values['end']));
+}
+
+
+/**
+ * Output Coupon Reports
+ */
+function uc_coupon_reports($start = null, $end = null) {
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') .'/reports.css', 'uc_coupon');
+  $output .= drupal_get_form('uc_coupon_reports_form', $start, $end);
+  // gather all the coupon data from the time period specified
+
+  if (isset($start) && isset($end)) {
+    $query = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) WHERE o.order_status > 0 AND o.created > %d AND o.created < %d ORDER BY co.cid, o.created ASC",$start, $end);
+
+    $row_header = array('Order #', 'Date Purchased', 'Order Value', 'Coupon Value');
+    $last_cid = 0;
+    
+    while ($row = db_fetch_object($query)) {
+      // Display the table of coupons if this is the next set of coupons
+      if ($row->cid != $last_cid AND $last_cid != 0) {
+    $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>$'. number_format($coupon_sale_amount,2) .'</b>', '<b>$'. number_format($coupon_amount,2) .'</b>');
+        $data .= theme('table', $row_header, $td, array('width' => '100%'));
+        $td = array();
+        $num_uses = 0;
+        $coupon_amount = 0;
+        $coupon_sale_amount = 0;
+      }
+      // if this is the first coupon of the set display the header first
+      if ($row->cid != $last_cid || $last_cid = 0) {
+        $data .= '<div class="totals"> Coupon Code: '.l($row->code,'admin/store/customers/coupon/'. $row->cid . '/edit') .'</div>';
+      }
+      $td[] = array(l('#'. $row->oid, 'admin/store/orders/'. $row->oid), date('m/d/Y', $row->created), '$'. number_format($row->order_total, 2), '$'. number_format($row->value,2));
+      $num_uses++;
+      $coupon_amount += $row->value;
+      $coupon_sale_amount += $row->order_total;
+      $last_cid = $row->cid;
+      $orders_total += $row->order_total;
+      $coupons_total += $row->value;
+    }
+    $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>$'. number_format($coupon_sale_amount,2) .'</b>', '<b>$'. number_format($coupon_amount,2) .'</b>');
+    $data .= theme('table', $row_header, $td, array('width' => '100%'));
+
+    $output .= '<h2>Coupon Usage report</h2>';  
+    $output .= $data;
+    $output .= '<br><table width="100%"><tr><td></td><td><b>Coupons Used: '. db_num_rows($query) .'</td><td>Orders Value: $'. $orders_total .'</td><td>Coupons Value: $'. $coupons_total .'</tr></tr></table>';
+    
+  }
+  return $output;    
+}

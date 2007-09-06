@@ -1,0 +1,5 @@
+; $Id$
+name = Store Coupons
+description = Allow administrators to manage store coupons
+dependencies = uc_store uc_product uc_cart
+package = Ubercart - payment
