@@ -8,7 +8,7 @@ function uc_coupon_install() {
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
-      db_query("CREATE TABLE uc_coupons (
+      db_query("CREATE TABLE {uc_coupons} (
 				cid int(11) NOT NULL auto_increment,
 				name varchar(30) character set utf8 NOT NULL,
 				code varchar(40) character set utf8 NOT NULL default 'coupon_code',
@@ -23,7 +23,7 @@ function uc_coupon_install() {
 				PRIMARY KEY  (cid)
 				)");
 	
-	  db_query("CREATE TABLE uc_coupons_orders (
+	  db_query("CREATE TABLE {uc_coupons_orders} (
 		  cuid int(11) NOT NULL auto_increment,
 		  cid int(11) NOT NULL,
 		  oid int(11) NOT NULL default '0',
@@ -33,7 +33,12 @@ function uc_coupon_install() {
 		  code varchar(40) NOT NULL default 'default_code',
 			PRIMARY KEY  (cuid)
 	    )");
-	
     break;
   }
+}
+
+function uc_coupon_uninstall() {
+  db_query("DROP TABLE {uc_coupons}");
+  db_query("DROP TABLE {uc_coupons_orders}");
+  drupal_set_message("UC Coupon Successfully Uninstalled.");
 }
