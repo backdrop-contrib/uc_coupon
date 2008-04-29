@@ -482,7 +482,7 @@ function uc_coupon_checkout_pane() {
  * Used to display a form in the checkout process so that customers
  * can enter discount coupons.
  */
-function uc_checkout_pane_coupon($op, $arg1, $arg2) {
+function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
   switch ($op) {
     case 'view':
       // Description shown to the user at checkout
