@@ -183,6 +183,7 @@ function uc_coupon_add_form($action, $cid = null) {
     '#size' => 25,
     '#weight' => 3,
     '#required' => true,
+    '#maxlength' => 14,
   );
 
   $form['status'] = array('#type' => 'checkbox',
