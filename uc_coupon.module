@@ -156,7 +156,7 @@ function uc_coupon_add_form($action, $cid = null) {
     );
     // Format the date from the database timestamp
     $value->valid_until = format_date($value->valid_until, 'custom', 'm/d/Y');
-
+    
     // Format the roles database values to set the chosen ones as defaults
     $permissions = $value->roles;
     $allowed_users = explode(',', $value->users);
@@ -224,14 +224,24 @@ function uc_coupon_add_form($action, $cid = null) {
     '#weight' => 9,
   );
 
- $form['max_uses'] = array('#type' => 'textfield',
+  $form['max_uses'] = array('#type' => 'textfield',
     '#title' => t('Maximum Number of Redemptions'),
     '#default_value' => $value->max_uses,
     '#description' => 'Enter "0" for unlimited number of redemptions',
     '#size' => 25,
     '#weight' => 11,
   );
- $form['users'] = array('#type' => 'select',
+  
+  $form['product'] = array(
+    '#type' => 'select',
+    '#title' => t('Product'),
+    '#description' => t('Choosing a product will make this coupon valid only for this product.'),
+    '#options' => uc_coupon_load_products(),
+    '#default_value' => $value->product,
+    '#weight' => 12
+  );
+  
+  $form['users'] = array('#type' => 'select',
     '#multiple' => TRUE,
     '#title' => t('Allowed Users'),
     '#default_value' => $allowed_users,
@@ -321,11 +331,34 @@ function uc_coupon_add_form_submit($form_id, $form) {
 function uc_coupon_load_users() {
   $user_array = db_query("SELECT uid, name FROM {users} ORDER BY name ASC");
   while ($users = db_fetch_object($user_array)) {
-    $user_return[$users->uid] = $users->name;
+    $user_return[$users->uid] = $users->uid ? $users->name : 'All Users';
   }
   return $user_return;
 }
 
+/**
+ * Load all products into an array.
+ *
+ * @return array
+ * Return an array of products for coupon assignment.
+ */
+function uc_coupon_load_products() {
+  $query = db_query("SELECT pcid FROM {uc_product_classes}");
+  $node_types = array('product', 'product_kit');
+  while ($row = db_fetch_object($query)) {
+    $node_types[] = $row->pcid;
+  }
+  foreach ($node_types as $type) {
+    $types .= "'$type', ";
+  }
+  $types = preg_replace('/, $/i', '', $types);
+  $products[0] = '--- Entire Order ---';
+  $query = db_query("SELECT nid, title FROM {node} WHERE type IN ($types)");
+  while ($row = db_fetch_object($query)) {
+    $products[$row->nid] = $row->title;
+  }
+  return $products;
+}
 
 /**
  * Load a coupon into the form for editing
@@ -399,7 +432,7 @@ function uc_coupon_validate($code, $order) {
   $today = time();
 
   // the following query grabs a result with a matching code that has a valid date and is marked as active
-  $coupon_data = db_fetch_object(db_query("SELECT code, cid, value, type, max_uses, users, roles, minimum_order FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, $today));
+  $coupon_data = db_fetch_object(db_query("SELECT code, cid, value, type, max_uses, product, users, roles, minimum_order FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, $today));
 
   if ($coupon_data) {
     $coupon_result->valid = false;
@@ -515,6 +548,10 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
   }
 
 }
+
+/**
+ * Implementation of hook_order().
+ */
 function uc_coupon_order($op, $arg1, $arg2) {
   switch ($op) {
     case 'save': 

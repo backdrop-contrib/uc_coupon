@@ -17,6 +17,7 @@ function uc_coupon_install() {
         status int(1) NOT NULL default '1',
         valid_until int(11) default NULL,
         max_uses int(4) NOT NULL,
+        products varchar(50) NOT NULL,
         users text,
         roles int(1) NOT NULL,
         minimum_order decimal(6,2) NOT NULL default 0.00,
@@ -41,4 +42,9 @@ function uc_coupon_uninstall() {
   db_query("DROP TABLE {uc_coupons}");
   db_query("DROP TABLE {uc_coupons_orders}");
   drupal_set_message("UC Coupon Successfully Uninstalled.");
+}
+
+function uc_coupon_update_1() {
+  $ret[] = update_sql("ALTER TABLE {uc_coupons} ADD COLUMN product INT NOT NULL DEFAULT 0 AFTER max_uses");
+  return $ret;
 }
