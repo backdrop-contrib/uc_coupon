@@ -3,7 +3,7 @@
 // $Id$
 
 /**
- *
+ * @file
  * Developed for the UberCart Drupal Shopping Cart System
  * Code by Blake Lucchesi
  * www.boldsource.com
@@ -11,18 +11,6 @@
  * 
  * Send any suggestions and feedback to the above address.
  */
-
-/**
- * Implementation of hook_simpletest
- */
-
-function uc_coupon_simpletest() {
-  $module_name = 'uc_coupon'; // Change this to your module name.
-  $dir = drupal_get_path('module', $module_name) .'/tests';
-  $tests = file_scan_directory($dir, '\.test$');
-  return array_keys($tests);
-}
-
 
 /**
  * Implementation of hook_menu().
@@ -100,7 +88,7 @@ function uc_coupon_menu($may_cache) {
 }
 
 /**
- * Implementation of hook_perm()
+ * Implementation of hook_perm().
  */
 function uc_coupon_perm() {
   return array('1' => 'view store coupons', '2' => 'manage store coupons', '3' => 'coupon wholesale pricing', '4' => 'view reports');
@@ -149,6 +137,12 @@ function uc_coupon_display($view_type = 'active') {
 
 /**
  *  Form builder for product attributes.
+ *
+ * @param $action string
+ * Form action, edit or add. 'edit' loads default values.
+ *
+ * @param $cid int
+ * Coupon ID, used to load defaults when $action = 'edit'
  */
 function uc_coupon_add_form($action, $cid = null) {
 
@@ -156,7 +150,8 @@ function uc_coupon_add_form($action, $cid = null) {
     // If the action is edit, we load the coupon from the database with default values
     $value = uc_coupon_load($cid);
     // Set a form variable that holds the coupon id
-    $form['cid'] = array('#type' => 'value',
+    $form['cid'] = array(
+      '#type' => 'value',
       '#value' => $value->cid,
     );
     // Format the date from the database timestamp
@@ -224,7 +219,7 @@ function uc_coupon_add_form($action, $cid = null) {
     '#default_value' => $value->valid_until,
     '#attributes' => array('class' => 'jscalendar'),
     '#jscalendar_ifFormat' => '%m/%d/%Y',
-    // Don't show time.
+    // Don't show hours, minutes and seconds.
     '#jscalendar_showsTime' => 'false',
     '#weight' => 9,
   );
@@ -268,7 +263,7 @@ function uc_coupon_add_form($action, $cid = null) {
 }
 
 /**
- * Validate the coupon form
+ * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form_id, $form) {
   // check to ensure a unique coupon code 
@@ -279,7 +274,7 @@ function uc_coupon_add_form_validate($form_id, $form) {
 }
 
 /**
- * Insert/Update coupon
+ * Coupon form submit handler.
  */
 function uc_coupon_add_form_submit($form_id, $form) {
   // Translate the date textfield into a timestamp for the database
@@ -316,7 +311,12 @@ function uc_coupon_add_form_submit($form_id, $form) {
 
 
 /**
- * Load all users in the system
+ * Load all users in the system.
+ *
+ * @return array
+ * Returns an array of users in the system.
+ *
+ * TODO: This is bad! Lots of users would make the site drag.
  */
 function uc_coupon_load_users() {
   $user_array = db_query("SELECT uid, name FROM {users} ORDER BY name ASC");
@@ -331,14 +331,14 @@ function uc_coupon_load_users() {
  * Load a coupon into the form for editing
  *
  * @param $cid
- *  Unique Coupin ID
+ *  Unique Coupin ID.
  *
  * @return $coupon
- *  Returns a coupon object
+ *  Returns a coupon object.
  */
 function uc_coupon_load($cid) {
   $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE cid = %d", $cid));
-  if ($coupon == '') {
+  if (!$coupon) {
     drupal_set_message("Sorry coupon $cid does not exist.  Choose another coupon to edit or create a new one");
     drupal_goto('admin/store/customers/coupon');
   }
@@ -348,8 +348,11 @@ function uc_coupon_load($cid) {
 /**
  * Delete coupon confirm form
  *
+ * @param $cid int
+ * Coupon ID.
+ *
  * @return $confirm
- *  Return a drupal confirm form
+ *  Return a drupal confirm form.
  */
 function uc_coupon_delete_confirm($cid) {
  $form['cid'] = array('#type' => 'value', '#value' => $cid);
@@ -366,7 +369,7 @@ function uc_coupon_delete_confirm($cid) {
 
 
 /**
- * Delete coupon
+ * Delete coupon form submit handler.
  */
 function uc_coupon_delete_confirm_submit($form_id, $form) {
   $coupon_id = $form['cid'];
@@ -391,7 +394,6 @@ function uc_coupon_delete_confirm_submit($form_id, $form) {
  * @return $coupon_result
  *  Returns a coupon result object with details about the validation
  */
-
 function uc_coupon_validate($code, $order) {
   //  Get the code passed in from the coupon code form
   $today = time();
@@ -464,8 +466,10 @@ function uc_coupon_validate($code, $order) {
 
 
 /**
- * hook_order_pane() - show a pane just above the order total that allows shoppers to enter a coupon
- * for a discount
+ * Implementation of hook_order_pane().
+ *
+ * Show a pane just above the order total that allows shoppers to enter a coupon
+ * for a discount.
  */
 function uc_coupon_checkout_pane() {
   $panes[] = array(
@@ -480,6 +484,8 @@ function uc_coupon_checkout_pane() {
 }
 
 /**
+ * Checkout Pane callback function. 
+ *
  * Used to display a form in the checkout process so that customers
  * can enter discount coupons.
  */
@@ -548,6 +554,12 @@ function uc_coupon_order($op, $arg1, $arg2) {
    }
 }
 
+/**
+ * Find the value for the coupon during checkout.
+ *
+ * @param $order_id
+ * Order ID. Used to load an order object to calculate the total coupon value.
+ */
 function uc_coupon_value($order_id) {
   $coupon_result = db_fetch_object(db_query("SELECT cid, oid, value, code FROM {uc_coupons_orders} WHERE oid = %d", $order_id));
   if ($coupon_result) {
@@ -617,6 +629,8 @@ function uc_coupon_reports_form_submit($form_id, $form_values) {
 
 /**
  * Output Coupon Reports
+ *
+ * TODO: Integrate with UberCart reports functionality.
  */
 function uc_coupon_reports($start = null, $end = null) {
   drupal_add_css(drupal_get_path('module', 'uc_coupon') .'/reports.css', 'uc_coupon');
