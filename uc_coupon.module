@@ -237,7 +237,7 @@ function uc_coupon_add_form($action, $cid = null) {
     '#title' => t('Product'),
     '#description' => t('Choosing a product will make this coupon valid only for this product.'),
     '#options' => uc_coupon_load_products(),
-    '#default_value' => $value->product,
+    '#default_value' => $value->products,
     '#weight' => 12
   );
   
@@ -296,10 +296,19 @@ function uc_coupon_add_form_submit($form_id, $form) {
       $users .= $user_id .',';
     }
   }
+
+  // Currently only supports a single product, but could be extended for multiple products
+  // later, ideally storing this data in a new table coupon_products or something.
+  // foreach ($form['product'] as $key => $nid) {
+  //   if (is_numeric($nid) && $key > 0 && $nid > 0) {
+  //     $products .= $nid .',';
+  //   }
+  // }
+  $products = $form['product'];
   
   // If the forms coupon id is not set then we try to insert a new coupon
   if (!isset($form['cid'])) {
-    if (db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, users, roles, minimum_order) VALUES ('%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s', %d)", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $users, $form['roles'], $form['minimum_order'])) {
+    if (db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, products, users, roles, minimum_order) VALUES ('%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s', %d)", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $products, $users, $form['roles'], $form['minimum_order'])) {
       $message = "New coupon {$form['name']} added succesfully";
     }
     else {
@@ -308,7 +317,7 @@ function uc_coupon_add_form_submit($form_id, $form) {
   }
   else {
     // Otherwise we try to update the coupon with matching coupon id
-    if (db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_until = %d, max_uses = %d, users = '%s', roles = '%s', minimum_order = %d WHERE cid = %d", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $users, $form['roles'], $form['minimum_order'], $form['cid'])) {
+    if (db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_until = %d, max_uses = %d, products = '%s', users = '%s', roles = '%s', minimum_order = %d WHERE cid = %d", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $products, $users, $form['roles'], $form['minimum_order'], $form['cid'])) {
       $message = "Coupon updated succssfully";
     }
     else {
@@ -432,14 +441,13 @@ function uc_coupon_validate($code, $order) {
   $today = time();
 
   // the following query grabs a result with a matching code that has a valid date and is marked as active
-  $coupon_data = db_fetch_object(db_query("SELECT code, cid, value, type, max_uses, product, users, roles, minimum_order FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, $today));
+  $coupon_data = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, $today));
 
   if ($coupon_data) {
     $coupon_result->valid = false;
     //  CHECK MAX USES
     if ($coupon_data->max_uses > 0) {
-        $result = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id WHERE uo.order_status > 0 AND uco.cid = %d", $coupon_data->cid));
-        $coupon_used = $result;        
+        $coupon_used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id WHERE uo.order_status > 0 AND uco.cid = %d", $coupon_data->cid));
         // Now that we have how many times it has been used we can check against its max uses
       if ($coupon_used >= $coupon_data->max_uses) {
         return $coupon_result;
@@ -482,7 +490,23 @@ function uc_coupon_validate($code, $order) {
     $coupon_result->code = $coupon_data->code;
     $coupon_result->cid = $coupon_data->cid;
 
-    if ($coupon_data->type == 'percentage') {
+    // If this coupon is just for a single product then calculate value here.
+    if ($coupon_data->products) {
+      foreach ($order->products as $key => $product) {
+        if ($product->nid == $coupon_data->products) {
+          $cart_total = $product->qty * $product->price;
+          $cart_qty = $product->qty;
+        }
+      }
+      if ($coupon_data->type == 'percentage') {
+        $coupon_result->amount = $cart_total * $coupon_data->value / 100;
+      }
+      else if ($coupon_data->type = 'price') {
+        $coupon_result->amount = $cart_qty * $coupon_data->value;
+      }
+    }
+    // Normal non product coupons.
+    else if ($coupon_data->type == 'percentage') {
       $coupon_result->amount = $cart_total * $coupon_data->value / 100;
     }
     else if ($coupon_data->type == 'price') {
