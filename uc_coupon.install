@@ -45,6 +45,6 @@ function uc_coupon_uninstall() {
 }
 
 function uc_coupon_update_1() {
-  $ret[] = update_sql("ALTER TABLE {uc_coupons} ADD COLUMN product INT NOT NULL DEFAULT 0 AFTER max_uses");
+  $ret[] = update_sql("ALTER TABLE {uc_coupons} ADD COLUMN products varchar(50) NOT NULL AFTER max_uses");
   return $ret;
 }

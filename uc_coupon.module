@@ -494,15 +494,15 @@ function uc_coupon_validate($code, $order) {
     if ($coupon_data->products) {
       foreach ($order->products as $key => $product) {
         if ($product->nid == $coupon_data->products) {
-          $cart_total = $product->qty * $product->price;
-          $cart_qty = $product->qty;
+          $total = $product->qty * $product->price;
+          $qty = $product->qty;
         }
       }
       if ($coupon_data->type == 'percentage') {
-        $coupon_result->amount = $cart_total * $coupon_data->value / 100;
+        $coupon_result->amount = $total * $coupon_data->value / 100;
       }
       else if ($coupon_data->type = 'price') {
-        $coupon_result->amount = $cart_qty * $coupon_data->value;
+        $coupon_result->amount = $qty * $coupon_data->value;
       }
     }
     // Normal non product coupons.
