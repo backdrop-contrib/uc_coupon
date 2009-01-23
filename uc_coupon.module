@@ -120,7 +120,7 @@ function uc_coupon_display($view_type = 'active') {
       $value = $row->value .'%';
     }
     else {
-      $value = '$'. $row->value;
+      $value = uc_currency_format($row->value);
     }
     $rows[] = array($row->name, $row->code, $value, format_date($row->valid_until, 'custom', 'm/d/Y'), l(t('edit'), "admin/store/customers/coupon/$row->cid/edit") .' '. l(t('delete'), "admin/store/customers/coupon/$row->cid/delete"));
   }
@@ -707,7 +707,7 @@ function uc_coupon_reports($start = null, $end = null) {
     while ($row = db_fetch_object($query)) {
       // Display the table of coupons if this is the next set of coupons
       if ($row->cid != $last_cid AND $last_cid != 0) {
-        $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>$'. number_format($coupon_sale_amount, 2) .'</b>', '<b>$'. number_format($coupon_amount, 2) .'</b>');
+        $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>'. uc_currency_format($coupon_sale_amount) .'</b>', '<b>'. uc_currency_format($coupon_amount) .'</b>');
         $data .= theme('table', $row_header, $td, array('width' => '100%'));
         $td = array();
         $num_uses = 0;
@@ -718,7 +718,7 @@ function uc_coupon_reports($start = null, $end = null) {
       if ($row->cid != $last_cid || $last_cid = 0) {
         $data .= '<div class="totals"> Coupon Code: '. l($row->code, 'admin/store/customers/coupon/'. $row->cid .'/edit') .'</div>';
       }
-      $td[] = array(l('#'. $row->oid, 'admin/store/orders/'. $row->oid), date('m/d/Y', $row->created), '$'. number_format($row->order_total, 2), '$'. number_format($row->value, 2));
+      $td[] = array(l('#'. $row->oid, 'admin/store/orders/'. $row->oid), date('m/d/Y', $row->created), uc_currency_format($row->order_total), uc_currency_format($row->value));
       $num_uses++;
       $coupon_amount += $row->value;
       $coupon_sale_amount += $row->order_total;
@@ -726,13 +726,13 @@ function uc_coupon_reports($start = null, $end = null) {
       $orders_total += $row->order_total;
       $coupons_total += $row->value;
     }
-    $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>$'. number_format($coupon_sale_amount, 2) .'</b>', '<b>$'. number_format($coupon_amount, 2) .'</b>');
+    $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>'. uc_currency_format($coupon_sale_amount) .'</b>', '<b>'. uc_currency_format($coupon_amount) .'</b>');
     $data .= theme('table', $row_header, $td, array('width' => '100%'));
 
     $output .= '<h2>Coupon Usage report</h2>';  
     $output .= $data;
-    $output .= '<br><table width="100%"><tr><td></td><td><b>Coupons Used: '. db_num_rows($query) .'</td><td>Orders Value: $'. $orders_total .'</td><td>Coupons Value: $'. $coupons_total .'</tr></tr></table>';
+    $output .= '<br><table width="100%"><tr><td></td><td><b>Coupons Used: '. db_num_rows($query) .'</td><td>Orders Value: '. uc_currency_format($orders_total) .'</td><td>Coupons Value: '. uc_currency_format($coupons_total) .'</tr></tr></table>';
     
   }
-  return $output;    
+  return $output;
 }
