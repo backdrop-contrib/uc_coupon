@@ -539,14 +539,20 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       $contents['code'] = array(
         '#type' => 'textfield',
         '#title' => t('Coupon code'),
-        '#default_value' => $arg1->coupon['code'],
+        '#default_value' => $arg1->data['coupon'],
         '#size' => 25,
       );
       return array('description' => $description, 'contents' => $contents);
 
     case 'process':
-      $arg1->coupon['code'] = check_plain($arg2['code']);
-      // print '<pre>pane process'. print_r($arg1, true) . print_r($arg2, true) .'</pre>';
+      if ($arg2['code']) {
+        $arg1->data['coupon'] = check_plain($arg2['code']);
+        $coupon = uc_coupon_validate($arg1->data['coupon'], $arg1);
+        if (!$coupon->valid) {
+          drupal_set_message(t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.'), 'error');
+          return FALSE;
+        }
+      }
       return TRUE;
 
     case 'settings':
@@ -562,76 +568,93 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 /**
  * Implementation of hook_order().
  */
-function uc_coupon_order($op, $arg1, $arg2) {
+function uc_coupon_order($op, &$arg1, $arg2) {
   switch ($op) {
-    case 'save': 
-      // print '<pre>order save'. print_r($arg1, true) . print_r($arg2, true) .'</pre>';
-      //  Check to see if a coupon code was entered
-      if ($arg1->coupon['code'] != '') {
-        $coupon_result = uc_coupon_validate($arg1->coupon['code'], $arg1);
-        if ($coupon_result->valid) {
-          // If we received a result from the database then it means there is a coupon in the table with that code
-          // we then must validate the coupon with our validation function.  It will return data about the coupon to insert into the order table
-          db_query("UPDATE {uc_coupons_orders} SET cid = %d, oid = %d, code = '%s', value = %f WHERE oid = %d", $coupon_result->cid, $arg1->order_id, $coupon_result->code, $coupon_result->amount, $arg1->order_id);
-          if (db_affected_rows() == 0) {
-            db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $coupon_result->cid, $arg1->order_id, $coupon_result->code, $coupon_result->amount);
+    case 'save':
+      $changes = array();
+      $line_items = uc_line_item_coupon('load', $arg1);
+      if (is_array($arg1->line_items)) {
+        foreach ($arg1->line_items as $line) {
+          if ($line['type'] == 'coupon') {
+            $delete = true;
+            foreach ($line_items as $id => $new_line) {
+              if ($new_line['title'] == $line['title']) {
+                if ($new_line['amount'] != $line['amount']) {
+                  db_query("UPDATE {uc_coupons_orders} SET cid = %d, code = '%s', value = %f WHERE oid = %d", $new_line['cid'], $new_line['code'], -$new_line['amount'], $arg1->order_id);
+                  uc_order_update_line_item($line['line_item_id'], $new_line['title'], $new_line['amount']);
+                  $changes[] = t('Changed %title discount to %amount.', array('%amount' => uc_currency_format(-$new_line['amount']), '%title' => $new_line['title']));
+                }
+                unset($line_items[$id]);
+                $delete = false;
+                break;
+              }
+            }
+            if ($delete) {
+              db_query("DELETE FROM {uc_coupons_orders} WHERE oid = %d", $arg1->order_id);
+              uc_order_delete_line_item($line['line_item_id']);
+              $changes[] = t('Removed %title discount.', array('%title' => $line['title']));
+            }
           }
-          db_query("UPDATE {uc_order_line_items} SET title = 'Coupon Discount: \'%s\'', amount = -%f, weight = 0 WHERE order_id = %d AND type ='coupon'", $coupon_result->code, $coupon_result->amount, $arg1->order_id);
-          if (db_affected_rows() == 0) {
-            db_query("INSERT INTO {uc_order_line_items} (order_id, type, title, amount, weight) VALUES (%d, 'coupon', 'Coupon Discount: \'%s\'', -%f, 0)", $arg1->order_id, $coupon_result->code, $coupon_result->amount);
-          }
-        }
-        else {
-          // display errors if the coupon returns invalid
-          db_query("DELETE FROM {uc_coupons_orders} WHERE oid = %d", $arg1->order_id);
-          db_query("DELETE FROM {uc_order_line_items} WHERE order_id = %d", $arg1->order_id);
-          drupal_set_message('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.  Click the back button at the bottom of this form to try a new coupon.', 'error');
         }
       }
+      if (is_array($line_items)) {
+        foreach ($line_items as $line) {
+          db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $line['cid'], $arg1->order_id, $line['code'], -$line['amount']);
+          uc_order_line_item_add($arg1->order_id, $line['id'], $line['title'], $line['amount'], $line['weight']);
+          $changes[] = t('Discounted %amount for %title.', array('%amount' => uc_currency_format(-$line['amount']), '%title' => $line['title']));
+        }
+      }
+      if (count($changes)) {
+        uc_order_log_changes($arg1->order_id, $changes);
+      }
       break;
-    case 'load':  
-      $coupon_result = db_fetch_object(db_query("SELECT cid, oid, value, code FROM {uc_coupons_orders} WHERE oid = %d", $arg1->order_id));
-      if ($coupon_result) {
-        $arg1->coupon['code']= $coupon_result->code;
-        $arg1->coupon['value'] = $coupon_result->value; //"SET THE VALUE";
-        $arg1->coupon['cid'] = $coupon_result->cid;
-      } 
-      // print '<pre>order load'. print_r($arg1, true) . print_r($arg2, true) .'</pre>';
-      break;
-   }
+  }
 }
 
 /**
- * Find the value for the coupon during checkout.
- *
- * @param $order_id
- * Order ID. Used to load an order object to calculate the total coupon value.
+ * Implementation of hook_line_item().
  */
-function uc_coupon_value($order_id) {
-  $coupon_result = db_fetch_object(db_query("SELECT cid, oid, value, code FROM {uc_coupons_orders} WHERE oid = %d", $order_id));
-  if ($coupon_result) {
-    return $coupon_result->value;
-  }
-  else {
-    return FALSE;
-  }
-}
-
 function uc_coupon_line_item() {
   $items[] = array(
     'id' => 'coupon',
-    'title' => t('Coupon Discount'),
+    'title' => t('Coupon discount'),
     'weight' => 2,
     'default' => FALSE,
     'stored' => TRUE,
-    'add_list' => TRUE,
+    'add_list' => FALSE,
     'calculated' => TRUE,
     'callback' => 'uc_line_item_coupon',
   );
   return $items;
 }
 
+/**
+ * Line item callback function.
+ */
+function uc_line_item_coupon($op, $order) {
+  switch ($op) {
+    case 'load':
+      $lines = array();
+      if ($order->data['coupon']) {
+        $coupon = uc_coupon_validate($order->data['coupon'], $order);
+        if ($coupon->valid) {
+          $lines[] = array(
+            'id' => 'coupon',
+            'title' => t('Coupon: @code', array('@code' => $coupon->code)),
+            'amount' => -$coupon->amount,
+            'cid' => $coupon->cid,
+            'code' => $coupon->code,
+            'weight' => 2,
+          );
+        }
+      }
+      return $lines;
+  }
+}
 
+/**
+ * Coupon report form.
+ */
 function uc_coupon_reports_form($start = NULL, $end = NULL) {
   if (is_null($start)) {
     $start = time();
