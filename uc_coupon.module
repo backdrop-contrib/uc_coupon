@@ -262,10 +262,10 @@ function uc_coupon_add_form($action, $cid = NULL) {
  * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form_id, $form) {
-  // check to ensure a unique coupon code 
-  $result = db_result(db_query("SELECT name, code FROM {uc_coupons} WHERE code LIKE '%s' AND cid <> %d", $form['code'], $form['cid']));
-  if ($result) {
-    form_set_error($form['code'], t('Code already used by coupon: %name.', array('%name' => $result->name)));
+  // check to ensure a unique coupon code
+  $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code LIKE '%s' AND cid <> %d", $form['code'], $form['cid']));
+  if ($name) {
+    form_set_error($form['code'], t('Coupon code already used by %name.', array('%name' => $name)));
   }
 }
 
