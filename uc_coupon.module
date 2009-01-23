@@ -8,7 +8,7 @@
  * Code by Blake Lucchesi
  * www.boldsource.com
  * blake@boldsource.com
- * 
+ *
  * Send any suggestions and feedback to the above address.
  */
 
@@ -383,11 +383,11 @@ function uc_coupon_load($cid) {
  *  Return a drupal confirm form.
  */
 function uc_coupon_delete_confirm($cid) {
- $form['cid'] = array('#type' => 'value', '#value' => $cid);
- $confirm = confirm_form(
-    $form, 
+  $form['cid'] = array('#type' => 'value', '#value' => $cid);
+  $confirm = confirm_form(
+    $form,
     t('Confirm Deletion of Coupon %cid', array('%cid' => $cid)),
-    'admin/store/customers/coupon', 
+    'admin/store/customers/coupon',
     t('Deleting this coupon will remove all records of past uses as well.'),
     t('Delete'),
     t('Cancel')
@@ -455,7 +455,7 @@ function uc_coupon_validate($code, $order) {
         return $coupon_result;
       }
     }
-    
+
     // CHECK USER PERMISSIONS
     // 1 - both wholesale and retail any user
     // 2 - wholesale only -> users with 'coupon wholesale pricing'
@@ -527,7 +527,7 @@ function uc_coupon_checkout_pane() {
 }
 
 /**
- * Checkout Pane callback function. 
+ * Checkout Pane callback function.
  *
  * Used to display a form in the checkout process so that customers
  * can enter discount coupons.
@@ -576,7 +576,7 @@ function uc_coupon_order($op, &$arg1, $arg2) {
       if (is_array($arg1->line_items)) {
         foreach ($arg1->line_items as $line) {
           if ($line['type'] == 'coupon') {
-            $delete = true;
+            $delete = TRUE;
             foreach ($line_items as $id => $new_line) {
               if ($new_line['title'] == $line['title']) {
                 if ($new_line['amount'] != $line['amount']) {
@@ -585,7 +585,7 @@ function uc_coupon_order($op, &$arg1, $arg2) {
                   $changes[] = t('Changed %title discount to %amount.', array('%amount' => uc_currency_format(-$new_line['amount']), '%title' => $new_line['title']));
                 }
                 unset($line_items[$id]);
-                $delete = false;
+                $delete = FALSE;
                 break;
               }
             }
@@ -696,19 +696,19 @@ function uc_coupon_reports_form_submit($form_id, $form_values) {
  */
 function uc_coupon_reports($start = NULL, $end = NULL) {
   drupal_add_css(drupal_get_path('module', 'uc_coupon') .'/reports.css', 'uc_coupon');
-  $output .= drupal_get_form('uc_coupon_reports_form', $start, $end);
-  // gather all the coupon data from the time period specified
+
+  $output = drupal_get_form('uc_coupon_reports_form', $start, $end);
 
   if (isset($start) && isset($end)) {
     $query = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) WHERE o.created > %d AND o.created < %d ORDER BY co.cid, o.created ASC", $start, $end);
 
-    $row_header = array('Order #', 'Date Purchased', 'Order Value', 'Coupon Value');
+    $row_header = array(t('Order #'), t('Purchase date'), t('Total'), t('Coupon value'));
     $last_cid = 0;
-    
+
     while ($row = db_fetch_object($query)) {
       // Display the table of coupons if this is the next set of coupons
       if ($row->cid != $last_cid AND $last_cid != 0) {
-        $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>'. uc_currency_format($coupon_sale_amount) .'</b>', '<b>'. uc_currency_format($coupon_amount) .'</b>');
+        $td[] = array('', '<b>'. t('Uses: @total', array('@total' => $num_uses)) .'</b>', '<b>'. uc_currency_format($coupon_sale_amount) .'</b>', '<b>'. uc_currency_format($coupon_amount) .'</b>');
         $data .= theme('table', $row_header, $td, array('width' => '100%'));
         $td = array();
         $num_uses = 0;
@@ -717,7 +717,7 @@ function uc_coupon_reports($start = NULL, $end = NULL) {
       }
       // if this is the first coupon of the set display the header first
       if ($row->cid != $last_cid || $last_cid = 0) {
-        $data .= '<div class="totals"> Coupon Code: '. l($row->code, 'admin/store/customers/coupon/'. $row->cid .'/edit') .'</div>';
+        $data .= '<div class="totals">'. t('Coupon code: !link', array('!link' => l($row->code, 'admin/store/customers/coupon/'. $row->cid .'/edit'))) .'</div>';
       }
       $td[] = array(l('#'. $row->oid, 'admin/store/orders/'. $row->oid), format_date($row->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y')), uc_currency_format($row->order_total), uc_currency_format($row->value));
       $num_uses++;
@@ -727,12 +727,16 @@ function uc_coupon_reports($start = NULL, $end = NULL) {
       $orders_total += $row->order_total;
       $coupons_total += $row->value;
     }
-    $td[] = array('', '<b>Uses: '. $num_uses .'</b>', '<b>'. uc_currency_format($coupon_sale_amount) .'</b>', '<b>'. uc_currency_format($coupon_amount) .'</b>');
+    $td[] = array('', '<b>'. t('Uses: @total', array('@total' => $num_uses)) .'</b>', '<b>'. uc_currency_format($coupon_sale_amount) .'</b>', '<b>'. uc_currency_format($coupon_amount) .'</b>');
     $data .= theme('table', $row_header, $td, array('width' => '100%'));
 
-    $output .= '<h2>Coupon Usage report</h2>';  
+    $output .= '<h2>'. t('Coupon usage report') .'</h2>';
     $output .= $data;
-    $output .= '<br><table width="100%"><tr><td></td><td><b>Coupons Used: '. db_num_rows($query) .'</td><td>Orders Value: '. uc_currency_format($orders_total) .'</td><td>Coupons Value: '. uc_currency_format($coupons_total) .'</tr></tr></table>';
+    $output .= '<br /><table width="100%"><tr>';
+    $output .= '<td>'. t('Coupons used: @total', array('@total' => db_num_rows($query))) .'</td>';
+    $output .= '<td>'. t('Orders total: @total', array('@total' => uc_currency_format($orders_total))) .'</td>';
+    $output .= '<td>'. t('Coupons total: @total', array('@total' => uc_currency_format($coupons_total))) .'</td>';
+    $output .= '</tr></table>';
   }
   return $output;
 }
