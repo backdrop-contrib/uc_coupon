@@ -2,6 +2,7 @@
 // $Id$
 
 /**
+ * @file
  * Ubercart uc_coupon.module schema
  */
 function uc_coupon_install() {
