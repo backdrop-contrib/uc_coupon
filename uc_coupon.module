@@ -308,7 +308,7 @@ function uc_coupon_add_form_submit($form_id, $form) {
   
   // If the forms coupon id is not set then we try to insert a new coupon
   if (!isset($form['cid'])) {
-    if (db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, products, users, roles, minimum_order) VALUES ('%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s', %d)", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $products, $users, $form['roles'], $form['minimum_order'])) {
+    if (db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, products, users, roles, minimum_order) VALUES ('%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s', '%s', %d)", $form['name'], $form['code'], $form['value'], $form['type'], $form['status'], $form['valid_until'], $form['max_uses'], $products, $users, $form['roles'], $form['minimum_order'])) {
       $message = "New coupon {$form['name']} added succesfully";
     }
     else {
