@@ -104,6 +104,8 @@ function uc_coupon_perm() {
  *   pass in an argument to filter out active/inactive coupons
  */
 function uc_coupon_display($view_type = 'active') {
+  _uc_coupon_paypal_check();
+
   $result = db_query('SELECT * FROM {uc_coupons} WHERE status = %d ORDER BY code', $view_type == 'inactive' ? 0 : 1);
   $rows = array();
   while ($row = db_fetch_object($result)) {
@@ -139,6 +141,8 @@ function uc_coupon_display($view_type = 'active') {
  * Coupon ID, used to load defaults when $action = 'edit'
  */
 function uc_coupon_add_form($action, $cid = NULL) {
+  _uc_coupon_paypal_check();
+
   if ($action == 'edit') {
     $value = uc_coupon_load($cid);
     $form['cid'] = array(
@@ -739,4 +743,13 @@ function uc_coupon_reports($start = NULL, $end = NULL) {
     $output .= '</tr></table>';
   }
   return $output;
+}
+
+/**
+ * Show a message if PayPal is enabled and "itemized order" is selected.
+ */
+function _uc_coupon_paypal_check() {
+  if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wbs_submit_method', 'single') == 'itemized') {
+    drupal_set_message(t('To use coupons with PayPal you must select "Submit the whole order as a single line item". Click <a href="!url">here</a> to change this setting.', array('!url' => url('admin/store/settings/payment/edit/methods'))));
+  }
 }
