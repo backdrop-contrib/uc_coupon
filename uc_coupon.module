@@ -267,9 +267,9 @@ function uc_coupon_add_form($action, $cid = NULL) {
  */
 function uc_coupon_add_form_validate($form_id, $form) {
   // check to ensure a unique coupon code
-  $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code LIKE '%s' AND cid <> %d", $form['code'], $form['cid']));
+  $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code = '%s' AND cid <> %d", strtoupper($form['code']), $form['cid']));
   if ($name) {
-    form_set_error($form['code'], t('Coupon code already used by %name.', array('%name' => $name)));
+    form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
 }
 
@@ -277,6 +277,7 @@ function uc_coupon_add_form_validate($form_id, $form) {
  * Coupon form submit handler.
  */
 function uc_coupon_add_form_submit($form_id, $form) {
+  $form['code'] = strtoupper($form['code']);
   $form['valid_until'] = mktime(0, 0, 0, $form['valid_until']['month'], $form['valid_until']['day'], $form['valid_until']['year']);
 
   // Catch the roles array variables and set them up for insertion to database
@@ -431,7 +432,7 @@ function uc_coupon_validate($code, $order) {
   $today = time();
 
   // the following query grabs a result with a matching code that has a valid date and is marked as active
-  $coupon_data = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code LIKE '%s' AND status ='1' AND valid_until > %d", $code, $today));
+  $coupon_data = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, $today));
 
   if ($coupon_data) {
     $coupon_result->valid = FALSE;
@@ -550,7 +551,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 
     case 'process':
       if ($arg2['code']) {
-        $arg1->data['coupon'] = check_plain($arg2['code']);
+        $arg1->data['coupon'] = strtoupper(check_plain($arg2['code']));
         $coupon = uc_coupon_validate($arg1->data['coupon'], $arg1);
         if (!$coupon->valid) {
           drupal_set_message(t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.'), 'error');
