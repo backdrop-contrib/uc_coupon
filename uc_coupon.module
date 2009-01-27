@@ -514,7 +514,7 @@ function uc_coupon_validate($code, $order) {
 
 
 /**
- * Implementation of hook_order_pane().
+ * Implementation of hook_checkout_pane().
  *
  * Show a pane just above the order total that allows shoppers to enter a coupon
  * for a discount.
@@ -557,6 +557,17 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
           drupal_set_message(t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.'), 'error');
           return FALSE;
         }
+
+        $title = t('Coupon: @code', array('@code' => $coupon->code));
+        $result = db_query("SELECT line_item_id FROM {uc_order_line_items} WHERE order_id = %d AND type = 'coupon'", $arg1->order_id);
+        if ($lid = db_result($result)) {
+          db_query("UPDATE {uc_coupons_orders} SET cid = %d, code = '%s', value = %f WHERE oid = %d", $coupon->cid, $coupon->code, $coupon->amount, $arg1->order_id);
+          uc_order_update_line_item($lid, $title, -$coupon->amount);
+        }
+        else {
+          db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $coupon->cid, $arg1->order_id, $coupon->code, $coupon->amount);
+          uc_order_line_item_add($arg1->order_id, 'coupon', $title, -$coupon->amount);
+        }
       }
       return TRUE;
 
@@ -571,52 +582,6 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 }
 
 /**
- * Implementation of hook_order().
- */
-function uc_coupon_order($op, &$arg1, $arg2) {
-  switch ($op) {
-    case 'save':
-      $changes = array();
-      $line_items = uc_line_item_coupon('load', $arg1);
-      if (is_array($arg1->line_items)) {
-        foreach ($arg1->line_items as $line) {
-          if ($line['type'] == 'coupon') {
-            $delete = TRUE;
-            foreach ($line_items as $id => $new_line) {
-              if ($new_line['title'] == $line['title']) {
-                if ($new_line['amount'] != $line['amount']) {
-                  db_query("UPDATE {uc_coupons_orders} SET cid = %d, code = '%s', value = %f WHERE oid = %d", $new_line['cid'], $new_line['code'], -$new_line['amount'], $arg1->order_id);
-                  uc_order_update_line_item($line['line_item_id'], $new_line['title'], $new_line['amount']);
-                  $changes[] = t('Changed %title discount to %amount.', array('%amount' => uc_currency_format(-$new_line['amount']), '%title' => $new_line['title']));
-                }
-                unset($line_items[$id]);
-                $delete = FALSE;
-                break;
-              }
-            }
-            if ($delete) {
-              db_query("DELETE FROM {uc_coupons_orders} WHERE oid = %d", $arg1->order_id);
-              uc_order_delete_line_item($line['line_item_id']);
-              $changes[] = t('Removed %title discount.', array('%title' => $line['title']));
-            }
-          }
-        }
-      }
-      if (is_array($line_items)) {
-        foreach ($line_items as $line) {
-          db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $line['cid'], $arg1->order_id, $line['code'], -$line['amount']);
-          uc_order_line_item_add($arg1->order_id, $line['id'], $line['title'], $line['amount'], $line['weight']);
-          $changes[] = t('Discounted %amount for %title.', array('%amount' => uc_currency_format(-$line['amount']), '%title' => $line['title']));
-        }
-      }
-      if (count($changes)) {
-        uc_order_log_changes($arg1->order_id, $changes);
-      }
-      break;
-  }
-}
-
-/**
  * Implementation of hook_line_item().
  */
 function uc_coupon_line_item() {
@@ -626,35 +591,10 @@ function uc_coupon_line_item() {
     'weight' => 2,
     'default' => FALSE,
     'stored' => TRUE,
-    'add_list' => FALSE,
+    'add_list' => TRUE,
     'calculated' => TRUE,
-    'callback' => 'uc_line_item_coupon',
   );
   return $items;
-}
-
-/**
- * Line item callback function.
- */
-function uc_line_item_coupon($op, $order) {
-  switch ($op) {
-    case 'load':
-      $lines = array();
-      if ($order->data['coupon']) {
-        $coupon = uc_coupon_validate($order->data['coupon'], $order);
-        if ($coupon->valid) {
-          $lines[] = array(
-            'id' => 'coupon',
-            'title' => t('Coupon: @code', array('@code' => $coupon->code)),
-            'amount' => -$coupon->amount,
-            'cid' => $coupon->cid,
-            'code' => $coupon->code,
-            'weight' => 2,
-          );
-        }
-      }
-      return $lines;
-  }
 }
 
 /**
