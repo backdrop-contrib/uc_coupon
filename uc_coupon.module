@@ -419,7 +419,7 @@ function uc_coupon_validate($code, $order) {
     $coupon_result->valid = FALSE;
     //  CHECK MAX USES
     if ($coupon_data->max_uses > 0) {
-        $coupon_used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id WHERE uo.order_status > 0 AND uco.cid = %d", $coupon_data->cid));
+        $coupon_used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d", $coupon_data->cid));
         // Now that we have how many times it has been used we can check against its max uses
       if ($coupon_used >= $coupon_data->max_uses) {
         return $coupon_result;
