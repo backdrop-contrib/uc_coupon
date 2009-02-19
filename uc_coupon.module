@@ -4,10 +4,10 @@
 
 /**
  * @file
- * Developed for the UberCart Drupal Shopping Cart System
- * Code by Blake Lucchesi
- * www.boldsource.com
- * blake@boldsource.com
+ * Provides discount coupons for Ubercart.
+ *
+ * Original code by Blake Lucchesi (www.boldsource.com)
+ * Maintained by David Long (dave@longwaveconsulting.com)
  *
  * Send any suggestions and feedback to the above address.
  */
@@ -74,6 +74,14 @@ function uc_coupon_menu() {
     'access arguments' => array('manage store coupons'),
     'type' => MENU_CALLBACK,
   );
+
+  $items['cart/checkout/coupon'] = array(
+    'title' => 'Apply coupon',
+    'page callback' => 'uc_coupon_checkout_apply',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
 }
 
@@ -402,13 +410,10 @@ function uc_coupon_delete_confirm_submit($form, &$form_state) {
  * @param $code
  *  The coupon code entered at the checkout screen
  *
- * @param $order
- *  The order object
- *
  * @return $coupon_result
  *  Returns a coupon result object with details about the validation
  */
-function uc_coupon_validate($code, $order) {
+function uc_coupon_validate($code) {
   //  Get the code passed in from the coupon code form
   $today = time();
 
@@ -417,6 +422,11 @@ function uc_coupon_validate($code, $order) {
 
   if ($coupon_data) {
     $coupon_result->valid = FALSE;
+
+    foreach (uc_cart_get_contents() as $item) {
+      $cart_total += $item->price * $item->qty;
+    }
+
     //  CHECK MAX USES
     if ($coupon_data->max_uses > 0) {
         $coupon_used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d", $coupon_data->cid));
@@ -425,8 +435,8 @@ function uc_coupon_validate($code, $order) {
         return $coupon_result;
       }
     }
+
     //  CHECK MINIMUM PURCHASE VALUE
-    $cart_total = uc_order_get_total($order, TRUE);  // this is also used below in the percentage discount calculation
     if ($coupon_data->minimum_order > 0 && $coupon_data->minimum_order > $cart_total) {
       return $coupon_result;
     }
@@ -458,16 +468,18 @@ function uc_coupon_validate($code, $order) {
         }
       }
     }
+
     $coupon_result->valid = TRUE;
     $coupon_result->code = $coupon_data->code;
     $coupon_result->cid = $coupon_data->cid;
+    $coupon_result->title = t('Coupon: @code', array('@code' => $coupon_data->code));
 
     // If this coupon is just for a single product then calculate value here.
     if ($coupon_data->products) {
-      foreach ($order->products as $key => $product) {
-        if ($product->nid == $coupon_data->products) {
-          $total = $product->qty * $product->price;
-          $qty = $product->qty;
+      foreach (uc_cart_get_contents() as $item) {
+        if ($item->nid == $coupon_data->products) {
+          $total = $item->qty * $item->price;
+          $qty = $item->qty;
         }
       }
       if ($coupon_data->type == 'percentage') {
@@ -504,7 +516,7 @@ function uc_coupon_checkout_pane() {
   $panes[] = array(
     'id' => 'coupon',
     'callback' => 'uc_checkout_pane_coupon',
-    'title' => t('Coupon Discount'),
+    'title' => t('Coupon discount'),
     'desc' => t('Allows shoppers to use a coupon during checkout for order discounts.'),
     'weight' => 5,
     'process' => TRUE,
@@ -521,6 +533,17 @@ function uc_coupon_checkout_pane() {
 function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
   switch ($op) {
     case 'view':
+      drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.js');
+
+      $coupon = uc_coupon_validate($arg1->data['coupon']);
+      if ($coupon->valid) {
+        uc_add_js('$(document).ready(function() {
+          if (window.set_line_item) {
+            set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 2);
+          }
+        });', 'inline');
+      }
+
       $description = variable_get('uc_coupon_pane_description', 'Enter a coupon code for this order.');
       $contents['code'] = array(
         '#type' => 'textfield',
@@ -528,26 +551,30 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
         '#default_value' => $arg1->data['coupon'],
         '#size' => 25,
       );
+      $contents['apply'] = array(
+        '#type' => 'button',
+        '#value' => t('Apply to order'),
+        '#attributes' => array('onclick' => "getCoupon(); return false;"),
+      );
       return array('description' => $description, 'contents' => $contents);
 
     case 'process':
       if ($arg2['code']) {
         $arg1->data['coupon'] = strtoupper(check_plain($arg2['code']));
-        $coupon = uc_coupon_validate($arg1->data['coupon'], $arg1);
+        $coupon = uc_coupon_validate($arg1->data['coupon']);
         if (!$coupon->valid) {
           drupal_set_message(t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.'), 'error');
           return FALSE;
         }
 
-        $title = t('Coupon: @code', array('@code' => $coupon->code));
         $result = db_query("SELECT line_item_id FROM {uc_order_line_items} WHERE order_id = %d AND type = 'coupon'", $arg1->order_id);
         if ($lid = db_result($result)) {
           db_query("UPDATE {uc_coupons_orders} SET cid = %d, code = '%s', value = %f WHERE oid = %d", $coupon->cid, $coupon->code, $coupon->amount, $arg1->order_id);
-          uc_order_update_line_item($lid, $title, -$coupon->amount);
+          uc_order_update_line_item($lid, $coupon->title, -$coupon->amount);
         }
         else {
           db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $coupon->cid, $arg1->order_id, $coupon->code, $coupon->amount);
-          uc_order_line_item_add($arg1->order_id, 'coupon', $title, -$coupon->amount);
+          uc_order_line_item_add($arg1->order_id, 'coupon', $coupon->title, -$coupon->amount);
         }
       }
       return TRUE;
@@ -560,6 +587,23 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       );
       return $form;
   }
+}
+
+/**
+ * Checkout pane AJAX callback.
+ *
+ * @param $code
+ *  The coupon code entered at the checkout screen.
+ **/
+function uc_coupon_checkout_apply($code = NULL) {
+  $coupon = uc_coupon_validate(strtoupper($code));
+  if (!$coupon->valid) {
+    $coupon->message = t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.');
+  }
+
+  drupal_set_header("Content-Type: text/javascript; charset=utf-8");
+  print drupal_to_js($coupon);
+  exit();
 }
 
 /**
