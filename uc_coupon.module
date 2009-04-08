@@ -597,12 +597,9 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 
 /**
  * Checkout pane AJAX callback.
- *
- * @param $code
- *  The coupon code entered at the checkout screen.
  **/
-function uc_coupon_checkout_apply($code = NULL) {
-  $coupon = uc_coupon_validate(strtoupper($code));
+function uc_coupon_checkout_apply() {
+  $coupon = uc_coupon_validate(strtoupper($_POST['code']));
   if (!$coupon->valid) {
     $coupon->message = t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.');
   }
