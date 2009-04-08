@@ -176,6 +176,7 @@ function uc_coupon_add_form(&$form_state, $action, $coupon = NULL) {
     '#title' => t('Expiry date'),
     '#default_value' => $value->valid_until,
     '#required' => TRUE,
+    '#after_build' => array('_uc_coupon_date_range'),
   );
 
   $form['status'] = array(
@@ -255,6 +256,11 @@ function uc_coupon_add_form(&$form_state, $action, $coupon = NULL) {
   $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
 
   return $form;
+}
+
+function _uc_coupon_date_range($form_element) {
+  $form_element['year']['#options'] = drupal_map_assoc(range(2008, 2020));
+  return $form_element;
 }
 
 /**
@@ -635,12 +641,14 @@ function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL) {
   $form['start'] = array(
     '#type' => 'date',
     '#title' => t('Start date'),
-    '#default_value' => array('year' => format_date($start, 'custom', 'Y'), 'month' => format_date($start, 'custom', 'n'), 'day' => format_date($start, 'custom', 'j'))
+    '#default_value' => array('year' => format_date($start, 'custom', 'Y'), 'month' => format_date($start, 'custom', 'n'), 'day' => format_date($start, 'custom', 'j')),
+    '#after_build' => array('_uc_coupon_date_range'),
   );
   $form['end'] = array(
     '#type' => 'date',
     '#title' => t('End date'),
-    '#default_value' => array('year' => format_date($end, 'custom', 'Y'), 'month' => format_date($end, 'custom', 'n'), 'day' => format_date($end, 'custom', 'j'))
+    '#default_value' => array('year' => format_date($end, 'custom', 'Y'), 'month' => format_date($end, 'custom', 'n'), 'day' => format_date($end, 'custom', 'j')),
+    '#after_build' => array('_uc_coupon_date_range'),
   );
   $form['submit'] = array(
     '#type' => 'submit',
