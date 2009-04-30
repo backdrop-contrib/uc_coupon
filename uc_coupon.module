@@ -151,6 +151,7 @@ function uc_coupon_add_form(&$form_state, $action, $coupon = NULL) {
     $value->max_uses = 0;
     $value->users = '0';
     $value->roles = 1;
+    $value->products = '0';
   }
 
   $value->valid_until = array('year' => format_date($value->valid_until, 'custom', 'Y'), 'month' => format_date($value->valid_until, 'custom', 'n'), 'day' => format_date($value->valid_until, 'custom', 'j'));
@@ -223,12 +224,14 @@ function uc_coupon_add_form(&$form_state, $action, $coupon = NULL) {
     '#required' => TRUE,
   );
 
-  $form['product'] = array(
+  $form['products'] = array(
     '#type' => 'select',
+    '#multiple' => TRUE,
     '#title' => t('Product'),
-    '#description' => t('Choosing a product will make this coupon valid only for this product.'),
+    '#description' => t('Choosing one or more products will make this coupon valid only for those products, and discounts will apply to each matching product.'),
     '#options' => uc_coupon_load_products(),
-    '#default_value' => $value->products,
+    '#default_value' => explode(',', $value->products),
+    '#required' => TRUE,
   );
 
   $form['users'] = array(
@@ -289,14 +292,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     }
   }
 
-  // Currently only supports a single product, but could be extended for multiple products
-  // later, ideally storing this data in a new table coupon_products or something.
-  // foreach ($form_state['values']['product'] as $key => $nid) {
-  //   if (is_numeric($nid) && $key > 0 && $nid > 0) {
-  //     $products .= $nid .',';
-  //   }
-  // }
-  $products = $form_state['values']['product'];
+  $products = implode(',', $form_state['values']['products']);
 
   // If the forms coupon id is not set then we try to insert a new coupon
   if (!isset($form['#uc_coupon_cid'])) {
@@ -429,8 +425,29 @@ function uc_coupon_validate($code) {
   if ($coupon_data) {
     $coupon_result->valid = FALSE;
 
-    foreach (uc_cart_get_contents() as $item) {
-      $cart_total += $item->price * $item->qty;
+    if ($coupon_data->products) {
+      // Product coupons apply to the subtotal and quantity of matching products.
+      $coupon_products = explode(',', $coupon_data->products);
+      foreach (uc_cart_get_contents() as $item) {
+        $cart_total += $item->price * $item->qty;
+        if (in_array($item->nid, $coupon_products)) {
+          $applicable_total += $item->price * $item->qty;
+          $applicable_qty += $item->qty;
+        }
+      }
+    }
+    else {
+      // Standard coupons apply once to the whole cart.
+      foreach (uc_cart_get_contents() as $item) {
+        $cart_total += $item->price * $item->qty;
+      }
+      $applicable_total = $cart_total;
+      $applicable_qty = 1;
+    }
+
+    if ($applicable_total == 0) {
+      // Coupon does not apply to any products.
+      return $coupon_result;
     }
 
     //  CHECK MAX USES
@@ -480,29 +497,12 @@ function uc_coupon_validate($code) {
     $coupon_result->cid = $coupon_data->cid;
     $coupon_result->title = t('Coupon: @code', array('@code' => $coupon_data->code));
 
-    // If this coupon is just for a single product then calculate value here.
-    if ($coupon_data->products) {
-      foreach (uc_cart_get_contents() as $item) {
-        if ($item->nid == $coupon_data->products) {
-          $total = $item->qty * $item->price;
-          $qty = $item->qty;
-        }
-      }
-      if ($coupon_data->type == 'percentage') {
-        $coupon_result->amount = $total * $coupon_data->value / 100;
-      }
-      else if ($coupon_data->type = 'price') {
-        $coupon_result->amount = $qty * $coupon_data->value;
-      }
-    }
-    // Normal non product coupons.
-    else if ($coupon_data->type == 'percentage') {
-      $coupon_result->amount = $cart_total * $coupon_data->value / 100;
+    if ($coupon_data->type == 'percentage') {
+      $coupon_result->amount = $applicable_total * $coupon_data->value / 100;
     }
     else if ($coupon_data->type == 'price') {
-      $coupon_result->amount = $coupon_data->value;
+      $coupon_result->amount = min($applicable_total, $applicable_qty * $coupon_data->value);
     }
-
   }
   else {
     // The coupon was not found, inactive, or is expired in the list of coupons
