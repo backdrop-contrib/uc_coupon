@@ -628,13 +628,22 @@ function uc_coupon_line_item() {
 /**
  * Coupon report form.
  */
-function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL) {
+function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL, $statuses = NULL) {
   if (is_null($start)) {
     $start = time();
   }
   if (is_null($end)) {
     $end = time();
   }
+  if (is_null($statuses)) {
+    $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
+  }
+
+  $options = array();
+  foreach (uc_order_status_list() as $status) {
+    $options[$status['id']] = $status['title'];
+  }
+
   $form['start'] = array(
     '#type' => 'date',
     '#title' => t('Start date'),
@@ -646,6 +655,15 @@ function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL) {
     '#title' => t('End date'),
     '#default_value' => array('year' => format_date($end, 'custom', 'Y'), 'month' => format_date($end, 'custom', 'n'), 'day' => format_date($end, 'custom', 'j')),
     '#after_build' => array('_uc_coupon_date_range'),
+  );
+  $form['status'] = array(
+    '#type' => 'select',
+    '#title' => t('Order statuses'),
+    '#description' => t('Only orders with selected statuses will be included in the report.') .'<br />'. t('Hold Ctrl + click to select multiple statuses.'),
+    '#options' => $options,
+    '#default_value' => $statuses,
+    '#multiple' => TRUE,
+    '#size' => 5,
   );
   $form['submit'] = array(
     '#type' => 'submit',
@@ -660,7 +678,9 @@ function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL) {
 function uc_coupon_reports_form_submit($form, &$form_state) {
   $start = mktime(0, 0, 0, $form_state['values']['start']['month'], $form_state['values']['start']['day'], $form_state['values']['start']['year']);
   $end = mktime(23, 59, 59, $form_state['values']['end']['month'], $form_state['values']['end']['day'], $form_state['values']['end']['year']);
-  $form_state['redirect'] = 'admin/store/reports/coupon/'. $start .'/'. $end;
+  $statuses = implode(',', array_keys($form_state['values']['status']));
+
+  $form_state['redirect'] = 'admin/store/reports/coupon/'. $start .'/'. $end .'/'. $statuses;
 }
 
 
@@ -669,13 +689,20 @@ function uc_coupon_reports_form_submit($form, &$form_state) {
  *
  * TODO: Integrate with UberCart reports functionality.
  */
-function uc_coupon_reports($start = NULL, $end = NULL) {
+function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
   drupal_add_css(drupal_get_path('module', 'uc_coupon') .'/reports.css', 'uc_coupon');
 
-  $output = drupal_get_form('uc_coupon_reports_form', $start, $end);
+  if (is_null($statuses)) {
+    $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
+  }
+  else {
+    $statuses = explode(',', $statuses);
+  }
+
+  $output = drupal_get_form('uc_coupon_reports_form', $start, $end, $statuses);
 
   if (isset($start) && isset($end)) {
-    $query = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) WHERE o.created > %d AND o.created < %d ORDER BY co.cid, o.created ASC", $start, $end);
+    $query = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) WHERE o.created > %d AND o.created < %d AND o.order_status IN ('". implode("', '", $statuses) ."') ORDER BY co.cid, o.created ASC", $start, $end);
     $total = 0;
 
     $row_header = array(t('Order #'), t('Purchase date'), t('Total'), t('Coupon value'));
