@@ -603,6 +603,9 @@ function uc_coupon_checkout_apply() {
   if (!$coupon->valid) {
     $coupon->message = t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.');
   }
+  else {
+    $coupon->message = t('The coupon has been applied to your order.');
+  }
 
   drupal_set_header("Content-Type: text/javascript; charset=utf-8");
   print drupal_to_js($coupon);

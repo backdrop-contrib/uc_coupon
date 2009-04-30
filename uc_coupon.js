@@ -11,13 +11,14 @@ function getCoupon() {
     },
     dataType: "json",
     success: function(coupon) {
+      code.parent().next().after('<div id="coupon-message">' + coupon.message + '</div>');
+
       if (coupon.valid) {
         if (window.set_line_item) {
           set_line_item('coupon', coupon.title, -coupon.amount, 2);
         }
       }
       else {
-        code.parent().next().after('<div id="coupon-message">' + coupon.message + '</div>');
         if (window.remove_line_item) {
           remove_line_item('coupon');
         }
