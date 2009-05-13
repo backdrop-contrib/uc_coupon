@@ -82,6 +82,25 @@ function uc_coupon_menu() {
     'type' => MENU_CALLBACK,
   );
 
+  $items['uc_coupon/autocomplete/node'] = array(
+    'title' => 'Node autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_node',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['uc_coupon/autocomplete/user'] = array(
+    'title' => 'User autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_user',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['uc_coupon/autocomplete/role'] = array(
+    'title' => 'Role autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_role',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
 }
 
@@ -102,7 +121,13 @@ function uc_coupon_perm() {
 function uc_coupon_display($view_type = 'active') {
   _uc_coupon_paypal_check();
 
-  $result = db_query('SELECT * FROM {uc_coupons} WHERE status = %d ORDER BY code', $view_type == 'inactive' ? 0 : 1);
+  $header[] = array('data' => t('Name'), 'field' => 'name');
+  $header[] = array('data' => t('Code'), 'field' => 'code', 'sort' => 'asc');
+  $header[] = array('data' => t('Value'), 'field' => 'value');
+  $header[] = array('data' => t('Valid until'), 'field' => 'valid_until');
+  $header[] = array('data' => t('Actions'));
+
+  $result = pager_query('SELECT cid, name, value, code, type, valid_until FROM {uc_coupons} WHERE status = %d'. tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
   $rows = array();
   while ($row = db_fetch_object($result)) {
     if ($row->type == 'percentage') {
@@ -115,8 +140,8 @@ function uc_coupon_display($view_type = 'active') {
   }
 
   if (count($rows)) {
-    $header = array('Name', 'Code', 'Value', 'Valid until', 'Actions');
     $output = theme('table', $header, $rows, array('width' => '100%'));
+    $output .= theme('pager', NULL, 20);
   }
   else {
     $output = '<p>'. t('There are currently no coupons in the system.') .'</p>';
@@ -136,9 +161,7 @@ function uc_coupon_display($view_type = 'active') {
  * @param $coupon object
  * Coupon, used to load defaults when $action = 'edit'
  */
-
-// XXX not 100% sure if form state is what's getting based in here. Someone review
-function uc_coupon_add_form(&$form_state, $action, $coupon = NULL) {
+function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
   if ($action == 'edit') {
@@ -149,9 +172,6 @@ function uc_coupon_add_form(&$form_state, $action, $coupon = NULL) {
     $value->valid_until = time();
     $value->minimum_order = 0;
     $value->max_uses = 0;
-    $value->users = '0';
-    $value->roles = 1;
-    $value->products = '0';
   }
 
   $value->valid_until = array('year' => format_date($value->valid_until, 'custom', 'Y'), 'month' => format_date($value->valid_until, 'custom', 'n'), 'day' => format_date($value->valid_until, 'custom', 'j'));
@@ -217,37 +237,125 @@ function uc_coupon_add_form(&$form_state, $action, $coupon = NULL) {
 
   $form['max_uses'] = array(
     '#type' => 'textfield',
-    '#title' => t('Maximum number of redemptions'),
+    '#title' => t('Maximum number of redemptions (total)'),
     '#default_value' => $value->max_uses,
-    '#description' => t('Enter the maximum number of times this coupon can be used, or 0 for unlimited.'),
+    '#description' => t('Enter the maximum number of times this coupon can be used in total, or 0 for unlimited.'),
     '#size' => 5,
     '#required' => TRUE,
   );
 
-  $form['products'] = array(
-    '#type' => 'select',
-    '#multiple' => TRUE,
-    '#title' => t('Product'),
-    '#description' => t('Choosing one or more products will make this coupon valid only for those products, and discounts will apply to each matching product.'),
-    '#options' => uc_coupon_load_products(),
-    '#default_value' => explode(',', $value->products),
+  $form['max_uses_per_user'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum number of redemptions (per user)'),
+    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : 0,
+    '#description' => t('Enter the maximum number of times this coupon can be used by a single user, or 0 for unlimited.'),
+    '#size' => 5,
     '#required' => TRUE,
   );
 
-  $form['users'] = array(
+  $options = array('' => '(none)');
+  foreach (module_invoke_all('product_types') as $type) {
+    $options[$type] = $type;
+  }
+
+  $form['product_types'] = array(
     '#type' => 'select',
+    '#title' => t('Product classes'),
+    '#description' => t('Selecting one or more product classes will restrict this coupon to matching products only. Discounts will then apply to each matching product.'),
+    '#options' => $options,
+    '#default_value' => $value->data['product_types'],
     '#multiple' => TRUE,
-    '#title' => t('Users'),
-    '#description' => t('Select the users who can use this coupon.'),
-    '#default_value' => explode(',', $value->users),
-    '#options' => uc_coupon_load_users(),
   );
 
-  $form['roles'] = array(
+  $form['products'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Products'),
+    '#description' => t('Enter one or more products below to restrict this coupon to a set of products. Discounts will then apply to each matching product.'),
+    '#tree' => TRUE,
+  );
+
+  $form['products']['negate_products'] = array(
     '#type' => 'radios',
-    '#title' => 'Permissions',
-    '#description' => t('Select the groups who are able to use this coupon.'),
-    '#default_value' => $value->roles,
+    '#default_value' => isset($value->data['negate_products']) ? 1 : 0,
+    '#options' => array(
+      0 => t('Apply coupon to products listed below.'),
+      1 => t('Apply coupon to all products except those listed below.'),
+    ),
+    '#tree' => FALSE,
+  );
+
+  if (isset($value->data['products'])) {
+    foreach ($value->data['products'] as $nid) {
+      $title = db_result(db_query('SELECT title FROM {node} WHERE nid = %d', $nid));
+      $form['products'][] = array(
+        '#type' => 'textfield',
+        '#default_value' => $title .' [nid:'. $nid .']',
+        '#autocomplete_path' => 'uc_coupon/autocomplete/node',
+      );
+    }
+  }
+
+  for ($i = 0; $i < 3; $i++) {
+    $form['products'][] = array(
+      '#type' => 'textfield',
+      '#autocomplete_path' => 'uc_coupon/autocomplete/node',
+    );
+  }
+
+  $form['users'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Users'),
+    '#description' => t('Enter one or more user names and/or "anonymous users" below to make this coupon valid only for those users.'),
+    '#tree' => TRUE,
+  );
+
+  if (isset($value->data['users'])) {
+    foreach ($value->data['users'] as $uid) {
+      $username = $uid ? db_result(db_query('SELECT name FROM {users} WHERE uid = %d', $uid)) : t('anonymous users');
+      $form['users'][] = array(
+        '#type' => 'textfield',
+        '#default_value' => $username .' [uid:'. $uid .']',
+        '#autocomplete_path' => 'uc_coupon/autocomplete/user',
+      );
+    }
+  }
+
+  for ($i = 0; $i < 3; $i++) {
+    $form['users'][] = array(
+      '#type' => 'textfield',
+      '#autocomplete_path' => 'uc_coupon/autocomplete/user',
+    );
+  }
+
+  $form['roles'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Roles'),
+    '#description' => t('Enter one or more role names below to make this coupon valid only for users with those roles.'),
+    '#tree' => TRUE,
+  );
+
+  if (isset($value->data['roles'])) {
+    foreach ($value->data['roles'] as $role) {
+      $form['roles'][] = array(
+        '#type' => 'textfield',
+        '#default_value' => $role,
+        '#autocomplete_path' => 'uc_coupon/autocomplete/role',
+      );
+    }
+  }
+
+  for ($i = 0; $i < 3; $i++) {
+    $form['roles'][] = array(
+      '#type' => 'textfield',
+      '#autocomplete_path' => 'uc_coupon/autocomplete/role',
+    );
+  }
+
+  $form['wholesale'] = array(
+    '#type' => 'radios',
+    '#title' => 'Wholesale permissions',
+    '#description' => t('Select the groups who are able to use this coupon. This option is deprecated, it is recommended that you leave this option as "Both wholesale and retail" use the role selection above instead.'),
+    '#default_value' => isset($value->data['wholesale']) ? $value->data['wholesale'] : 1,
     '#options' => array(
       '1' => 'Both wholesale and retail',
       '2' => 'Wholesale buyers only',
@@ -266,6 +374,44 @@ function _uc_coupon_date_range($form_element) {
   return $form_element;
 }
 
+function uc_coupon_autocomplete_node($string) {
+  $matches = array();
+  $product_types = module_invoke_all('product_types');
+
+  $result = db_query_range("SELECT nid, title FROM {node} WHERE type IN ('". implode("','", $product_types) ."') AND title LIKE '%%%s%'", $string, 0, 10);
+  while ($row = db_fetch_object($result)) {
+    $title = check_plain($row->title);
+    $matches[$title .' [nid:'. $row->nid .']'] = $title;
+  }
+  print drupal_to_js($matches);
+  exit;
+}
+
+function uc_coupon_autocomplete_user($string) {
+  $matches = array();
+  $anonymous = t('anonymous users');
+  if (strpos($anonymous, $string) !== FALSE) {
+    $matches[$anonymous .' [uid:0]'] = $anonymous;
+  }
+
+  $result = db_query_range("SELECT uid, name FROM {users} WHERE name LIKE '%%%s%'", $string, 0, 10);
+  while ($row = db_fetch_object($result)) {
+    $matches[$row->name .' [uid:'. $row->uid .']'] = $row->name;
+  }
+  print drupal_to_js($matches);
+  exit;
+}
+
+function uc_coupon_autocomplete_role($string) {
+  $matches = array();
+  $result = db_query_range("SELECT name FROM {role} WHERE name LIKE '%%%s%'", $string, 0, 10);
+  while ($row = db_fetch_object($result)) {
+    $matches[$row->name] = $row->name;
+  }
+  print drupal_to_js($matches);
+  exit;
+}
+
 /**
  * Coupon form validate handler.
  */
@@ -275,87 +421,72 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
+
+  foreach ($form_state['values']['products'] as $key => $product) {
+    if ($product && !preg_match('/\[nid:(\d+)\]$/', $product)) {
+      form_set_error('products]['. $key, t('Products must include the node ID.'));
+    }
+  }
+
+  foreach ($form_state['values']['users'] as $key => $user) {
+    if ($user && !preg_match('/\[uid:(\d+)\]$/', $user)) {
+      form_set_error('users]['. $key, t('User names must include the user ID.'));
+    }
+  }
 }
 
 /**
  * Coupon form submit handler.
  */
 function uc_coupon_add_form_submit($form, &$form_state) {
-  $form_state['values']['code'] = strtoupper($form_state['values']['code']);
-  $form_state['values']['valid_until'] = mktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  $code = strtoupper($form_state['values']['code']);
+  $valid_until = mktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  $data = array();
 
-  // Catch the roles array variables and set them up for insertion to database
-  $users = '';
-  foreach ($form_state['values']['users'] as $key => $user_id) {
-    if (is_numeric($user_id) && $key > 0 && $user_id > 0) {
-      $users .= $user_id .',';
+  if ($form_state['values']['max_uses_per_user']) {
+    $data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
+  }
+
+  if ($form_state['values']['negate_products']) {
+    $data['negate_products'] = TRUE;
+  }
+
+  foreach ($form_state['values']['product_types'] as $type) {
+    if ($type) {
+      $data['product_types'][] = $type;
     }
   }
 
-  $products = implode(',', $form_state['values']['products']);
+  foreach ($form_state['values']['products'] as $key => $product) {
+    if ($product && preg_match('/\[nid:(\d+)\]$/', $product, $matches)) {
+      $data['products'][] = $matches[1];
+    }
+  }
 
-  // If the forms coupon id is not set then we try to insert a new coupon
+  foreach ($form_state['values']['users'] as $key => $user) {
+    if ($user && preg_match('/\[uid:(\d+)\]$/', $user, $matches)) {
+      $data['users'][] = $matches[1];
+    }
+  }
+
+  foreach ($form_state['values']['roles'] as $role) {
+    if ($role) {
+      $data['roles'][] = $role;
+    }
+  }
+
+  $data['wholesale'] = $form_state['values']['wholesale'];
+
   if (!isset($form['#uc_coupon_cid'])) {
-    if (db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, products, users, roles, minimum_order) VALUES ('%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s', '%s', %d)", $form_state['values']['name'], $form_state['values']['code'], $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $form_state['values']['valid_until'], $form_state['values']['max_uses'], $products, $users, $form_state['values']['roles'], $form_state['values']['minimum_order'])) {
-      $message = "New coupon {$form_state['values']['name']} added succesfully";
-    }
-    else {
-      $message = "Sorry coupon could not be added. Try again";
-    }
+    db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, minimum_order, data) VALUES ('%s', '%s', %f, '%s', %d, %d, %d, %d, '%s')", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data));
   }
   else {
-    // Otherwise we try to update the coupon with matching coupon id
-    if (db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_until = %d, max_uses = %d, products = '%s', users = '%s', roles = '%s', minimum_order = %d WHERE cid = %d", $form_state['values']['name'], $form_state['values']['code'], $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $form_state['values']['valid_until'], $form_state['values']['max_uses'], $products, $users, $form_state['values']['roles'], $form_state['values']['minimum_order'], $form['#uc_coupon_cid'])) {
-      $message = "Coupon updated succssfully";
-    }
-    else {
-      $message = "Coupon could not be updated. Try again.";
-    }
+    db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_until = %d, max_uses = %d, minimum_order = %d, data = '%s' WHERE cid = %d", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form['#uc_coupon_cid']);
   }
-  drupal_set_message($message);
+
   $form_state['redirect'] = 'admin/store/customers/coupon';
 }
 
-
-/**
- * Load all users in the system.
- *
- * @return array
- * Returns an array of users in the system.
- *
- * TODO: This is bad! Lots of users would make the site drag.
- */
-function uc_coupon_load_users() {
-  $user_array = db_query("SELECT uid, name FROM {users} ORDER BY name ASC");
-  while ($users = db_fetch_object($user_array)) {
-    $user_return[$users->uid] = $users->uid ? $users->name : 'All Users';
-  }
-  return $user_return;
-}
-
-/**
- * Load all products into an array.
- *
- * @return array
- * Return an array of products for coupon assignment.
- */
-function uc_coupon_load_products() {
-  $query = db_query("SELECT pcid FROM {uc_product_classes}");
-  $types = array('product', 'product_kit');
-  while ($row = db_fetch_object($query)) {
-    $types[] = $row->pcid;
-  }
-
-  $placeholders = array_fill(0, count($types), "'%s'");
-  $query = db_query('SELECT nid, title FROM {node} WHERE type IN ('. implode(',', $placeholders) .')', $types);
-
-  $products[0] = '--- Entire Order ---';
-  while ($row = db_fetch_object($query)) {
-    $products[$row->nid] = $row->title;
-  }
-
-  return $products;
-}
 
 /**
  * Load a coupon into the form for editing
@@ -367,7 +498,11 @@ function uc_coupon_load_products() {
  *  Returns a coupon object.
  */
 function uc_coupon_load($cid) {
-  return db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE cid = %d", $cid));
+  $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE cid = %d", $cid));
+  if ($coupon->data) {
+    $coupon->data = unserialize($coupon->data);
+  }
+  return $coupon;
 }
 
 /**
@@ -392,125 +527,147 @@ function uc_coupon_delete_confirm(&$form_state, $coupon) {
   return $confirm;
 }
 
-
-/**
- * Delete coupon form submit handler.
- */
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
-  if (db_query("DELETE FROM {uc_coupons} WHERE cid = %d", $form['#uc_coupon_cid'])) {
-    drupal_set_message("Coupon deleted successfully");
-  }
-  else {
-    drupal_set_message("Error deleting coupon");
-  }
+  db_query("DELETE FROM {uc_coupons} WHERE cid = %d", $form['#uc_coupon_cid']);
+  db_query("DELETE FROM {uc_coupons_orders} WHERE cid = %d", $form['#uc_coupon_cid']);
   $form_state['redirect'] = 'admin/store/customers/coupon';
 }
 
 /**
- * Coupon Validation Handler
+ * Validate a coupon and calculate the coupon amount against the current cart contents.
  *
  * @param $code
  *  The coupon code entered at the checkout screen
  *
- * @return $coupon_result
+ * @return
  *  Returns a coupon result object with details about the validation
  */
 function uc_coupon_validate($code) {
-  //  Get the code passed in from the coupon code form
-  $today = time();
+  global $user;
 
-  // the following query grabs a result with a matching code that has a valid date and is marked as active
-  $coupon_data = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, $today));
+  $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code = '%s' AND status ='1' AND valid_until > %d", $code, time()));
+  $result->valid = FALSE;
 
-  if ($coupon_data) {
-    $coupon_result->valid = FALSE;
+  if (!$coupon) {
+    $result->message = t('This coupon code is invalid or has expired.');
+    return $result;
+  }
 
-    if ($coupon_data->products) {
-      // Product coupons apply to the subtotal and quantity of matching products.
-      $coupon_products = explode(',', $coupon_data->products);
-      foreach (uc_cart_get_contents() as $item) {
-        $cart_total += $item->price * $item->qty;
-        if (in_array($item->nid, $coupon_products)) {
+  if ($coupon->data) {
+    $coupon->data = unserialize($coupon->data);
+  }
+
+  if (isset($coupon->data['products']) || isset($coupon->data['product_types'])) {
+    // Product coupons apply to the subtotal and quantity of matching products.
+    foreach (uc_cart_get_contents() as $item) {
+      $cart_total += $item->price * $item->qty;
+      if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) ^ in_array($item->nid, $coupon->data['products']))) {
+        $applicable_total += $item->price * $item->qty;
+        $applicable_qty += $item->qty;
+      }
+      else if (isset($coupon->data['product_types'])) {
+        $type = db_result(db_query("SELECT type FROM {node} WHERE nid = %d", $item->nid));
+        if (in_array($type, $coupon->data['product_types'])) {
           $applicable_total += $item->price * $item->qty;
           $applicable_qty += $item->qty;
         }
       }
     }
-    else {
-      // Standard coupons apply once to the whole cart.
-      foreach (uc_cart_get_contents() as $item) {
-        $cart_total += $item->price * $item->qty;
-      }
-      $applicable_total = $cart_total;
-      $applicable_qty = 1;
-    }
-
-    if ($applicable_total == 0) {
-      // Coupon does not apply to any products.
-      return $coupon_result;
-    }
-
-    //  CHECK MAX USES
-    if ($coupon_data->max_uses > 0) {
-        $coupon_used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d", $coupon_data->cid));
-        // Now that we have how many times it has been used we can check against its max uses
-      if ($coupon_used >= $coupon_data->max_uses) {
-        return $coupon_result;
-      }
-    }
-
-    //  CHECK MINIMUM PURCHASE VALUE
-    if ($coupon_data->minimum_order > 0 && $coupon_data->minimum_order > $cart_total) {
-      return $coupon_result;
-    }
-
-    //  CHECK USER ID
-    if ($coupon_data->users != '') {
-      global $user;
-      $users = explode(',', $coupon_data->users);
-      // Important to match the data by type as well, using the third parameter = true
-      // if not used then users with id = 0 will result in true for any check
-      if (!in_array($user->uid, $users, TRUE)) {
-        return $coupon_result;
-      }
-    }
-
-    // CHECK USER PERMISSIONS
-    // 1 - both wholesale and retail any user
-    // 2 - wholesale only -> users with 'coupon wholesale pricing'
-    // 3 - retail only -> users without 'coupon wholesale pricing'
-    if ($coupon_data->roles > 1) {
-      if ($coupon_data->roles == 2) {
-        if (!user_access('coupon wholesale pricing')) {
-          return $coupon_result;
-        } 
-      }
-      else if ($coupon_data->roles == 3) {
-        if (user_access('coupon wholesale pricing')) {
-          return $coupon_result;
-        }
-      }
-    }
-
-    $coupon_result->valid = TRUE;
-    $coupon_result->code = $coupon_data->code;
-    $coupon_result->cid = $coupon_data->cid;
-    $coupon_result->title = t('Coupon: @code', array('@code' => $coupon_data->code));
-
-    if ($coupon_data->type == 'percentage') {
-      $coupon_result->amount = $applicable_total * $coupon_data->value / 100;
-    }
-    else if ($coupon_data->type == 'price') {
-      $coupon_result->amount = min($applicable_total, $applicable_qty * $coupon_data->value);
-    }
   }
   else {
-    // The coupon was not found, inactive, or is expired in the list of coupons
-    $coupon_result->valid = FALSE;
+    // Standard coupons apply once to the whole cart.
+    foreach (uc_cart_get_contents() as $item) {
+      $cart_total += $item->price * $item->qty;
+    }
+    $applicable_total = $cart_total;
+    $applicable_qty = 1;
   }
-  return $coupon_result;
-}
 
+  if ($applicable_total == 0) {
+    $result->message = t('You do not have applicable products in your cart.');
+    return $result;
+  }
+
+  //  CHECK MAX USES
+  if ($coupon->max_uses > 0) {
+    $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d", $coupon->cid));
+    if ($used >= $coupon->max_uses) {
+      $result->message = t('This coupon has reached the maximum redemption limit.');
+      return $result;
+    }
+  }
+
+  //  CHECK MAX USES PER USER
+  if (isset($coupon->data['max_uses_per_user'])) {
+    $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d AND uo.uid = %d", $coupon->cid, $user->uid));
+    if ($used >= $coupon->data['max_uses_per_user']) {
+      $result->message = t('This coupon has reached the maximum redemption limit.');
+      return $result;
+    }
+  }
+
+  //  CHECK MINIMUM PURCHASE VALUE
+  if ($coupon->minimum_order > 0 && $coupon->minimum_order > $cart_total) {
+    $result->message = t('You have not reached the minimum order total for this coupon.');
+    return $result;
+  }
+
+  //  CHECK USER ID
+  if (isset($coupon->data['users'])) {
+    if (!in_array("$user->uid", $coupon->data['users'], TRUE)) {
+      $result->message = t('Your user ID is not allowed to use this coupon.');
+      return $result;
+    }
+  }
+
+  // CHECK ROLES
+  if (isset($coupon->data['roles'])) {
+    $role_found = FALSE;
+    foreach ($coupon->data['roles'] as $role) {
+      if (in_array($role, $user->roles)) {
+        $role_found = TRUE;
+        break;
+      }
+    }
+    if (!$role_found) {
+      $result->message = t('You do not have the correct permission to use this coupon.');
+      return $result;
+    }
+  }
+
+  // CHECK USER PERMISSIONS
+  // 1 - both wholesale and retail any user
+  // 2 - wholesale only -> users with 'coupon wholesale pricing'
+  // 3 - retail only -> users without 'coupon wholesale pricing'
+  if ($coupon->data['wholesale'] > 1) {
+    if ($coupon->data['wholesale'] == 2) {
+      if (!user_access('coupon wholesale pricing')) {
+        $result->message = t('You do not have the correct permission to use this coupon.');
+        return $result;
+      }
+    }
+    else if ($coupon->data['wholesale'] == 3) {
+      if (user_access('coupon wholesale pricing')) {
+        $result->message = t('You do not have the correct permission to use this coupon.');
+        return $result;
+      }
+    }
+  }
+
+  $result->valid = TRUE;
+  $result->code = $coupon->code;
+  $result->cid = $coupon->cid;
+  $result->title = t('Coupon: @code', array('@code' => $coupon->code));
+
+  if ($coupon->type == 'percentage') {
+    $result->amount = $applicable_total * $coupon->value / 100;
+  }
+  else if ($coupon->type == 'price') {
+    $result->amount = min($applicable_total, $applicable_qty * $coupon->value);
+  }
+
+  return $result;
+}
 
 /**
  * Implementation of hook_checkout_pane().
@@ -569,7 +726,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
         $arg1->data['coupon'] = strtoupper(check_plain($arg2['code']));
         $coupon = uc_coupon_validate($arg1->data['coupon']);
         if (!$coupon->valid) {
-          drupal_set_message(t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.'), 'error');
+          drupal_set_message($coupon->message, 'error');
           return FALSE;
         }
 
@@ -600,10 +757,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
  **/
 function uc_coupon_checkout_apply() {
   $coupon = uc_coupon_validate(strtoupper($_POST['code']));
-  if (!$coupon->valid) {
-    $coupon->message = t('Sorry, the coupon you tried to use is invalid or cannot be applied to this order.');
-  }
-  else {
+  if ($coupon->valid) {
     $coupon->message = t('The coupon has been applied to your order.');
   }
 
