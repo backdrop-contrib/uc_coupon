@@ -269,9 +269,11 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
 
   $form['products'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Products'),
-    '#description' => t('Enter one or more products below to restrict this coupon to a set of products. Discounts will then apply to each matching product.'),
+    '#title' => t('Applicable products'),
+    '#description' => t('Enter one or more products below to restrict this coupon to a set of products, regardless of any product attributes. Discounts will apply to each matching product.'),
     '#tree' => TRUE,
+    '#collapsible' => TRUE,
+    '#collapsed' => !isset($value->data['products']),
   );
 
   $form['products']['negate_products'] = array(
@@ -302,11 +304,37 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     );
   }
 
+  $form['skus'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Applicable SKUs'),
+    '#description' => t('Enter one or more SKUs below to restrict this coupon to a set of SKUs, allowing coupons to apply to specific products or attribute options. Discounts will apply to matching SKU.'),
+    '#tree' => TRUE,
+    '#collapsible' => TRUE,
+    '#collapsed' => !isset($value->data['skus']),
+  );
+
+  if (isset($value->data['skus'])) {
+    foreach ($value->data['skus'] as $sku) {
+      $form['skus'][] = array(
+        '#type' => 'textfield',
+        '#default_value' => $sku,
+      );
+    }
+  }
+
+  for ($i = 0; $i < 3; $i++) {
+    $form['skus'][] = array(
+      '#type' => 'textfield',
+    );
+  }
+
   $form['users'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Users'),
+    '#title' => t('User restrictions'),
     '#description' => t('Enter one or more user names and/or "anonymous users" below to make this coupon valid only for those users.'),
     '#tree' => TRUE,
+    '#collapsible' => TRUE,
+    '#collapsed' => !isset($value->data['users']),
   );
 
   if (isset($value->data['users'])) {
@@ -329,9 +357,11 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
 
   $form['roles'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Roles'),
+    '#title' => t('Role restrictions'),
     '#description' => t('Enter one or more role names below to make this coupon valid only for users with those roles.'),
     '#tree' => TRUE,
+    '#collapsible' => TRUE,
+    '#collapsed' => !isset($value->data['roles']),
   );
 
   if (isset($value->data['roles'])) {
@@ -463,6 +493,12 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     }
   }
 
+  foreach ($form_state['values']['skus'] as $sku) {
+    if ($sku) {
+      $data['skus'][] = $sku;
+    }
+  }
+
   foreach ($form_state['values']['users'] as $key => $user) {
     if ($user && preg_match('/\[uid:(\d+)\]$/', $user, $matches)) {
       $data['users'][] = $matches[1];
@@ -557,11 +593,15 @@ function uc_coupon_validate($code) {
     $coupon->data = unserialize($coupon->data);
   }
 
-  if (isset($coupon->data['products']) || isset($coupon->data['product_types'])) {
+  if (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['product_types'])) {
     // Product coupons apply to the subtotal and quantity of matching products.
     foreach (uc_cart_get_contents() as $item) {
       $cart_total += $item->price * $item->qty;
       if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) ^ in_array($item->nid, $coupon->data['products']))) {
+        $applicable_total += $item->price * $item->qty;
+        $applicable_qty += $item->qty;
+      }
+      else if (isset($coupon->data['skus']) && in_array($item->model, $coupon->data['skus'])) {
         $applicable_total += $item->price * $item->qty;
         $applicable_qty += $item->qty;
       }
