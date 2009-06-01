@@ -710,6 +710,69 @@ function uc_coupon_validate($code) {
 }
 
 /**
+ * Implementation of hook_cart_pane().
+ */
+function uc_coupon_cart_pane($items) {
+  $panes[] = array(
+    'id' => 'coupon',
+    'body' => drupal_get_form('uc_cart_pane_coupon'),
+    'title' => t('Coupon discount'),
+    'desc' => t('Allows shoppers to use a coupon during checkout for order discounts.'),
+    'weight' => 1,
+    'enabled' => TRUE,
+  );
+  return $panes;
+}
+
+/**
+ * Cart pane coupon form.
+ */
+function uc_cart_pane_coupon($form_state) {
+  $form['code'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Coupon code'),
+    '#description' => variable_get('uc_coupon_pane_description', 'Enter a coupon code for this order.'),
+    '#size' => 25,
+  );
+  $form['apply'] = array(
+    '#type' => 'submit',
+    '#value' => t('Apply to order'),
+  );
+  return $form;
+}
+
+function uc_cart_pane_coupon_submit($form, &$form_state) {
+  if ($form_state['values']['code']) {
+    $code = strtoupper(check_plain($form_state['values']['code']));
+    $coupon = uc_coupon_validate($code);
+    if (!$coupon->valid) {
+      unset($_SESSION['uc_coupon']);
+      drupal_set_message($coupon->message, 'error');
+    }
+    else {
+      $_SESSION['uc_coupon'] = $code;
+      drupal_set_message(t('The coupon has been applied to your order.'));
+    }
+  }
+}
+
+/**
+ * Implementation of hook_order().
+ *
+ * Ensure any cart pane coupon is added to the order if the checkout page is skipped
+ * (e.g. Paypal Express Checkout, Google Checkout)
+ */
+function uc_coupon_order($op, &$arg1, $arg2) {
+  if ($op == 'save' && isset($_SESSION['uc_coupon'])) {
+    $coupon = uc_coupon_validate($_SESSION['uc_coupon']);
+    if ($coupon->valid) {
+      _uc_coupon_apply_to_order($arg1->order_id, $coupon);
+    }
+    unset($_SESSION['uc_coupon']);
+  }
+}
+
+/**
  * Implementation of hook_checkout_pane().
  *
  * Show a pane just above the order total that allows shoppers to enter a coupon
@@ -738,7 +801,16 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
     case 'view':
       drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.js');
 
-      $coupon = uc_coupon_validate($arg1->data['coupon']);
+      // Use coupon code from cart pane if available.
+      if ($_SESSION['uc_coupon']) {
+        $code = $_SESSION['uc_coupon'];
+        unset($_SESSION['uc_coupon']);
+      }
+      else {
+        $code = $arg1->data['coupon'];
+      }
+
+      $coupon = uc_coupon_validate($code);
       if ($coupon->valid) {
         uc_add_js('$(document).ready(function() {
           if (window.set_line_item) {
@@ -751,7 +823,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       $contents['code'] = array(
         '#type' => 'textfield',
         '#title' => t('Coupon code'),
-        '#default_value' => $arg1->data['coupon'],
+        '#default_value' => $code,
         '#size' => 25,
       );
       $contents['apply'] = array(
@@ -769,16 +841,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
           drupal_set_message($coupon->message, 'error');
           return FALSE;
         }
-
-        $result = db_query("SELECT line_item_id FROM {uc_order_line_items} WHERE order_id = %d AND type = 'coupon'", $arg1->order_id);
-        if ($lid = db_result($result)) {
-          db_query("UPDATE {uc_coupons_orders} SET cid = %d, code = '%s', value = %f WHERE oid = %d", $coupon->cid, $coupon->code, $coupon->amount, $arg1->order_id);
-          uc_order_update_line_item($lid, $coupon->title, -$coupon->amount);
-        }
-        else {
-          db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $coupon->cid, $arg1->order_id, $coupon->code, $coupon->amount);
-          uc_order_line_item_add($arg1->order_id, 'coupon', $coupon->title, -$coupon->amount);
-        }
+        _uc_coupon_apply_to_order($arg1->order_id, $coupon);
       }
       return TRUE;
 
@@ -804,6 +867,21 @@ function uc_coupon_checkout_apply() {
   drupal_set_header("Content-Type: text/javascript; charset=utf-8");
   print drupal_to_js($coupon);
   exit();
+}
+
+/**
+ * Create or update the coupon line item in an order.
+ */
+function _uc_coupon_apply_to_order($order_id, $coupon) {
+  $lid = db_result(db_query("SELECT line_item_id FROM {uc_order_line_items} WHERE order_id = %d AND type = 'coupon'", $order_id));
+  if ($lid) {
+    db_query("UPDATE {uc_coupons_orders} SET cid = %d, code = '%s', value = %f WHERE oid = %d", $coupon->cid, $coupon->code, $coupon->amount, $order_id);
+    uc_order_update_line_item($lid, $coupon->title, -$coupon->amount);
+  }
+  else {
+    db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $coupon->cid, $order_id, $coupon->code, $coupon->amount);
+    uc_order_line_item_add($order_id, 'coupon', $coupon->title, -$coupon->amount);
+  }
 }
 
 /**
