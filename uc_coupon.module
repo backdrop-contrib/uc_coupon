@@ -88,6 +88,12 @@ function uc_coupon_menu() {
     'access arguments' => array('manage store coupons'),
     'type' => MENU_CALLBACK,
   );
+  $items['uc_coupon/autocomplete/term'] = array(
+    'title' => 'Term autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_term',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+  );
   $items['uc_coupon/autocomplete/user'] = array(
     'title' => 'User autocomplete',
     'page callback' => 'uc_coupon_autocomplete_user',
@@ -328,6 +334,43 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     );
   }
 
+  $form['terms'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Applicable taxonomy terms'),
+    '#description' => t('Enter one or more taxonomy terms (categories) below to restrict this coupon to a set of products. Discounts will apply to all matching products with these terms.'),
+    '#tree' => TRUE,
+    '#collapsible' => TRUE,
+    '#collapsed' => !isset($value->data['terms']),
+  );
+
+  $form['terms']['negate_terms'] = array(
+    '#type' => 'radios',
+    '#default_value' => isset($value->data['negate_terms']) ? 1 : 0,
+    '#options' => array(
+      0 => t('Apply coupon to products with terms listed below.'),
+      1 => t('Apply coupon to all products except those with terms listed below.'),
+    ),
+    '#tree' => FALSE,
+  );
+
+  if (isset($value->data['terms'])) {
+    foreach ($value->data['terms'] as $tid) {
+      $name = db_result(db_query('SELECT name FROM {term_data} WHERE tid = %d', $tid));
+      $form['terms'][] = array(
+        '#type' => 'textfield',
+        '#default_value' => $name .' [tid:'. $tid .']',
+        '#autocomplete_path' => 'uc_coupon/autocomplete/term',
+      );
+    }
+  }
+
+  for ($i = 0; $i < 3; $i++) {
+    $form['terms'][] = array(
+      '#type' => 'textfield',
+      '#autocomplete_path' => 'uc_coupon/autocomplete/term',
+    );
+  }
+
   $form['users'] = array(
     '#type' => 'fieldset',
     '#title' => t('User restrictions'),
@@ -417,6 +460,16 @@ function uc_coupon_autocomplete_node($string) {
   exit;
 }
 
+function uc_coupon_autocomplete_term($string) {
+  $matches = array();
+  $result = db_query_range("SELECT tid, name FROM {term_data} WHERE name LIKE '%%%s%'", $string, 0, 10);
+  while ($row = db_fetch_object($result)) {
+    $matches[$row->name .' [tid:'. $row->tid .']'] = $row->name;
+  }
+  print drupal_to_js($matches);
+  exit;
+}
+
 function uc_coupon_autocomplete_user($string) {
   $matches = array();
   $anonymous = t('anonymous users');
@@ -481,6 +534,10 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     $data['negate_products'] = TRUE;
   }
 
+  if ($form_state['values']['negate_terms']) {
+    $data['negate_terms'] = TRUE;
+  }
+
   foreach ($form_state['values']['product_types'] as $type) {
     if ($type) {
       $data['product_types'][] = $type;
@@ -496,6 +553,12 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   foreach ($form_state['values']['skus'] as $sku) {
     if ($sku) {
       $data['skus'][] = $sku;
+    }
+  }
+
+  foreach ($form_state['values']['terms'] as $key => $term) {
+    if ($term && preg_match('/\[tid:(\d+)\]$/', $term, $matches)) {
+      $data['terms'][] = $matches[1];
     }
   }
 
@@ -593,15 +656,26 @@ function uc_coupon_validate($code) {
     $coupon->data = unserialize($coupon->data);
   }
 
-  if (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['product_types'])) {
+  if (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types'])) {
     // Product coupons apply to the subtotal and quantity of matching products.
     foreach (uc_cart_get_contents() as $item) {
       $cart_total += $item->price * $item->qty;
-      if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) ^ in_array($item->nid, $coupon->data['products']))) {
+
+      $terms = array();
+      $query = db_query("SELECT tid FROM {term_node} WHERE vid = %d", $item->vid);
+      while ($tid = db_result($query)) {
+        $terms[] = $tid;
+      }
+
+      if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) xor in_array($item->nid, $coupon->data['products']))) {
         $applicable_total += $item->price * $item->qty;
         $applicable_qty += $item->qty;
       }
       else if (isset($coupon->data['skus']) && in_array($item->model, $coupon->data['skus'])) {
+        $applicable_total += $item->price * $item->qty;
+        $applicable_qty += $item->qty;
+      }
+      else if (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
         $applicable_total += $item->price * $item->qty;
         $applicable_qty += $item->qty;
       }
