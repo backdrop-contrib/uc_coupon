@@ -67,6 +67,18 @@ function uc_coupon_schema() {
       'data' => array(
         'type' => 'text',
       ),
+      'bulk' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'bulk_seed' => array(
+        'type' => 'char',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
     ),
     'primary key' => array('cid'),
   );
@@ -143,6 +155,31 @@ function uc_coupon_update_6000() {
 
     db_drop_field($ret, 'uc_coupons_orders', 'user');
     db_drop_field($ret, 'uc_coupons_orders', 'role');
+  }
+
+  return $ret;
+}
+
+function uc_coupon_update_6001() {
+  $ret = array();
+
+  if (!db_column_exists('uc_coupons', 'bulk')) {
+    $field = array(
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => TRUE,
+      'default' => 0,
+    );
+    db_add_field($ret, 'uc_coupons', 'bulk', $field);
+
+    $field = array(
+      'type' => 'char',
+      'length' => 32,
+      'not null' => TRUE,
+      'default' => '',
+    );
+    db_add_field($ret, 'uc_coupons', 'bulk_seed', $field);
+    $ret[] = update_sql("UPDATE {uc_coupons} SET bulk_seed = MD5(RAND()) WHERE bulk_seed = ''");
   }
 
   return $ret;
