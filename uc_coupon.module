@@ -965,7 +965,7 @@ function uc_cart_pane_coupon_submit($form, &$form_state) {
     }
     else {
       $_SESSION['uc_coupon'] = $code;
-      drupal_set_message(t('The coupon has been applied to your order.'));
+      drupal_set_message(t('A coupon discount of !amount will be deducted from your order total at checkout.', array('!amount' => uc_currency_format($coupon->amount))));
     }
   }
 }
