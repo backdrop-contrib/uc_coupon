@@ -886,7 +886,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 
       $coupon = uc_coupon_validate($code);
       if ($coupon->valid) {
-        uc_add_js('$(document).ready(function() {
+        drupal_add_js('$(document).ready(function() {
           if (window.set_line_item) {
             set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 2);
           }
