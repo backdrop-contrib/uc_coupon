@@ -191,6 +191,8 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     $value = $coupon;
     $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} WHERE cid = %d", $value->cid));
     $form['#uc_coupon_cid'] = $value->cid;
+    $form['#uc_coupon'] = $value;
+    $form['#uc_coupon_used'] = $used;
   }
   else {
     $value->valid_until = time();
@@ -214,7 +216,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#description' => t('Coupon codes cannot be changed once they have been used in an order.'),
     '#default_value' => $value->code,
     '#size' => 25,
-    '#required' => TRUE,
+    '#required' => !$used,
     '#maxlength' => 14,
     '#disabled' => $used,
   );
@@ -579,7 +581,7 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     }
   }
 
-  if ($form_state['values']['bulk_generate'] && intval($form_state['values']['bulk_number']) <= 0) {
+  if (!$form['#uc_coupon_used'] && $form_state['values']['bulk_generate'] && intval($form_state['values']['bulk_number']) <= 0) {
     form_set_error('bulk_number', t('You must specify the number of codes to generate.'));
   }
 }
@@ -588,6 +590,12 @@ function uc_coupon_add_form_validate($form, &$form_state) {
  * Coupon form submit handler.
  */
 function uc_coupon_add_form_submit($form, &$form_state) {
+  // If the coupon was previously used, reset disabled textfields to their original values.
+  if ($form['#uc_coupon_used']) {
+    $form_state['values']['code'] = $form['#uc_coupon']->code;
+    $form_state['values']['bulk_number'] = $form['#uc_coupon']->data['bulk_number'];
+  }
+
   $code = strtoupper($form_state['values']['code']);
   $valid_until = mktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
   $data = array();
