@@ -138,10 +138,11 @@ function uc_coupon_display($view_type = 'active') {
   $header[] = array('data' => t('Name'), 'field' => 'name');
   $header[] = array('data' => t('Code'), 'field' => 'code', 'sort' => 'asc');
   $header[] = array('data' => t('Value'), 'field' => 'value');
+  $header[] = array('data' => t('Valid from'), 'field' => 'valid_from');
   $header[] = array('data' => t('Valid until'), 'field' => 'valid_until');
   $header[] = array('data' => t('Actions'));
 
-  $result = pager_query('SELECT cid, name, value, code, type, valid_until, bulk FROM {uc_coupons} WHERE status = %d'. tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
+  $result = pager_query('SELECT cid, name, value, code, type, valid_from, valid_until, bulk FROM {uc_coupons} WHERE status = %d'. tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
   $rows = array();
   while ($row = db_fetch_object($result)) {
     if ($row->type == 'percentage') {
@@ -159,7 +160,9 @@ function uc_coupon_display($view_type = 'active') {
     }
     $actions .= ' '. l(t('delete'), "admin/store/customers/coupon/$row->cid/delete");
 
-    $rows[] = array($row->name, $code, $value, format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y')), $actions);
+    $valid_from = format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
+    $valid_until = format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
+    $rows[] = array($row->name, $code, $value, $valid_from, $valid_until, $actions);
   }
 
   if (count($rows)) {
@@ -195,12 +198,14 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     $form['#uc_coupon_used'] = $used;
   }
   else {
+    $value->valid_from = time();
     $value->valid_until = time();
     $value->minimum_order = 0;
     $value->max_uses = 0;
     $used = 0;
   }
 
+  $value->valid_from = array('year' => format_date($value->valid_from, 'custom', 'Y'), 'month' => format_date($value->valid_from, 'custom', 'n'), 'day' => format_date($value->valid_from, 'custom', 'j'));
   $value->valid_until = array('year' => format_date($value->valid_until, 'custom', 'Y'), 'month' => format_date($value->valid_until, 'custom', 'n'), 'day' => format_date($value->valid_until, 'custom', 'j'));
 
   $form['name'] = array(
@@ -260,6 +265,14 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#default_value' => $value->data['bulk_length'],
     '#options' => drupal_map_assoc(range(8, 30)),
     '#disabled' => $used,
+  );
+
+  $form['valid_from'] = array(
+    '#type' => 'date',
+    '#title' => t('Start date'),
+    '#default_value' => $value->valid_from,
+    '#required' => TRUE,
+    '#after_build' => array('_uc_coupon_date_range'),
   );
 
   $form['valid_until'] = array(
@@ -584,6 +597,12 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   if (!$form['#uc_coupon_used'] && $form_state['values']['bulk_generate'] && intval($form_state['values']['bulk_number']) <= 0) {
     form_set_error('bulk_number', t('You must specify the number of codes to generate.'));
   }
+
+  $valid_from = mktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
+  $valid_until = mktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  if ($valid_from > $valid_until) {
+    form_set_error('valid_from', t('The coupon start date must be before the expiration date.'));
+  }
 }
 
 /**
@@ -597,6 +616,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   }
 
   $code = strtoupper($form_state['values']['code']);
+  $valid_from = mktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
   $valid_until = mktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
   $data = array();
 
@@ -657,11 +677,11 @@ function uc_coupon_add_form_submit($form, &$form_state) {
 
   if (!isset($form['#uc_coupon_cid'])) {
     // Only set bulk coupon seed once.
-    db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', %d, %d, %d, %d, '%s', %d, '%s')", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], md5(uniqid()));
+    db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_from, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', %d, %d, %d, %d, '%s', %d, '%s')", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], md5(uniqid()));
     drupal_set_message(t('Coupon %name has been created.', array('%name' => $form_state['values']['name'])));
   }
   else {
-    db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_until = %d, max_uses = %d, minimum_order = %d, data = '%s', bulk = %d WHERE cid = %d", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], $form['#uc_coupon_cid']);
+    db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_from = %d, valid_until = %d, max_uses = %d, minimum_order = %d, data = '%s', bulk = %d WHERE cid = %d", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], $form['#uc_coupon_cid']);
     drupal_set_message(t('Coupon %name has been updated.', array('%name' => $form_state['values']['name'])));
   }
 
@@ -742,7 +762,7 @@ function uc_coupon_get_bulk_code($coupon, $id) {
  */
 function uc_coupon_find($code) {
   // Look for matching single coupon first.
-  $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code = '%s' AND status = 1 AND bulk = 0 AND valid_until > %d", $code, time()));
+  $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code = '%s' AND status = 1 AND bulk = 0 AND valid_from < %d AND valid_until > %d", $code, time(), time()));
   if ($coupon !== FALSE) {
     if ($coupon->data) {
       $coupon->data = unserialize($coupon->data);
@@ -751,7 +771,7 @@ function uc_coupon_find($code) {
   }
 
   // Look through bulk coupons.
-  $result = db_query("SELECT * FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_until > %d", time());
+  $result = db_query("SELECT * FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_from < %d AND valid_until > %d", time(), time());
   while ($coupon = db_fetch_object($result)) {
     // Check coupon prefix.
     $prefix_length = strlen($coupon->code);

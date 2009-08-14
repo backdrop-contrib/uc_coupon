@@ -48,6 +48,9 @@ function uc_coupon_schema() {
         'not null' => TRUE,
         'default' => 1,
       ),
+      'valid_from' => array(
+        'type' => 'int',
+      ),
       'valid_until' => array(
         'type' => 'int',
       ),
@@ -180,6 +183,16 @@ function uc_coupon_update_6001() {
     );
     db_add_field($ret, 'uc_coupons', 'bulk_seed', $field);
     $ret[] = update_sql("UPDATE {uc_coupons} SET bulk_seed = MD5(RAND()) WHERE bulk_seed = ''");
+  }
+
+  return $ret;
+}
+
+function uc_coupon_update_6002() {
+  $ret = array();
+
+  if (!db_column_exists('uc_coupons', 'valid_from')) {
+    db_add_field($ret, 'uc_coupons', 'valid_from', array('type' => 'int'));
   }
 
   return $ret;
