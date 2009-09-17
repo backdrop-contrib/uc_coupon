@@ -182,7 +182,7 @@ function uc_coupon_update_6001() {
       'default' => '',
     );
     db_add_field($ret, 'uc_coupons', 'bulk_seed', $field);
-    $ret[] = update_sql("UPDATE {uc_coupons} SET bulk_seed = MD5(RAND()) WHERE bulk_seed = ''");
+    $ret[] = update_sql("UPDATE {uc_coupons} SET bulk_seed = MD5(CAST(RAND() AS CHAR(32))) WHERE bulk_seed = ''");
   }
 
   return $ret;
