@@ -677,7 +677,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
 
   if (!isset($form['#uc_coupon_cid'])) {
     // Only set bulk coupon seed once.
-    db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_from, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', %d, %d, %d, %d, '%s', %d, '%s')", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], md5(uniqid()));
+    db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_from, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', %d, %d, %d, %d, %f, '%s', %d, '%s')", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], md5(uniqid()));
     drupal_set_message(t('Coupon %name has been created.', array('%name' => $form_state['values']['name'])));
   }
   else {
