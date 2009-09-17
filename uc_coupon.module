@@ -248,7 +248,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
       '#default_value' => $value->bulk,
     );
   }
-  
+
   $form['bulk']['bulk_number'] = array(
     '#type' => 'textfield',
     '#title' => t('Number of codes to generate'),
@@ -257,7 +257,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#maxlength' => 10,
     '#disabled' => $used,
   );
-  
+
   $form['bulk']['bulk_length'] = array(
     '#type' => 'select',
     '#title' => t('Code length'),
@@ -335,6 +335,27 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : 0,
     '#description' => t('Enter the maximum number of times this coupon can be used by a single user, or 0 for unlimited.'),
     '#size' => 5,
+    '#required' => TRUE,
+  );
+
+  $form['max_applicable_products'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum number of applicable products'),
+    '#description' => t('For coupons that are limited in application by product class, product node, SKU, or taxonomy term, specify the maximum number of applicable products to which the discount should be applied. Enter 0 to apply the discount to every product.'),
+    '#default_value' => isset($value->data['max_applicable_products']) ? $value->data['max_applicable_products'] : 0,
+    '#size' => 5,
+    '#required' => TRUE,
+  );
+
+  $form['max_applicable_products_value'] = array(
+    '#type' => 'radios',
+    '#title' => t('Apply against which products'),
+    '#description' => t('For coupons that have a limited number of applicable products, specify to which products the discount should be applied.'),
+    '#options' => array(
+      'cheapest' => t('The cheapest product(s)'),
+      'expensive' => t('The most expensive product(s)'),
+    ),
+    '#default_value' => isset($value->data['max_applicable_products_value']) ? $value->data['max_applicable_products_value'] : 'cheapest',
     '#required' => TRUE,
   );
 
@@ -605,6 +626,13 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   if ($valid_from > $valid_until) {
     form_set_error('valid_from', t('The coupon start date must be before the expiration date.'));
   }
+
+  if ($form_state['values']['max_applicable_products']) {
+    $restrictions = array_filter($form_state['values']['product_types'] + $form_state['values']['products'] + $form_state['values']['skus'] + $form_state['values']['terms']);
+    if (empty($restrictions)) {
+      form_set_error('max_applicable_products', t('To use the maximum number of applicable products feature, you must restrict the coupon by product class, product node, SKU, or taxonomy term.'));
+    }
+  }
 }
 
 /**
@@ -629,6 +657,14 @@ function uc_coupon_add_form_submit($form, &$form_state) {
 
   if ($form_state['values']['max_uses_per_user']) {
     $data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
+  }
+
+  if ($form_state['values']['max_applicable_products']) {
+    $data['max_applicable_products'] = $form_state['values']['max_applicable_products'];
+  }
+
+  if ($form_state['values']['max_applicable_products_value']) {
+    $data['max_applicable_products_value'] = $form_state['values']['max_applicable_products_value'];
   }
 
   if ($form_state['values']['negate_products']) {
@@ -800,7 +836,7 @@ function uc_coupon_find($code) {
       return $coupon;
     }
   }
-  
+
   return FALSE;
 }
 
@@ -827,6 +863,8 @@ function uc_coupon_validate($code) {
   }
 
   if (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types'])) {
+    $prices = array();
+
     // Product coupons apply to the subtotal and quantity of matching products.
     foreach (uc_cart_get_contents() as $item) {
       $cart_total += $item->price * $item->qty;
@@ -838,24 +876,49 @@ function uc_coupon_validate($code) {
       }
 
       if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) xor in_array($item->nid, $coupon->data['products']))) {
-        $applicable_total += $item->price * $item->qty;
-        $applicable_qty += $item->qty;
+        $prices = array_pad($prices, count($prices) + $item->qty, $item->price);
       }
       else if (isset($coupon->data['skus']) && in_array($item->model, $coupon->data['skus'])) {
-        $applicable_total += $item->price * $item->qty;
-        $applicable_qty += $item->qty;
+        $prices = array_pad($prices, count($prices) + $item->qty, $item->price);
       }
       else if (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
-        $applicable_total += $item->price * $item->qty;
-        $applicable_qty += $item->qty;
+        $prices = array_pad($prices, count($prices) + $item->qty, $item->price);
       }
       else if (isset($coupon->data['product_types'])) {
         $type = db_result(db_query("SELECT type FROM {node} WHERE nid = %d", $item->nid));
         if (in_array($type, $coupon->data['product_types'])) {
-          $applicable_total += $item->price * $item->qty;
-          $applicable_qty += $item->qty;
+          $prices = array_pad($prices, count($prices) + $item->qty, $item->price);
         }
       }
+    }
+
+    // If a maximum number of applicable products has been specified...
+    if (isset($coupon->data['max_applicable_products']) && ($num = $coupon->data['max_applicable_products']) > 0) {
+      // Sort the array of applicable product prices.
+      sort($prices);
+
+      // Slice the appropriate number of prices off the array.
+      if ($coupon->data['max_applicable_products_value'] == 'cheapest') {
+        $applicable_prices = array_slice($prices, 0, $num);
+      }
+      else {
+        $applicable_prices = array_slice($prices, -$num);
+      }
+
+      // Set the applicable total and quantity based on our new prices.
+      $applicable_total = 0;
+      foreach ($applicable_prices as $price) {
+        $applicable_total += $price;
+      }
+      $applicable_qty = $num;
+    }
+    else {
+      // Otherwise include all the prices in the applicable totals.
+      $applicable_total = 0;
+      foreach ($prices as $price) {
+        $applicable_total += $price;
+      }
+      $applicable_qty = count($prices);
     }
   }
   else {
