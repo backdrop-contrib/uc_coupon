@@ -681,7 +681,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     drupal_set_message(t('Coupon %name has been created.', array('%name' => $form_state['values']['name'])));
   }
   else {
-    db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_from = %d, valid_until = %d, max_uses = %d, minimum_order = %d, data = '%s', bulk = %d WHERE cid = %d", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], $form['#uc_coupon_cid']);
+    db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_from = %d, valid_until = %d, max_uses = %d, minimum_order = %f, data = '%s', bulk = %d WHERE cid = %d", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], $form['#uc_coupon_cid']);
     drupal_set_message(t('Coupon %name has been updated.', array('%name' => $form_state['values']['name'])));
   }
 
