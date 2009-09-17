@@ -311,11 +311,13 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
 
   $form['minimum_order'] = array(
     '#type' => 'textfield',
-    '#title' => t('Minimum order limit'),
+    '#title' => t('Minimum order total'),
     '#default_value' => $value->minimum_order,
     '#size' => 10,
     '#description' => t('A minimum order total that applies to the coupon, or 0 for no minimum order limit.'),
     '#required' => TRUE,
+    '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
+    '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
   );
 
   $form['max_uses'] = array(
