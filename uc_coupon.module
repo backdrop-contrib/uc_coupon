@@ -1331,7 +1331,21 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
  * Show a message if PayPal is enabled and "itemized order" is selected.
  */
 function _uc_coupon_paypal_check() {
-  if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wbs_submit_method', 'single') == 'itemized') {
-    drupal_set_message(t('To use coupons with PayPal you must select "Submit the whole order as a single line item". Click <a href="!url">here</a> to change this setting.', array('!url' => url('admin/store/settings/payment/edit/methods'))));
+  if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wps_submit_method', 'single') == 'itemized') {
+    drupal_set_message(t('To use coupons with PayPal you must select "Submit the whole order as a single line item". <a href="!url">Click here to change this setting</a>.', array('!url' => url('admin/store/settings/payment/edit/methods'))));
   }
+}
+
+/**
+ * Implementation of hook_store_status().
+ */
+function uc_coupon_store_status() {
+  if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wps_submit_method', 'single') == 'itemized') {
+    $statuses[] = array(
+      'status' => 'warning',
+      'title' => t('Coupons'),
+      'desc' => t('To use coupons with PayPal you must select "Submit the whole order as a single line item". <a href="!url">Click here to change this setting</a>.', array('!url' => url('admin/store/settings/payment/edit/methods'))),
+    );
+  }
+  return $statuses;
 }
