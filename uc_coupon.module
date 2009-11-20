@@ -1,6 +1,7 @@
 <?php
-
 // $Id$
+
+require_once 'uc_coupon.ca.inc';
 
 /**
  * @file
@@ -1355,4 +1356,38 @@ function uc_coupon_store_status() {
     );
   }
   return $statuses;
+}
+
+/**
+ * Implementation of hook_token_list().
+ */
+function uc_coupon_token_list($type = 'all') {
+  if ($type == 'coupon' || $type == 'ubercart' || $type == 'all') {
+    $tokens['coupon']['coupon-name'] = t('The coupon name.');
+    $tokens['coupon']['coupon-code'] = t('The coupon code.');
+    $tokens['coupon']['coupon-bulk-codes'] = t('The list of bulk coupon codes, if the coupon is a bulk coupon.');
+  }
+
+  return $tokens;
+}
+
+/**
+ * Implementation of hook_token_values().
+ */
+function uc_coupon_token_values($type, $object = NULL) {
+  switch ($type) {
+    case 'coupon':
+      $values['coupon-name'] = $object->name;
+      $values['coupon-code'] = $object->code;
+      if ($object->bulk) {
+        $codes = array();
+        for ($id = 0; $id < $object->data['bulk_number']; $id++) {
+          $codes[] = uc_coupon_get_bulk_code($object, $id);
+        }
+        $values['coupon-bulk-codes'] .= implode("<br />", $codes);
+      }
+      break;
+  }
+
+  return $values;
 }

@@ -19,7 +19,7 @@ function uc_coupon_schema() {
       ),
       'name' => array(
         'type' => 'varchar',
-        'length' => 30,
+        'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -195,6 +195,15 @@ function uc_coupon_update_6002() {
     db_add_field($ret, 'uc_coupons', 'valid_from', array('type' => 'int'));
     $ret[] = update_sql("UPDATE {uc_coupons} SET valid_from = 0");
   }
+
+  return $ret;
+}
+
+// Increase coupon name length to 255 characters.
+function uc_coupon_update_6003() {
+  $ret = array();
+
+  db_change_field($ret, 'uc_coupons', 'name', 'name', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
 
   return $ret;
 }

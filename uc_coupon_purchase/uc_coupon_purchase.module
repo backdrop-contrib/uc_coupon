@@ -1,0 +1,197 @@
+<?php
+// $Id$
+
+require_once 'uc_coupon_purchase.ca.inc';
+
+/**
+ * Implementation of hook_product_feature().
+ */
+function uc_coupon_purchase_product_feature() {
+  $features[] = array(
+    'id' => 'coupon',
+    'title' => t('Coupon creation'),
+    'callback' => 'uc_coupon_purchase_feature_form',
+    'delete' => 'uc_coupon_purchase_feature_delete',
+    'settings' => 'uc_coupon_purchase_feature_settings',
+  );
+
+  return $features;
+}
+
+/**
+ * Form builder for hook_product_feature().
+ */
+function uc_coupon_purchase_feature_form($form_state, $node, $feature) {
+  $models = array(NULL => t('Any'), $node->model => $node->model);
+  if (module_exists('uc_attribute')) {
+    $adjustments = db_query("SELECT model FROM {uc_product_adjustments} WHERE nid = %d", $node->nid);
+    while ($adjustment = db_fetch_object($adjustments)) {
+      if (!in_array($adjustment->model, $models)) {
+        $models[$adjustment->model] = $adjustment->model;
+      }
+    }
+  }
+
+  if (!empty($feature)) {
+    $data = db_fetch_object(db_query("SELECT * FROM {uc_coupon_purchase} WHERE pfid = %d", $feature['pfid']));
+    $form['pfid'] = array(
+      '#type' => 'value',
+      '#value' => $feature['pfid'],
+    );
+  }
+  else {
+    $data = new stdClass();
+  }
+
+  $coupons = array();
+  $result = db_query("SELECT cid, name, code FROM {uc_coupons}");
+  while ($coupon = db_fetch_object($result)) {
+    $coupons[$coupon->cid] = $coupon->name .' ('. $coupon->code .')';
+  }
+
+  $form['title'] = array(
+    '#type' => 'markup',
+    '#value' => '<h2>'. t('Coupon creation') .'</h2>',
+  );
+  $form['nid'] = array(
+    '#type' => 'value',
+    '#value' => $node->nid,
+  );
+  $form['model'] = array(
+    '#type' => 'select',
+    '#title' => t('Model/SKU'),
+    '#default_value' => $data->model,
+    '#description' => t('Select the model/SKU of the product that cause a coupon to be created.'),
+    '#options' => $models,
+  );
+  $form['base_cid'] = array(
+    '#type' => 'select',
+    '#title' => t('Base coupon'),
+    '#default_value' => $data->base_cid,
+    '#description' => t('Select the coupon that will be cloned and activated when a user purchases this product.'),
+    '#options' => $coupons,
+  );
+
+  return uc_product_feature_form($form);
+}
+
+function uc_coupon_purchase_feature_form_submit($form, &$form_state) {
+  $coupon = uc_coupon_load($form_state['values']['base_cid']);
+ 
+  $description = (empty($form_state['values']['model'])) ? t('<strong>SKU:</strong> Any<br/>') : t('<strong>SKU:</strong> !sku<br/>', array('!sku' => $form_state['values']['model']));
+  $description .=  t('<strong>Base coupon:</strong> !coupon<br/>', array('!coupon' => $coupon->name .' ('. $coupon->code .')'));
+
+  $data = array(
+    'pfid' => $form_state['values']['pfid'],
+    'nid' => $form_state['values']['nid'],
+    'fid' => 'coupon',
+    'description' => $description,
+  );
+
+  $form_state['redirect'] = uc_product_feature_save($data);
+
+  if ($form_state['values']['pfid'] == 0) {
+    $pfid = db_last_insert_id('uc_product_features', 'pfid');
+  }
+  else {
+    $pfid = $form_state['values']['pfid'];
+    db_query("DELETE FROM {uc_coupon_purchase} WHERE pfid = %d", $pfid);
+  }
+
+  db_query("INSERT INTO {uc_coupon_purchase} (pfid, nid, model, base_cid) VALUES (%d, %d, '%s', %d)", $pfid, $form_state['values']['nid'], $form_state['values']['model'], $form_state['values']['base_cid']);
+}
+
+/**
+ * Delete callback for product feature.
+ */
+function uc_coupon_purchase_feature_delete($pfid) {
+  db_query("DELETE FROM {uc_coupon_purchase} WHERE pfid = %d", $pfid);
+}
+
+/**
+ * Form builder for feature settings.
+ */
+function uc_coupon_purchase_feature_settings() {
+  foreach (uc_order_status_list('general') as $status) {
+    $statuses[$status['id']] = $status['title'];
+  }
+
+  $form['uc_coupon_purchase_order_status'] = array(
+    '#type' => 'select',
+    '#title' => t('Order status'),
+    '#default_value' => variable_get('uc_coupon_purchase_order_status', 'completed'),
+    '#description' => t('Select the order status that will cause the coupon to be created. Be aware that if payments are processed automatically, this happens before anonymous customers have an account created. This order status should not be reached before the user account exists.'),
+    '#options' => $statuses,
+  );
+
+  return $form;
+}
+
+/**
+ * Implementation of hook_uc_message().
+ */
+function uc_coupon_purchase_uc_message() {
+  $messages['uc_coupon_purchase_single_subject'] = t('[store-name]: coupon purchase');
+  $messages['uc_coupon_purchase_single_message'] = t("[order-first-name] [order-last-name], \n\nThanks to your order, [order-link], at [store-name] you now have a new coupon available to use with the code [coupon-code].\n\nThanks again, \n\n[store-name]\n[site-slogan]");
+  $messages['uc_coupon_purchase_bulk_subject'] = t('[store-name]: bulk coupon purchase');
+  $messages['uc_coupon_purchase_bulk_message'] = t("[order-first-name] [order-last-name], \n\nThanks to your order, [order-link], at [store-name] you now have a new set of coupons available to use with the following codes:\n\n[coupon-bulk-codes]\n\nThanks again, \n\n[store-name]\n[site-slogan]");
+
+  return $messages;
+}
+
+/**
+ * Implementation of hook_order().
+ */
+function uc_coupon_purchase_order($op, $order, $status) {
+  switch ($op) {
+    case 'update':
+      if ($status == variable_get('uc_coupon_purchase_order_status', 'completed') &&
+          $order->status != $status &&
+          $order->uid > 0 &&
+          ($order_user = user_load(array('uid' => $order->uid))) !== FALSE) {
+        foreach ($order->products as $product) {
+          $result = db_query("SELECT * FROM {uc_coupon_purchase} WHERE nid = %d", $product->nid);
+          while ($row = db_fetch_object($result)) {
+            if ($row->model == $product->model || empty($row->model)) {
+              $coupon = uc_coupon_load($row->base_cid);
+              uc_coupon_purchase_create($coupon, $product->qty, $order);
+            }
+          }
+        }
+      }
+      break;
+  }
+}
+
+function uc_coupon_purchase_create($coupon, $qty, $order) {
+  global $user;
+
+  // Append purchaser data to the coupon name.
+  $purchaser = $order->billing_company ? $order->billing_company : ($order->billing_first_name .' '. $order->billing_last_name);
+  $coupon->name .= ' '. t('purchased by !name', array('!name' => $purchaser));
+  $coupon->data['order_id'] = $order->order_id;
+
+  // Append a random string to the coupon code and generate a new bulk seed.
+  $coupon->code .= strtoupper(user_password(5));
+  $coupon->bulk_seed = md5(uniqid());
+
+  // If the quantity purchased was more than 1, convert to a bulk coupon.
+  if ($qty > 1) {
+    $coupon->bulk = TRUE;
+    if (!isset($coupon->data['bulk_length'])) {
+      $coupon->data['bulk_length'] = 8;
+    }
+
+    if (!isset($coupon->data['bulk_number'])) {
+      $coupon->data['bulk_number'] = 1;
+    }
+    $coupon->data['bulk_number'] *= $qty;
+  }
+  
+  // Create coupon and save order comment.
+  db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_from, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', 1, %d, %d, %d, %f, '%s', %d, '%s')", $coupon->name, $coupon->code, $coupon->value, $coupon->type, $coupon->valid_from, $coupon->valid_until, $coupon->max_uses, $coupon->minimum_order, serialize($coupon->data), $coupon->bulk, $coupon->bulk_seed);
+  uc_order_comment_save($order->order_id, $user->uid, t('Coupon created with code %code.', array('%code' => $coupon->code)));
+
+  // Fire conditional actions to send emails for this coupon purchase.
+  ca_pull_trigger('uc_coupon_purchase', $order, $coupon);
+}
