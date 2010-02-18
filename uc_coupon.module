@@ -894,7 +894,7 @@ function uc_coupon_validate($code) {
 
   $result->valid = FALSE;
 
-  $code = strtoupper($code);
+  $code = trim(strtoupper($code));
   $coupon = uc_coupon_find($code);
 
   if (!$coupon) {
@@ -1090,7 +1090,7 @@ function uc_cart_pane_coupon($form_state) {
 
 function uc_cart_pane_coupon_submit($form, &$form_state) {
   if ($form_state['values']['code']) {
-    $code = strtoupper(check_plain($form_state['values']['code']));
+    $code = $form_state['values']['code'];
     $coupon = uc_coupon_validate($code);
     if (!$coupon->valid) {
       unset($_SESSION['uc_coupon']);
@@ -1182,7 +1182,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 
     case 'process':
       if ($arg2['code']) {
-        $arg1->data['coupon'] = strtoupper(check_plain($arg2['code']));
+        $arg1->data['coupon'] = $arg2['code'];
         $coupon = uc_coupon_validate($arg1->data['coupon']);
         if (!$coupon->valid) {
           drupal_set_message($coupon->message, 'error');
