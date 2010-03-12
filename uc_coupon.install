@@ -31,7 +31,7 @@ function uc_coupon_schema() {
       ),
       'value' => array(
         'type' => 'numeric',
-        'precision' => 6,
+        'precision' => 10,
         'scale' => 2,
         'not null' => TRUE,
         'default' => 0,
@@ -62,7 +62,7 @@ function uc_coupon_schema() {
       ),
       'minimum_order' => array(
         'type' => 'numeric',
-        'precision' => 6,
+        'precision' => 10,
         'scale' => 2,
         'not null' => TRUE,
         'default' => 0,
@@ -204,6 +204,16 @@ function uc_coupon_update_6003() {
   $ret = array();
 
   db_change_field($ret, 'uc_coupons', 'name', 'name', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
+
+  return $ret;
+}
+
+// Increase precision of value and minimum_order fields.
+function uc_coupon_update_6004() {
+  $ret = array();
+
+  db_change_field($ret, 'uc_coupons', 'value', 'value', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
+  db_change_field($ret, 'uc_coupons', 'minimum_order', 'minimum_order', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
 
   return $ret;
 }
