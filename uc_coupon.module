@@ -1047,7 +1047,7 @@ function uc_coupon_validate($code) {
   $result->title = t('Coupon: @code', array('@code' => $code));
 
   if ($coupon->type == 'percentage') {
-    $result->amount = $applicable_total * $coupon->value / 100;
+    $result->amount = round($applicable_total * $coupon->value / 100, variable_get('uc_currency_prec', 2));
   }
   else if ($coupon->type == 'price') {
     $result->amount = min($applicable_total, $applicable_qty * $coupon->value);
