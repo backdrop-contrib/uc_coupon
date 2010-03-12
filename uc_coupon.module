@@ -661,8 +661,8 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     form_set_error('bulk_number', t('You must specify the number of codes to generate.'));
   }
 
-  $valid_from = mktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
-  $valid_until = mktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  $valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
+  $valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
   if ($valid_from > $valid_until) {
     form_set_error('valid_from', t('The coupon start date must be before the expiration date.'));
   }
@@ -686,8 +686,8 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   }
 
   $code = strtoupper($form_state['values']['code']);
-  $valid_from = mktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
-  $valid_until = mktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  $valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
+  $valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
   $data = array();
 
   if ($form_state['values']['bulk_generate']) {
