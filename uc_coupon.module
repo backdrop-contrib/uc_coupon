@@ -150,7 +150,11 @@ function uc_coupon_title($coupon) {
  * Implementation of hook_perm().
  */
 function uc_coupon_perm() {
-  return array('view store coupons', 'manage store coupons', 'coupon wholesale pricing');
+  $perms = array('view store coupons', 'manage store coupons', 'coupon wholesale pricing');
+  if (!module_exists('uc_reports')) {
+    $perms[] = 'view reports';
+  }
+  return $perms;
 }
 
 /**
