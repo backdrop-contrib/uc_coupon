@@ -301,7 +301,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
   $form['bulk']['bulk_length'] = array(
     '#type' => 'select',
     '#title' => t('Code length'),
-    '#description' => t('The number of characters selected here will be appended to the coupon code entered above..'),
+    '#description' => t('The number of characters selected here will be appended to the base code entered above when generating bulk and purchased coupons.'),
     '#default_value' => $value->data['bulk_length'],
     '#options' => drupal_map_assoc(range(8, 30)),
     '#disabled' => $used,
@@ -692,8 +692,9 @@ function uc_coupon_add_form_submit($form, &$form_state) {
 
   if ($form_state['values']['bulk_generate']) {
     $data['bulk_number'] = $form_state['values']['bulk_number'];
-    $data['bulk_length'] = $form_state['values']['bulk_length'];
   }
+  // Use this as the code length for purchased coupons.
+  $data['bulk_length'] = $form_state['values']['bulk_length'];
 
   if ($form_state['values']['max_uses_per_user']) {
     $data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];

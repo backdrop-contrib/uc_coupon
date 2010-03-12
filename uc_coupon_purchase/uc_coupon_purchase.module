@@ -171,16 +171,17 @@ function uc_coupon_purchase_create($coupon, $qty, $order) {
   $coupon->name .= ' '. t('purchased by !name', array('!name' => $purchaser));
   $coupon->data['order_id'] = $order->order_id;
 
+  if (!isset($coupon->data['bulk_length'])) {
+    $coupon->data['bulk_length'] = 8;
+  }
+
   // Append a random string to the coupon code and generate a new bulk seed.
-  $coupon->code .= strtoupper(user_password(5));
+  $coupon->code .= strtoupper(user_password($coupon->data['bulk_length']));
   $coupon->bulk_seed = md5(uniqid());
 
   // If the quantity purchased was more than 1, convert to a bulk coupon.
   if ($qty > 1) {
     $coupon->bulk = TRUE;
-    if (!isset($coupon->data['bulk_length'])) {
-      $coupon->data['bulk_length'] = 8;
-    }
 
     if (!isset($coupon->data['bulk_number'])) {
       $coupon->data['bulk_number'] = 1;
