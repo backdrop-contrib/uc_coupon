@@ -1152,6 +1152,11 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
   switch ($op) {
     case 'view':
       drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.js');
+      drupal_add_js(array(
+        'ucURL' => array(
+          'applyCoupon' => url('cart/checkout/coupon'),
+        ),
+      ), 'setting');
 
       // Use coupon code from cart pane if available.
       if ($_SESSION['uc_coupon']) {

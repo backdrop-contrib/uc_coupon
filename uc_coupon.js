@@ -5,7 +5,7 @@ function getCoupon() {
 
   $.ajax({
     type: "POST",
-    url: Drupal.settings.basePath + "?q=cart/checkout/coupon",
+    url: Drupal.settings.ucURL.applyCoupon,
     data: {
       code: code.val()
     },
