@@ -214,7 +214,14 @@ function uc_coupon_display($view_type = 'active') {
     $output .= theme('pager', NULL, 20);
   }
   else {
-    $output = '<p>'. t('There are currently no !type coupons in the system.', array('!type' => $view_type)) .'</p>';
+    switch ($view_type) {
+      case 'active':
+        $output = '<p>'. t('There are currently no active coupons in the system.') .'</p>';
+        break;
+      case 'inactive':
+        $output = '<p>'. t('There are currently no inactive coupons in the system.') .'</p>';
+        break;
+    }
   }
 
   return $output;
@@ -339,8 +346,8 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#title' => t('Discount type'),
     '#default_value' => $value->type,
     '#options' => array(
-      'percentage' => 'Percentage',
-      'price' => 'Price'
+      'percentage' => t('Percentage'),
+      'price' => t('Price')
     ),
   );
 
@@ -570,13 +577,13 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
 
   $form['wholesale'] = array(
     '#type' => 'radios',
-    '#title' => 'Wholesale permissions',
+    '#title' => t('Wholesale permissions'),
     '#description' => t('Select the groups who are able to use this coupon. This option is deprecated, it is recommended that you leave this option as "Both wholesale and retail" use the role selection above instead.'),
     '#default_value' => isset($value->data['wholesale']) ? $value->data['wholesale'] : 1,
     '#options' => array(
-      '1' => 'Both wholesale and retail',
-      '2' => 'Wholesale buyers only',
-      '3' => 'Retail buyers only'
+      '1' => t('Both wholesale and retail'),
+      '2' => t('Wholesale buyers only'),
+      '3' => t('Retail buyers only')
     ),
     '#required' => TRUE,
   );
@@ -1083,7 +1090,7 @@ function uc_cart_pane_coupon($form_state) {
   $form['code'] = array(
     '#type' => 'textfield',
     '#title' => t('Coupon code'),
-    '#description' => variable_get('uc_coupon_pane_description', 'Enter a coupon code for this order.'),
+    '#description' => variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.')),
     '#size' => 25,
   );
   $form['apply'] = array(
@@ -1176,7 +1183,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
         });', 'inline');
       }
 
-      $description = variable_get('uc_coupon_pane_description', 'Enter a coupon code for this order.');
+      $description = variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.'));
       $contents['code'] = array(
         '#type' => 'textfield',
         '#title' => t('Coupon code'),
@@ -1206,7 +1213,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       $form['uc_coupon_pane_description'] = array(
         '#type' => 'textarea',
         '#title' => t('Checkout pane message'),
-        '#default_value' => variable_get('uc_coupon_pane_description', 'Enter a coupon code for this order.'),
+        '#default_value' => variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.')),
       );
       return $form;
   }
