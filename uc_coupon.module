@@ -1404,6 +1404,8 @@ function uc_coupon_store_status() {
  * Implementation of hook_token_list().
  */
 function uc_coupon_token_list($type = 'all') {
+  $tokens = array();
+
   if ($type == 'coupon' || $type == 'ubercart' || $type == 'all') {
     $tokens['coupon']['coupon-name'] = t('The coupon name.');
     $tokens['coupon']['coupon-code'] = t('The coupon code.');
@@ -1417,6 +1419,8 @@ function uc_coupon_token_list($type = 'all') {
  * Implementation of hook_token_values().
  */
 function uc_coupon_token_values($type, $object = NULL) {
+  $values = array();
+ 
   switch ($type) {
     case 'coupon':
       $values['coupon-name'] = $object->name;
