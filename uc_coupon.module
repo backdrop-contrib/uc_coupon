@@ -728,37 +728,37 @@ function uc_coupon_add_form_submit($form, &$form_state) {
 
   foreach ($form_state['values']['product_types'] as $type) {
     if ($type) {
-      $data['product_types'][] = $type;
+      $data['product_types'][$type] = $type;
     }
   }
 
   foreach ($form_state['values']['products'] as $key => $product) {
     if ($product && preg_match('/\[nid:(\d+)\]$/', $product, $matches)) {
-      $data['products'][] = $matches[1];
+      $data['products'][$matches[1]] = $matches[1];
     }
   }
 
   foreach ($form_state['values']['skus'] as $sku) {
     if ($sku) {
-      $data['skus'][] = $sku;
+      $data['skus'][$sku] = $sku;
     }
   }
 
   foreach ($form_state['values']['terms'] as $key => $term) {
     if ($term && preg_match('/\[tid:(\d+)\]$/', $term, $matches)) {
-      $data['terms'][] = $matches[1];
+      $data['terms'][$matches[1]] = $matches[1];
     }
   }
 
   foreach ($form_state['values']['users'] as $key => $user) {
     if ($user && preg_match('/\[uid:(\d+)\]$/', $user, $matches)) {
-      $data['users'][] = $matches[1];
+      $data['users'][$matches[1]] = $matches[1];
     }
   }
 
   foreach ($form_state['values']['roles'] as $role) {
     if ($role) {
-      $data['roles'][] = $role;
+      $data['roles'][$role] = $role;
     }
   }
 
