@@ -25,7 +25,7 @@ function uc_coupon_schema() {
       ),
       'code' => array(
         'type' => 'varchar',
-        'length' => 40,
+        'length' => 100,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -115,9 +115,9 @@ function uc_coupon_schema() {
       ),
       'code' => array(
         'type' => 'varchar',
-        'length' => 40,
+        'length' => 100,
         'not null' => TRUE,
-        'default' => 'default_code',
+        'default' => '',
       ),
     ),
     'primary key' => array('cuid'),
@@ -214,6 +214,22 @@ function uc_coupon_update_6004() {
 
   db_change_field($ret, 'uc_coupons', 'value', 'value', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
   db_change_field($ret, 'uc_coupons', 'minimum_order', 'minimum_order', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
+
+  return $ret;
+}
+
+// Increase coupon code length to 100 characters.
+function uc_coupon_update_6005() {
+  $ret = array();
+
+  $field = array(
+    'type' => 'varchar',
+    'length' => 100,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_change_field($ret, 'uc_coupons', 'code', 'code', $field);
+  db_change_field($ret, 'uc_coupons_orders', 'code', 'code', $field);
 
   return $ret;
 }

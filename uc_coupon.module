@@ -272,7 +272,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#default_value' => $value->code,
     '#size' => 25,
     '#required' => !$used,
-    '#maxlength' => 14,
+    '#maxlength' => 50,
     '#disabled' => $used,
   );
 
