@@ -191,8 +191,10 @@ function uc_coupon_purchase_create($coupon, $qty, $order) {
   
   // Create coupon and save order comment.
   db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_from, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', 1, %d, %d, %d, %f, '%s', %d, '%s')", $coupon->name, $coupon->code, $coupon->value, $coupon->type, $coupon->valid_from, $coupon->valid_until, $coupon->max_uses, $coupon->minimum_order, serialize($coupon->data), $coupon->bulk, $coupon->bulk_seed);
+  $coupon->cid = db_last_insert_id('uc_coupons', 'cid');
   uc_order_comment_save($order->order_id, $user->uid, t('Coupon created with code %code.', array('%code' => $coupon->code)));
 
-  // Fire conditional actions to send emails for this coupon purchase.
+  // Fire hook and conditional actions to send emails for this coupon purchase.
+  module_invoke_all('uc_coupon_purchase', $order, $coupon);
   ca_pull_trigger('uc_coupon_purchase', $order, $coupon);
 }
