@@ -263,6 +263,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#title' => t('Coupon name'),
     '#default_value' => $value->name,
     '#required' => TRUE,
+    '#weight' => -10,
   );
 
   $form['code'] = array(
@@ -274,6 +275,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#required' => !$used,
     '#maxlength' => 50,
     '#disabled' => $used,
+    '#weight' => -10,
   );
 
   $form['bulk'] = array(
@@ -282,6 +284,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#description' => t('The coupon code entered above will be used to prefix each generated code.'),
     '#collapsible' => TRUE,
     '#collapsed' => !$value->bulk,
+    '#weight' => -5,
   );
 
   if (!$used) {
@@ -310,7 +313,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
   $form['bulk']['bulk_length'] = array(
     '#type' => 'select',
     '#title' => t('Code length'),
-    '#description' => t('The number of characters selected here will be appended to the base code entered above when generating bulk and purchased coupons.'),
+    '#description' => t('The number of characters selected here will be appended to the code entered above when generating bulk coupons.'),
     '#default_value' => $value->data['bulk_length'],
     '#options' => drupal_map_assoc(range(8, 30)),
     '#disabled' => $used,

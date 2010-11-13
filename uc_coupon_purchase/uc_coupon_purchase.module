@@ -139,6 +139,50 @@ function uc_coupon_purchase_uc_message() {
   return $messages;
 }
 
+
+/**
+ * Implementation of hook_form_FORM_ID_alter() for uc_coupon_add_form().
+ *
+ * Modify the coupon add form to include coupon purchase options.
+ */
+function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
+  $value = $form['#uc_coupon'];
+
+  $form['uc_coupon_purchase'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Coupon purchase options'),
+    '#description' => t('These settings alter the generation of purchased coupons based on this coupon.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -1,
+  );
+  $form['uc_coupon_purchase']['purchase_suffix_length'] = array(
+    '#type' => 'select',
+    '#title' => t('Purchased coupon code suffix length'),
+    '#default_value' => isset($value->data['purchase_suffix_length']) ? $value->data['purchase_suffix_length'] : 12,
+    '#description' => t('A random string of at least this many characters will be appended to the base coupon code to ensure uniqueness.'),
+    '#options' => drupal_map_assoc(range(4, 30)),
+  );
+  $form['uc_coupon_purchase']['purchase_relative'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Alter coupon validity relative to the purchase date.'),
+    '#description' => t('Checking this box will make purchased coupons valid for the same time span as the base coupon, otherwise coupons will always be valid between the same dates.'),
+    '#default_value' => isset($value->data['purchase_relative']) ? $value->data['purchase_relative'] : FALSE,
+  );
+}
+
+/**
+ * Implementation of hook_uc_coupon_presave().
+ */
+function uc_coupon_purchase_uc_coupon_presave(&$coupon, $edit) {
+  if (isset($edit['purchase_suffix_length'])) {
+    $coupon->data['purchase_suffix_length'] = $edit['purchase_suffix_length'];
+  }
+  if (isset($edit['purchase_relative']) && $edit['purchase_relative']) {
+    $coupon->data['purchase_relative'] = TRUE;
+  }
+}
+
 /**
  * Implementation of hook_order().
  */
@@ -163,6 +207,9 @@ function uc_coupon_purchase_order($op, $order, $status) {
   }
 }
 
+/**
+ * Create newly purchased coupons, based on the supplied coupon object.
+ */
 function uc_coupon_purchase_create($coupon, $qty, $order) {
   global $user;
 
@@ -171,27 +218,38 @@ function uc_coupon_purchase_create($coupon, $qty, $order) {
   $coupon->name .= ' '. t('purchased by !name', array('!name' => $purchaser));
   $coupon->data['order_id'] = $order->order_id;
 
-  if (!isset($coupon->data['bulk_length'])) {
-    $coupon->data['bulk_length'] = 8;
-  }
+  $suffix_length = isset($coupon->data['purchase_suffix_length']) ? $coupon->data['purchase_suffix_length'] : 12;
 
-  // Append a random string to the coupon code and generate a new bulk seed.
-  $coupon->code .= strtoupper(user_password($coupon->data['bulk_length']));
-  $coupon->bulk_seed = md5(uniqid());
-
-  // If the quantity purchased was more than 1, convert to a bulk coupon.
-  if ($qty > 1) {
+  // If more than one coupon will be generated, ensure it is a bulk coupon.
+  if ($qty > 1 || $coupon->bulk) {
     $coupon->bulk = TRUE;
 
     if (!isset($coupon->data['bulk_number'])) {
       $coupon->data['bulk_number'] = 1;
     }
     $coupon->data['bulk_number'] *= $qty;
+
+    if (!isset($coupon->data['bulk_length'])) {
+      $coupon->data['bulk_length'] = 8;
+    }
+
+    // Adjust the suffix so single and bulk coupons are the same length where possible.
+    $suffix_length = max($suffix_length - $coupon->data['bulk_length'], 4);
+  }
+
+  // Adjust the validity dates.
+  if (isset($coupon->data['purchase_relative'])) {
+    $diff = $coupon->valid_until - $coupon->valid_from;
+    $coupon->valid_from = gmmktime();
+    $coupon->valid_until = $coupon->valid_from + $diff;
   }
   
-  // Create coupon and save order comment.
-  db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_from, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', 1, %d, %d, %d, %f, '%s', %d, '%s')", $coupon->name, $coupon->code, $coupon->value, $coupon->type, $coupon->valid_from, $coupon->valid_until, $coupon->max_uses, $coupon->minimum_order, serialize($coupon->data), $coupon->bulk, $coupon->bulk_seed);
-  $coupon->cid = db_last_insert_id('uc_coupons', 'cid');
+  // Create a new, active coupon with the suffix applied.
+  unset($coupon->cid);
+  $coupon->code .= strtoupper(user_password($suffix_length));
+  $coupon->status = TRUE;
+  uc_coupon_save($coupon);
+
   uc_order_comment_save($order->order_id, $user->uid, t('Coupon created with code %code.', array('%code' => $coupon->code)));
 
   // Fire hook and conditional actions to send emails for this coupon purchase.
