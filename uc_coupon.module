@@ -289,7 +289,6 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
       '#type' => 'checkbox',
       '#title' => t('Enable bulk generation of coupon codes.'),
       '#default_value' => $value->bulk,
-      '#disabled' => $used,
     );
   }
   else {
@@ -587,7 +586,11 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
     '#required' => TRUE,
   );
 
-  $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save coupon'),
+    '#weight' => 10,
+  );
 
   return $form;
 }
@@ -695,97 +698,99 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     $form_state['values']['bulk_number'] = $form['#uc_coupon']->data['bulk_number'];
   }
 
-  $code = strtoupper($form_state['values']['code']);
-  $valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
-  $valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
-  $data = array();
-
-  if ($form_state['values']['bulk_generate']) {
-    $data['bulk_number'] = $form_state['values']['bulk_number'];
-  }
-  // Use this as the code length for purchased coupons.
-  $data['bulk_length'] = $form_state['values']['bulk_length'];
-
-  if ($form_state['values']['max_uses_per_user']) {
-    $data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
+  $coupon = new stdClass;
+  if (isset($form['#uc_coupon_cid'])) {
+    $coupon->cid = $form['#uc_coupon_cid'];
   }
 
-  if ($form_state['values']['max_applicable_products']) {
-    $data['max_applicable_products'] = $form_state['values']['max_applicable_products'];
-  }
+  // Set basic coupon information.
+  $coupon->name = $form_state['values']['name'];
+  $coupon->code = strtoupper($form_state['values']['code']);
+  $coupon->bulk = $form_state['values']['bulk_generate'];
+  $coupon->data['bulk_number'] = $form_state['values']['bulk_generate'] ? $form_state['values']['bulk_number'] : 0;
+  $coupon->data['bulk_length'] = $form_state['values']['bulk_length'];
+  $coupon->valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
+  $coupon->valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  $coupon->status = $form_state['values']['status'];
+  $coupon->type = $form_state['values']['type'];
+  $coupon->value = $form_state['values']['value'];
+  $coupon->minimum_order = $form_state['values']['minimum_order'];
+  $coupon->max_uses = $form_state['values']['max_uses'];
+  $coupon->data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
+  $coupon->data['max_applicable_products'] = $form_state['values']['max_applicable_products'];
+  $coupon->data['max_applicable_products_value'] = $form_state['values']['max_applicable_products_value'];
 
-  if ($form_state['values']['max_applicable_products_value']) {
-    $data['max_applicable_products_value'] = $form_state['values']['max_applicable_products_value'];
-  }
+  // Map restrictions back to their IDs.
+  array_walk($form_state['values']['products'], '_uc_coupon_map_restriction', 'nid');
+  array_walk($form_state['values']['terms'], '_uc_coupon_map_restriction', 'tid');
+  array_walk($form_state['values']['users'], '_uc_coupon_map_restriction', 'uid');
 
-  if ($form_state['values']['negate_products']) {
-    $data['negate_products'] = TRUE;
-  }
+  // Set coupon restrictions.
+  $coupon->data['product_types'] = drupal_map_assoc(array_filter($form_state['values']['product_types']));
+  $coupon->data['negate_products'] = $form_state['values']['negate_products'];
+  $coupon->data['products'] = drupal_map_assoc(array_filter($form_state['values']['products']));
+  $coupon->data['skus'] = drupal_map_assoc(array_filter($form_state['values']['skus']));
+  $coupon->data['negate_terms'] = $form_state['values']['negate_terms'];
+  $coupon->data['terms'] = drupal_map_assoc(array_filter($form_state['values']['terms']));
+  $coupon->data['users'] = drupal_map_assoc(array_filter($form_state['values']['users'], 'is_numeric'));
+  $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
+  $coupon->data['wholesale'] = $form_state['values']['wholesale'];
 
-  if ($form_state['values']['negate_terms']) {
-    $data['negate_terms'] = TRUE;
-  }
+  // Remove zero values and empty arrays.
+  $coupon->data = array_filter($coupon->data);
 
-  foreach ($form_state['values']['product_types'] as $type) {
-    if ($type) {
-      $data['product_types'][$type] = $type;
-    }
-  }
+  uc_coupon_save($coupon, $form_state['values']);
 
-  foreach ($form_state['values']['products'] as $key => $product) {
-    if ($product && preg_match('/\[nid:(\d+)\]$/', $product, $matches)) {
-      $data['products'][$matches[1]] = $matches[1];
-    }
-  }
-
-  foreach ($form_state['values']['skus'] as $sku) {
-    if ($sku) {
-      $data['skus'][$sku] = $sku;
-    }
-  }
-
-  foreach ($form_state['values']['terms'] as $key => $term) {
-    if ($term && preg_match('/\[tid:(\d+)\]$/', $term, $matches)) {
-      $data['terms'][$matches[1]] = $matches[1];
-    }
-  }
-
-  foreach ($form_state['values']['users'] as $key => $user) {
-    if ($user && preg_match('/\[uid:(\d+)\]$/', $user, $matches)) {
-      $data['users'][$matches[1]] = $matches[1];
-    }
-  }
-
-  foreach ($form_state['values']['roles'] as $role) {
-    if ($role) {
-      $data['roles'][$role] = $role;
-    }
-  }
-
-  $data['wholesale'] = $form_state['values']['wholesale'];
-
-  if (!isset($form['#uc_coupon_cid'])) {
-    // Only set bulk coupon seed once.
-    db_query("INSERT INTO {uc_coupons} (name, code, value, type, status, valid_from, valid_until, max_uses, minimum_order, data, bulk, bulk_seed) VALUES ('%s', '%s', %f, '%s', %d, %d, %d, %d, %f, '%s', %d, '%s')", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], md5(uniqid()));
-    drupal_set_message(t('Coupon %name has been created.', array('%name' => $form_state['values']['name'])));
-  }
-  else {
-    db_query("UPDATE {uc_coupons} SET name = '%s', code = '%s', value = %f, type = '%s', status = %d, valid_from = %d, valid_until = %d, max_uses = %d, minimum_order = %f, data = '%s', bulk = %d WHERE cid = %d", $form_state['values']['name'], $code, $form_state['values']['value'], $form_state['values']['type'], $form_state['values']['status'], $valid_from, $valid_until, $form_state['values']['max_uses'], $form_state['values']['minimum_order'], serialize($data), $form_state['values']['bulk_generate'], $form['#uc_coupon_cid']);
-    drupal_set_message(t('Coupon %name has been updated.', array('%name' => $form_state['values']['name'])));
-  }
-
-  $form_state['redirect'] = 'admin/store/customers/coupon'. ($form_state['values']['status'] ? '' : '/inactive');
+  drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
+  $form_state['redirect'] = 'admin/store/customers/coupon'. ($coupon->status ? '' : '/inactive');
 }
 
+function _uc_coupon_map_restriction(&$value, $key, $prefix) {
+  if ($value && preg_match('/\[' . $prefix . ':(\d+)\]$/', $value, $matches)) {
+    $value = $matches[1];
+  }
+  else {
+    $value = FALSE;
+  }
+}
 
 /**
- * Load a coupon into the form for editing
+ * Save a coupon object.
+ * 
+ * If the 'cid' field is set, then this will update an existing coupon.
+ * Otherwise, a new bulk seed will be generated, the coupon will be
+ * inserted into the database, and $coupon->cid will be set.
+ * 
+ * @param $coupon
+ *   The coupon to save.
+ * 
+ * @param $edit
+ *   An optional array of extra data that other modules may need to save.
+ */
+function uc_coupon_save(&$coupon, $edit = array()) {
+  foreach (module_implements('uc_coupon_presave') as $module) {
+    $callback = $module . '_uc_coupon_presave';
+    $callback($coupon, $edit);
+  }
+
+  if (isset($coupon->cid)) {
+    drupal_write_record('uc_coupons', $coupon, 'cid');
+  }
+  else {
+    // For a new coupon, create a new bulk seed,
+    $coupon->bulk_seed = md5(uniqid());
+    drupal_write_record('uc_coupons', $coupon);
+  }
+}
+
+/**
+ * Load a coupon object.
  *
  * @param $cid
- *  Unique coupon ID.
+ *   Unique coupon ID.
  *
  * @return $coupon
- *  Returns a coupon object.
+ *   A coupon object.
  */
 function uc_coupon_load($cid) {
   $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE cid = %d", $cid));

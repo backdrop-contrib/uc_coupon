@@ -69,6 +69,7 @@ function uc_coupon_schema() {
       ),
       'data' => array(
         'type' => 'text',
+        'serialize' => TRUE,
       ),
       'bulk' => array(
         'type' => 'int',
