@@ -419,7 +419,7 @@ function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
   $form['product_types'] = array(
     '#type' => 'select',
     '#title' => t('Product classes'),
-    '#description' => t('Selecting one or more product classes will apply this coupon to <strong>all</strong> products of this class, overriding any other product restrictions. Select (none) if you only want to match more specific products below.'),
+    '#description' => t('Selecting one or more product classes will apply this coupon to <strong>all</strong> products of this class, overriding other restrictions (except for specific products or terms explicitly excluded below). Select (none) if you only want to match more specific products below.'),
     '#options' => $options,
     '#default_value' => $value->data['product_types'],
     '#multiple' => TRUE,
@@ -937,11 +937,17 @@ function uc_coupon_validate($code) {
       if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) xor in_array($item->nid, $coupon->data['products']))) {
         $prices = array_pad($prices, count($prices) + $item->qty, $item->price);
       }
+      else if (isset($coupon->data['products']) && isset($coupon->data['negate_products']) && in_array($item->nid, $coupon->data['products'])) {
+        ;// always exclude if in list of negated products
+      }
       else if (isset($coupon->data['skus']) && in_array($item->model, $coupon->data['skus'])) {
         $prices = array_pad($prices, count($prices) + $item->qty, $item->price);
       }
       else if (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
         $prices = array_pad($prices, count($prices) + $item->qty, $item->price);
+      }
+      else if (isset($coupon->data['terms']) && isset($coupon->data['negate_terms']) && count(array_intersect($terms, $coupon->data['terms']))) {
+        ;// always exclude if one of the terms is in the list of negated terms
       }
       else if (isset($coupon->data['product_types'])) {
         $type = db_result(db_query("SELECT type FROM {node} WHERE nid = %d", $item->nid));
