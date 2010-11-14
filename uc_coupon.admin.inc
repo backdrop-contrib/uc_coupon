@@ -349,7 +349,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   $form['max_uses_per_user'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per user)'),
-    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : ($action == 'edit' ? '0' : ''),
+    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : ($coupon ? '0' : ''),
     '#description' => t('Enter the maximum number of times this coupon can be used by a single user, or 0 for unlimited.'),
     '#size' => 5,
     '#required' => TRUE,
