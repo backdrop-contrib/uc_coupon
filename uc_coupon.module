@@ -19,7 +19,7 @@ require_once 'uc_coupon.ca.inc';
 function uc_coupon_menu() {
   $items = array();
 
-  $items['admin/store/customers/coupon'] = array(
+  $items['admin/store/coupons'] = array(
     'title' => 'Coupons',
     'description' => 'Manage store discount coupons.',
     'page callback' => 'uc_coupon_display',
@@ -27,74 +27,74 @@ function uc_coupon_menu() {
     'access arguments' => array('view store coupons'),
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['admin/store/customers/coupon/list'] = array(
+  $items['admin/store/coupons/list'] = array(
     'title' => 'Active coupons',
     'description' => 'View active coupons.',
     'page callback' => 'uc_coupon_display',
     'page arguments' => array('active'),
     'access arguments' => array('view store coupons'),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'type' => MENU_NORMAL_ITEM,
     'weight' => 0,
   );
-  $items['admin/store/customers/coupon/inactive'] = array(
+  $items['admin/store/coupons/inactive'] = array(
     'title' => 'Inactive coupons',
     'description' => 'View inactive coupons.',
     'page callback' => 'uc_coupon_display',
     'page arguments' => array('inactive'),
     'access arguments' => array('view store coupons'),
-    'type' => MENU_LOCAL_TASK,
+    'type' => MENU_NORMAL_ITEM,
     'weight' => 1,
   );
-  $items['admin/store/customers/coupon/add'] = array(
+  $items['admin/store/coupons/add'] = array(
     'title' => 'Add new coupon',
     'description' => 'Add a new coupon.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('uc_coupon_add_form', 'add'),
+    'page arguments' => array('uc_coupon_add_form'),
     'access arguments' => array('manage store coupons'),
-    'type' => MENU_LOCAL_TASK,
+    'type' => MENU_NORMAL_ITEM,
     'weight' => 2,
   );
-  $items['admin/store/customers/coupon/%uc_coupon'] = array(
+  $items['admin/store/coupons/%uc_coupon'] = array(
     'title callback' => 'uc_coupon_title',
-    'title arguments' => array(4),
+    'title arguments' => array(3),
     'description' => 'View coupon details.',
     'page callback' => 'uc_coupon_view',
-    'page arguments' => array(4),
+    'page arguments' => array(3),
     'access arguments' => array('view store coupons'),
     'file' => 'uc_coupon.admin.inc',
     'type' => MENU_CALLBACK,
     'weight' => 3,
   );
-  $items['admin/store/customers/coupon/%uc_coupon/view'] = array(
+  $items['admin/store/coupons/%uc_coupon/view'] = array(
     'title' => 'View',
     'description' => 'View coupon details.',
     'access arguments' => array('view store coupons'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => 0,
   );
-  $items['admin/store/customers/coupon/%uc_coupon/edit'] = array(
+  $items['admin/store/coupons/%uc_coupon/edit'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing coupon.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('uc_coupon_add_form', 'edit', 4),
+    'page arguments' => array('uc_coupon_add_form', 3),
     'access arguments' => array('manage store coupons'),
     'type' => MENU_LOCAL_TASK,
     'weight' => 1,
   );
-  $items['admin/store/customers/coupon/%uc_coupon/delete'] = array(
+  $items['admin/store/coupons/%uc_coupon/delete'] = array(
     'title' => 'Delete',
     'description' => 'Delete a coupon.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('uc_coupon_delete_confirm', 4),
+    'page arguments' => array('uc_coupon_delete_confirm', 3),
     'access arguments' => array('manage store coupons'),
     'type' => MENU_LOCAL_TASK,
     'weight' => 2,
   );
-  $items['admin/store/customers/coupon/%uc_coupon/codes'] = array(
+  $items['admin/store/coupons/%uc_coupon/codes'] = array(
     'title' => 'Download bulk coupon codes',
     'description' => 'Download the list of bulk coupon codes as a CSV file.',
     'page callback' => 'uc_coupon_codes_csv',
-    'page arguments' => array(4),
+    'page arguments' => array(3),
     'access arguments' => array('view store coupons'),
     'type' => MENU_CALLBACK,
   );
@@ -174,39 +174,26 @@ function uc_coupon_init() {
 function uc_coupon_display($view_type = 'active') {
   _uc_coupon_paypal_check();
 
-  $header[] = array('data' => t('Name'), 'field' => 'name');
-  $header[] = array('data' => t('Code'), 'field' => 'code', 'sort' => 'asc');
-  $header[] = array('data' => t('Value'), 'field' => 'value');
-  $header[] = array('data' => t('Valid from'), 'field' => 'valid_from');
-  $header[] = array('data' => t('Valid until'), 'field' => 'valid_until');
-  $header[] = array('data' => t('Actions'));
+  $header = array(
+    array('data' => t('Actions')),
+    array('data' => t('Name'), 'field' => 'name'),
+    array('data' => t('Code'), 'field' => 'code', 'sort' => 'asc'),
+    array('data' => t('Value'), 'field' => 'value'),
+    array('data' => t('Valid from'), 'field' => 'valid_from'),
+    array('data' => t('Valid until'), 'field' => 'valid_until'),
+  );
 
   $result = pager_query('SELECT cid, name, value, code, type, valid_from, valid_until, bulk FROM {uc_coupons} WHERE status = %d'. tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
   $rows = array();
   while ($row = db_fetch_object($result)) {
-    if ($row->type == 'percentage') {
-      $value = $row->value .'%';
-    }
-    else {
-      $value = uc_currency_format($row->value);
-    }
-
-    $code = $row->code;
-    $actions = l(t('view'), "admin/store/customers/coupon/$row->cid");
-    if (user_access('manage store coupons')) {
-      $actions .= ' '. l(t('edit'), "admin/store/customers/coupon/$row->cid/edit");
-    }
-    if ($row->bulk) {
-      $code .= '* '. t('(bulk)');
-      $actions .= ' '. l(t('codes'), "admin/store/customers/coupon/$row->cid/codes");
-    }
-    if (user_access('manage store coupons')) {
-      $actions .= ' '. l(t('delete'), "admin/store/customers/coupon/$row->cid/delete");
-    }
-
-    $valid_from = format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
-    $valid_until = format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
-    $rows[] = array($row->name, $code, $value, $valid_from, $valid_until, $actions);
+    $rows[] = array(
+      uc_coupon_actions($row),
+      check_plain($row->name),
+      check_plain($row->code) . ($row->bulk ? '* '. t('(bulk)') : ''),
+      $row->type == 'percentage' ? ($row->value . '%') : uc_currency_format($row->value),
+      format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
+      format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
+    );
   }
 
   if (count($rows)) {
@@ -224,24 +211,69 @@ function uc_coupon_display($view_type = 'active') {
     }
   }
 
+  $output .= '<p>'. l(t('Add a new coupon.'), 'admin/store/coupons/add') .'</p>';
+
   return $output;
 }
 
+/**
+ * Return the actions a user may perform on a coupon.
+ */
+function uc_coupon_actions($coupon) {
+  $actions = array();
 
+  if (user_access('view store coupons')) {
+    $alt = t('View coupon: @name', array('@name' => $coupon->name));
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid,
+      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_view.gif" alt="'. $alt .'" />',
+      'title' => $alt,
+    );
+  }
+
+  if (user_access('view store coupons') && $coupon->bulk) {
+    $alt = t('Download codes as CSV: @name', array('@name' => $coupon->name));
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid .'/codes',
+      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/menu_reports_small.gif" alt="'. $alt .'" />',
+      'title' => $alt,
+    );
+  }
+
+  if (user_access('manage store coupons')) {
+    $alt = t('Edit coupon: @name', array('@name' => $coupon->name));
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid .'/edit',
+      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_edit.gif" alt="'. $alt .'" />',
+      'title' => $alt,
+    );
+  }
+
+  if (user_access('manage store coupons')) {
+    $alt = t('Delete coupon: @name', array('@name' => $coupon->name));
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid .'/delete',
+      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_delete.gif" alt="'. $alt .'" />',
+      'title' => $alt,
+    );
+  }
+
+  foreach ($actions as &$action) {
+    $action = l($action['icon'], $action['url'], array('attributes' => array('title' => $action['title']), 'html' => TRUE));
+  }
+  return implode(' ', $actions);
+}
 
 /**
- *  Form builder for product attributes.
- *
- * @param $action string
- * Form action, edit or add. 'edit' loads default values.
+ * Coupon add/edit form.
  *
  * @param $coupon object
- * Coupon, used to load defaults when $action = 'edit'
+ *   Coupon object, or NULL to add a new coupon.
  */
-function uc_coupon_add_form($form_state, $action, $coupon = NULL) {
+function uc_coupon_add_form($form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
-  if ($action == 'edit') {
+  if ($coupon) {
     $value = $coupon;
     $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} WHERE cid = %d", $value->cid));
     $form['#uc_coupon_cid'] = $value->cid;
@@ -745,7 +777,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   uc_coupon_save($coupon, $form_state['values']);
 
   drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
-  $form_state['redirect'] = 'admin/store/customers/coupon'. ($coupon->status ? '' : '/inactive');
+  $form_state['redirect'] = 'admin/store/coupons'. ($coupon->status ? '' : '/inactive');
 }
 
 function _uc_coupon_map_restriction(&$value, $key, $prefix) {
@@ -814,7 +846,7 @@ function uc_coupon_load($cid) {
  */
 function uc_coupon_delete_confirm(&$form_state, $coupon) {
   $form['#uc_coupon_cid'] = $coupon->cid;
-  return confirm_form($form, t('Are you sure you want to delete coupon %name with code %code?', array('%name' => $coupon->name, '%code' => $coupon->code)), 'admin/store/customers/coupon', t('This action cannot be undone. Deleting this coupon will remove all records of past uses as well.'), t('Delete'));
+  return confirm_form($form, t('Are you sure you want to delete coupon %name with code %code?', array('%name' => $coupon->name, '%code' => $coupon->code)), 'admin/store/coupons', t('This action cannot be undone. Deleting this coupon will remove all records of past uses as well.'), t('Delete'));
 }
 
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
@@ -824,7 +856,7 @@ function uc_coupon_delete_confirm_submit($form, &$form_state) {
   db_query("DELETE FROM {uc_coupons_orders} WHERE cid = %d", $form['#uc_coupon_cid']);
 
   drupal_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
-  $form_state['redirect'] = 'admin/store/customers/coupon'. ($coupon->status ? '' : '/inactive');
+  $form_state['redirect'] = 'admin/store/coupons'. ($coupon->status ? '' : '/inactive');
 }
 
 /**
@@ -1372,7 +1404,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
       }
       // if this is the first coupon of the set display the header first
       if ($row->cid != $last_cid || $last_cid = 0) {
-        $data .= '<div class="totals">'. t('Coupon code: !link', array('!link' => l($row->code, 'admin/store/customers/coupon/'. $row->cid .'/edit'))) .'</div>';
+        $data .= '<div class="totals">'. t('Coupon code: !link', array('!link' => l($row->code, 'admin/store/coupons/'. $row->cid .'/edit'))) .'</div>';
       }
       $td[] = array(l('#'. $row->oid, 'admin/store/orders/'. $row->oid), format_date($row->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y')), uc_currency_format($row->order_total), uc_currency_format($row->value));
       $num_uses++;
