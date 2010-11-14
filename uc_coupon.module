@@ -629,22 +629,26 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
         ),
       ), 'setting');
 
-      // Use coupon code from cart pane if available.
-      if ($_SESSION['uc_coupon']) {
+      if (isset($_SESSION['uc_coupon'])) {
         $code = $_SESSION['uc_coupon'];
       }
+      else if (isset($arg1->data['coupon'])) {
+        $code = $_SESSION['uc_coupon'] = $arg1->data['coupon'];
+      }
       else {
-        $code = $arg1->data['coupon'];
+        $code = '';
       }
 
-      $coupon = uc_coupon_validate($code);
-      if ($coupon->valid) {
-        drupal_add_js('$(document).ready(function() {
-          if (window.set_line_item) {
-            li_values["subtotal"] += ' . $coupon->amount . ';
-            set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 2);
-          }
-        });', 'inline');
+      if ($code) {
+        $coupon = uc_coupon_validate($code);
+        if ($coupon->valid) {
+          drupal_add_js('$(document).ready(function() {
+            if (window.set_line_item) {
+              li_values["subtotal"] += ' . $coupon->amount . ';
+              set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 2);
+            }
+          });', 'inline');
+        }
       }
 
       $description = variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.'));
@@ -669,8 +673,8 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
           drupal_set_message($coupon->message, 'error');
           return FALSE;
         }
+        $_SESSION['uc_coupon'] = $arg1->data['coupon'];
         _uc_coupon_apply_to_order($arg1->order_id, $coupon);
-        unset($_SESSION['uc_coupon']);
       }
       return TRUE;
 
@@ -839,4 +843,13 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
     }
     $form['cart_contents']['#value'] = serialize($items);
   }
+}
+
+/**
+ * Implementation of hook_checkout_complete().
+ *
+ * Ensure the stored coupon code is reset after checkout.
+ */
+function uc_coupon_uc_checkout_complete($order, $account) {
+  unset($_SESSION['uc_coupon']);
 }
