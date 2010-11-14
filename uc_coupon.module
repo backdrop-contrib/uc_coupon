@@ -509,12 +509,36 @@ function uc_coupon_validate($code) {
 }
 
 /**
+ * Implementation of hook_block().
+ */
+function uc_coupon_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list':
+      $blocks = array();
+      $blocks[0] = array(
+        'info' => t('Coupon discount form'),
+      );
+      return $blocks;
+
+    case 'view':
+      if ($delta == 0) {
+        $block = array(
+          'subject' => t('Coupon discount'),
+          'content' => drupal_get_form('uc_coupon_block_form'),
+        );
+        return $block;
+      }
+      break;
+  }
+}
+
+/**
  * Implementation of hook_cart_pane().
  */
 function uc_coupon_cart_pane($items) {
   $panes[] = array(
     'id' => 'coupon',
-    'body' => drupal_get_form('uc_cart_pane_coupon'),
+    'body' => drupal_get_form('uc_coupon_block_form', 25),
     'title' => t('Coupon discount'),
     'desc' => t('Allows shoppers to use a coupon during checkout for order discounts.'),
     'weight' => 1,
@@ -524,14 +548,14 @@ function uc_coupon_cart_pane($items) {
 }
 
 /**
- * Cart pane coupon form.
+ * Coupon block form, also available as a cart pane.
  */
-function uc_cart_pane_coupon($form_state) {
+function uc_coupon_block_form($form_state, $size = 15) {
   $form['code'] = array(
     '#type' => 'textfield',
     '#title' => t('Coupon code'),
-    '#description' => variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.')),
-    '#size' => 25,
+    '#default_value' => $_SESSION['uc_coupon'],
+    '#size' => $size,
   );
   $form['apply'] = array(
     '#type' => 'submit',
@@ -540,7 +564,7 @@ function uc_cart_pane_coupon($form_state) {
   return $form;
 }
 
-function uc_cart_pane_coupon_submit($form, &$form_state) {
+function uc_coupon_block_form_submit($form, &$form_state) {
   if ($form_state['values']['code']) {
     $code = $form_state['values']['code'];
     $coupon = uc_coupon_validate($code);
