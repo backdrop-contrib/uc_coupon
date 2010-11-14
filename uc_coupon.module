@@ -550,7 +550,7 @@ function uc_cart_pane_coupon_submit($form, &$form_state) {
     }
     else {
       $_SESSION['uc_coupon'] = $code;
-      drupal_set_message(t('A coupon discount of !amount will be deducted from your order total at checkout.', array('!amount' => uc_currency_format($coupon->amount))));
+      drupal_set_message(t('A discount of !amount has been applied to your cart.', array('!amount' => uc_currency_format($coupon->amount))));
     }
   }
 }
@@ -608,7 +608,6 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       // Use coupon code from cart pane if available.
       if ($_SESSION['uc_coupon']) {
         $code = $_SESSION['uc_coupon'];
-        unset($_SESSION['uc_coupon']);
       }
       else {
         $code = $arg1->data['coupon'];
@@ -618,6 +617,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       if ($coupon->valid) {
         drupal_add_js('$(document).ready(function() {
           if (window.set_line_item) {
+            li_values["subtotal"] += ' . $coupon->amount . ';
             set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 2);
           }
         });', 'inline');
@@ -646,6 +646,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
           return FALSE;
         }
         _uc_coupon_apply_to_order($arg1->order_id, $coupon);
+        unset($_SESSION['uc_coupon']);
       }
       return TRUE;
 
@@ -666,6 +667,10 @@ function uc_coupon_checkout_apply() {
   $coupon = uc_coupon_validate($_POST['code']);
   if ($coupon->valid) {
     $coupon->message = t('The coupon has been applied to your order.');
+    $_SESSION['uc_coupon'] = $_POST['code'];
+  }
+  else {
+    unset($_SESSION['uc_coupon']);
   }
 
   drupal_set_header("Content-Type: text/javascript; charset=utf-8");
@@ -763,4 +768,51 @@ function uc_coupon_token_values($type, $object = NULL) {
   }
 
   return $values;
+}
+
+/**
+ * Implementation of hook_uc_cart_alter().
+ *
+ * If a coupon is in use, add it as a cart item.
+ */
+function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
+  if (isset($_SESSION['uc_coupon'])) {
+    $coupon = uc_coupon_validate($_SESSION['uc_coupon']);
+    if ($coupon->valid) {
+      $items[] = (object) array(
+        'module' => 'uc_coupon',
+        'coupon' => $coupon,
+        'title' => $coupon->title,
+        'qty' => 1,
+        'price' => -$coupon->amount,
+      );
+    }
+  }
+}
+
+/**
+ * Implementation of hook_cart_display().
+ */
+function uc_coupon_cart_display($item) {
+  return array(
+    'title' => array('#value' => $item->title),
+    '#total' => $item->price,
+  );
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter() for uc_cart_checkout_form().
+ *
+ * Remove the coupon cart item, as it will be handled as a line item during checkout.
+ */
+function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
+  if (isset($_SESSION['uc_coupon'])) {
+    $items = unserialize($form['cart_contents']['#value']);
+    foreach ($items as $key => $item) {
+      if ($item->module == 'uc_coupon') {
+        unset($items[$key]);
+      }
+    }
+    $form['cart_contents']['#value'] = serialize($items);
+  }
 }
