@@ -83,6 +83,11 @@ function uc_coupon_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'created' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'primary key' => array('cid'),
   );
@@ -231,6 +236,22 @@ function uc_coupon_update_6005() {
   );
   db_change_field($ret, 'uc_coupons', 'code', 'code', $field);
   db_change_field($ret, 'uc_coupons_orders', 'code', 'code', $field);
+
+  return $ret;
+}
+
+// Add creation timestamp.
+function uc_coupon_update_6006() {
+  $ret = array();
+
+  if (!db_column_exists('uc_coupons', 'created')) {
+    db_add_field($ret, 'uc_coupons', 'created', array(
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+    ));
+    $ret[] = update_sql("UPDATE {uc_coupons} SET created = " . time());
+  }
 
   return $ret;
 }

@@ -249,7 +249,7 @@ function uc_coupon_save(&$coupon, $edit = array()) {
     drupal_write_record('uc_coupons', $coupon, 'cid');
   }
   else {
-    // For a new coupon, create a new bulk seed,
+    $coupon->created = time();
     $coupon->bulk_seed = md5(uniqid());
     drupal_write_record('uc_coupons', $coupon);
   }
