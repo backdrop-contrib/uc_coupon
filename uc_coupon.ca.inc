@@ -17,6 +17,17 @@ function uc_coupon_ca_entity() {
  * Implementation of hook_ca_condition().
  */
 function uc_coupon_ca_condition() {
+  $conditions['uc_coupon_condition_order_has_coupon'] = array(
+    '#title' => t('Check if an order has a coupon applied'),
+    '#description' => t('Returns TRUE if the order had a coupon applied.'),
+    '#category' => t('Order'),
+    '#callback' => 'uc_coupon_condition_order_has_coupon',
+    '#arguments' => array(
+      'order' => array(
+        '#entity' => 'uc_order',
+      ),
+    ),
+  );
   $conditions['uc_coupon_condition_is_bulk'] = array(
     '#title' => t('Check if a coupon is a bulk coupon'),
     '#description' => t('Returns TRUE if the coupon is a bulk coupon.'),
@@ -30,6 +41,13 @@ function uc_coupon_ca_condition() {
   );
 
   return $conditions;
+}
+
+/**
+ * Check if an order has a coupon applied.
+ */
+function uc_coupon_condition_order_has_coupon($order, $settings) {
+  return isset($order->data['coupon']);
 }
 
 /**
