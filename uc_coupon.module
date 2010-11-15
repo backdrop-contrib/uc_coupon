@@ -179,51 +179,15 @@ function uc_coupon_init() {
 }
 
 /**
- * Return the actions a user may perform on a coupon.
+ * Implementation of hook_theme().
  */
-function uc_coupon_actions($coupon) {
-  $actions = array();
-
-  if (user_access('view store coupons')) {
-    $alt = t('View coupon: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid,
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_view.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  if (user_access('view store coupons') && $coupon->bulk) {
-    $alt = t('Download codes as CSV: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/codes',
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/menu_reports_small.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  if (user_access('manage store coupons')) {
-    $alt = t('Edit coupon: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/edit',
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_edit.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  if (user_access('manage store coupons')) {
-    $alt = t('Delete coupon: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/delete',
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_delete.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  foreach ($actions as &$action) {
-    $action = l($action['icon'], $action['url'], array('attributes' => array('title' => $action['title']), 'html' => TRUE));
-  }
-  return implode(' ', $actions);
+function uc_coupon_theme() {
+  return array(
+    'uc_coupon_actions' => array(
+      'arguments' => array('coupon' => NULL),
+      'file' => 'uc_coupon.admin.inc',
+    ),
+  );
 }
 
 /**
@@ -852,4 +816,14 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
  */
 function uc_coupon_uc_checkout_complete($order, $account) {
   unset($_SESSION['uc_coupon']);
+}
+
+/**
+ * Implementation of hook_views_api().
+ */
+function uc_coupon_views_api() {
+  return array(
+    'api' => '2.0',
+    'path' => drupal_get_path('module', 'uc_coupon') .'/views',
+  );
 }
