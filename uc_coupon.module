@@ -317,6 +317,10 @@ function uc_coupon_validate($code) {
 
     // Product coupons apply to the subtotal and quantity of matching products.
     foreach (uc_cart_get_contents() as $item) {
+      if ($item->module == 'uc_coupon') {
+        continue;
+      }
+
       $cart_total += $item->price * $item->qty;
 
       $terms = array();
@@ -380,7 +384,9 @@ function uc_coupon_validate($code) {
   else {
     // Standard coupons apply once to the whole cart.
     foreach (uc_cart_get_contents() as $item) {
-      $cart_total += $item->price * $item->qty;
+      if ($item->module != 'uc_coupon') {
+        $cart_total += $item->price * $item->qty;
+      }
     }
     $applicable_total = $cart_total;
     $applicable_qty = 1;
@@ -473,6 +479,27 @@ function uc_coupon_validate($code) {
 }
 
 /**
+ * Run price alterers on a coupon value.
+ */
+function uc_coupon_price($amount, $revision = 'formatted') {
+  $context = array(
+    'revision' => $revision,
+    'type' => 'line_item',
+    'subject' => array(
+      'order' => (object) array(
+        'products' => uc_cart_get_contents(),
+      ),
+      'line_item' => array(
+        'type' => 'coupon',
+        'amount' => $amount,
+        'weight' => 2,
+      ),
+    ),
+  );
+  return uc_price($amount, $context);
+}
+
+/**
  * Implementation of hook_block().
  */
 function uc_coupon_block($op = 'list', $delta = 0, $edit = array()) {
@@ -538,7 +565,7 @@ function uc_coupon_block_form_submit($form, &$form_state) {
     }
     else {
       $_SESSION['uc_coupon'] = $code;
-      drupal_set_message(t('A discount of !amount has been applied to your cart.', array('!amount' => uc_currency_format($coupon->amount))));
+      drupal_set_message(t('A discount of !amount has been applied to your cart.', array('!amount' => uc_coupon_price($coupon->amount))));
     }
   }
 }
@@ -776,7 +803,7 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
         'coupon' => $coupon,
         'title' => $coupon->title,
         'qty' => 1,
-        'price' => -$coupon->amount,
+        'price' => uc_coupon_price(-$coupon->amount, 'altered'),
       );
     }
   }
