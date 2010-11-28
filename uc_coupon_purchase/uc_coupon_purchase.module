@@ -252,6 +252,9 @@ function uc_coupon_purchase_create($coupon, $qty, $order) {
 
   uc_order_comment_save($order->order_id, $user->uid, t('Coupon created with code %code.', array('%code' => $coupon->code)));
 
+  // Record this coupon purchase.
+  db_query("INSERT INTO {uc_coupon_purchase_users} (uid, cid) VALUES (%d, %d)", $order->uid, $coupon->cid);
+
   // Fire hook and conditional actions to send emails for this coupon purchase.
   module_invoke_all('uc_coupon_purchase', $order, $coupon);
   ca_pull_trigger('uc_coupon_purchase', $order, $coupon);
