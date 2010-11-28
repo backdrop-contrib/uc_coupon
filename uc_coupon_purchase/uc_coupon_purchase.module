@@ -4,6 +4,63 @@
 require_once 'uc_coupon_purchase.ca.inc';
 
 /**
+ * Implementation of hook_perm().
+ */
+function uc_coupon_purchase_perm() {
+  return array('view purchased coupons');
+}
+
+/**
+ * Implementation of hook_menu().
+ */ 
+function uc_coupon_purchase_menu() {
+  $items = array();
+
+  $items['user/%user/coupons'] = array(
+    'title' => t('Coupons'),
+    'description' => t('View your purchased coupons.'),
+    'page callback' => 'uc_coupon_purchase_view',
+    'access callback' => 'uc_coupon_purchase_can_view',
+    'page arguments' => array(1),
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'uc_coupon_purchase.pages.inc',
+    'weight' => 5,
+  );
+  
+  return $items;
+}
+
+/**
+ * Access callback for user/%/coupons.
+ * 
+ * User must have "view purchased coupons" permission, current user must have a
+ * coupon to view, other users must have "administer users" permission.
+ */
+function uc_coupon_purchase_can_view($account) {
+  global $user;
+
+  if (user_access('view purchased coupons')) {
+    if (user_access('administer users') || ($account->uid == $user->uid && uc_coupon_purchase_has_coupon($account))) {
+      return TRUE;
+    }
+  }
+  
+  return FALSE;
+}
+
+/**
+ * Check whether a given user has purchased any coupon, or the specific supplied coupon.
+ */
+function uc_coupon_purchase_has_coupon($account, $cid = NULL) {
+  $sql = 'SELECT COUNT(*) FROM {uc_coupon_purchase_users} WHERE uid = %d';
+  if (!empty($cid)) {
+    $sql .= ' AND cid = %d';
+  }
+  return db_result(db_query($sql, $account->uid, $cid));
+}
+
+/**
  * Implementation of hook_product_feature().
  */
 function uc_coupon_purchase_product_feature() {
