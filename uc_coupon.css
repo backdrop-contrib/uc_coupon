@@ -1,0 +1,20 @@
+// $Id$
+
+.view-uc-coupon-purchase-view .uc-coupon-code-used {
+  text-decoration: line-through;
+}
+.view-uc-coupon-purchase-view .views-field-base-name {
+  width: 20%;
+}
+.view-uc-coupon-purchase-view td {
+  vertical-align: top;
+}
+
+div.uc-coupon-certificate {
+  page-break-after: always;
+  background: white;
+  width: 90%;
+  margin: auto;
+  border: 1px solid blue;
+  padding: 2%;
+}

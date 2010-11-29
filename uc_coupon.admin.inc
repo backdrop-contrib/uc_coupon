@@ -80,13 +80,21 @@ function uc_coupon_view($coupon) {
   $rows[] = array(t('Status'), $status);
 
   if (!$coupon->bulk) {
-    $rows[] = array(t('Code'), check_plain($coupon->code));
+    $rows[] = array(t('Code'), check_plain($coupon->code) . ' (' . l(t('Print'), 'admin/store/coupons/' . $coupon->cid . '/print') . ')');
     if ($coupon->max_uses) {
       $rows[] = array(t('Maximum uses'), $coupon->max_uses);
     }
   }
   else {
-    $rows[] = array(t('Codes'), check_plain($coupon->code) .' &times; '. check_plain($coupon->data['bulk_number']) .' ('. l(t('Download as CSV'), 'admin/store/customers/coupon/'. $coupon->cid .'/codes') .')');
+    $codes = '<strong>' . check_plain($coupon->code) . ' &times; ' . check_plain($coupon->data['bulk_number']) . '</strong>';
+    $codes .= ' ('. l(t('Download codes'), 'admin/store/coupons/'. $coupon->cid .'/codes') .')';
+    $codes .= ' ('. l(t('Print all'), 'admin/store/coupons/'. $coupon->cid .'/print') .')';
+    for ($id = 0; $id < $coupon->data['bulk_number']; $id++) {
+      $code = uc_coupon_get_bulk_code($coupon, $id);
+      $codes .= '<br />' . check_plain($code) . ' (' . l(t('Print'), 'admin/store/coupons/' . $coupon->cid . '/print/' . $code) . ')';
+    }
+
+    $rows[] = array(t('Codes'), $codes);
     //$rows[] = array(t('Bulk seed'), check_plain($coupon->bulk_seed));
     if ($coupon->max_uses) {
       $rows[] = array(t('Maximum uses per code'), $coupon->max_uses);
@@ -195,6 +203,33 @@ function uc_coupon_view($coupon) {
 
   $output = theme('table', array(), $rows);
   return $output;
+}
+
+/**
+ * Print a coupon, or set of bulk coupons.
+ */
+function uc_coupon_print($coupon, $code = NULL) {
+  if ($code) {
+    $codes = array($code);
+  }
+  elseif (!$coupon->bulk) {
+    $codes = array($coupon->code);
+  }
+  else {
+    $codes = array();
+    for ($id = 0; $id < $coupon->data['bulk_number']; $id++) {
+      $codes[] = uc_coupon_get_bulk_code($coupon, $id);
+    }
+  }
+
+  $output = '';
+  foreach ($codes as $code) {
+    $output .= theme('uc_coupon_certificate', $coupon, $code);
+  }
+
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
+  echo theme('uc_coupon_page', $output);
+  exit;
 }
 
 /**
@@ -777,6 +812,13 @@ function theme_uc_coupon_actions($coupon) {
     $actions[] = array(
       'url' => 'admin/store/coupons/'. $coupon->cid,
       'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_view.gif" alt="'. $alt .'" />',
+      'title' => $alt,
+    );
+
+    $alt = t('Print coupon: @name', array('@name' => $coupon->name));
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid . '/print',
+      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/print.gif" alt="'. $alt .'" />',
       'title' => $alt,
     );
   }

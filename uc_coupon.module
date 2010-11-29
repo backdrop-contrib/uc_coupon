@@ -77,6 +77,16 @@ function uc_coupon_menu() {
     'file' => 'uc_coupon.admin.inc',
     'weight' => 0,
   );
+  $items['admin/store/coupons/%uc_coupon/print'] = array(
+    'title' => 'Print',
+    'description' => 'Print coupon.',
+    'page callback' => 'uc_coupon_print',
+    'page arguments' => array(3),
+    'access arguments' => array('view store coupons'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'uc_coupon.admin.inc',
+    'weight' => 1,
+  );
   $items['admin/store/coupons/%uc_coupon/edit'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing coupon.',
@@ -85,7 +95,7 @@ function uc_coupon_menu() {
     'access arguments' => array('manage store coupons'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'uc_coupon.admin.inc',
-    'weight' => 1,
+    'weight' => 2,
   );
   $items['admin/store/coupons/%uc_coupon/delete'] = array(
     'title' => 'Delete',
@@ -95,7 +105,7 @@ function uc_coupon_menu() {
     'access arguments' => array('manage store coupons'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'uc_coupon.admin.inc',
-    'weight' => 2,
+    'weight' => 3,
   );
   $items['admin/store/coupons/%uc_coupon/codes'] = array(
     'title' => 'Download bulk coupon codes',
@@ -190,6 +200,16 @@ function uc_coupon_theme() {
     'uc_coupon_code' => array(
       'arguments' => array('code' => NULL, 'uses' => NULL, 'max_uses' => NULL),
       'file' => 'uc_coupon.admin.inc',
+    ),
+    'uc_coupon_certificate' => array(
+      'arguments' => array('coupon' => NULL, 'code' => NULL),
+      'template' => 'uc_coupon-certificate',
+      'path' => drupal_get_path('module', 'uc_coupon') .'/theme',
+    ),
+    'uc_coupon_page' => array(
+      'arguments' => array('content' => NULL),
+      'template' => 'uc_coupon-page',
+      'path' => drupal_get_path('module', 'uc_coupon') .'/theme',
     ),
   );
 }
@@ -847,6 +867,81 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
  */
 function uc_coupon_uc_checkout_complete($order, $account) {
   unset($_SESSION['uc_coupon']);
+}
+
+/**
+ * Preprocess template for a printed coupon certificate.
+ * @see uc_coupon-certificate.tpl.php
+ */
+function template_preprocess_uc_coupon_certificate(&$variables) {
+  $coupon = $variables['coupon'];
+
+  if ($coupon->type == 'percentage') {
+    $variables['value'] = (float)$coupon->value . '%';
+  }
+  else {
+    $variables['value'] = uc_currency_format($coupon->value);
+  }
+
+  $variables['display_name'] = $coupon->name;
+  $n = stripos($variables['display_name'], 'purchased by');
+  if ($n) {
+    $variables['display_name'] = substr($variables['display_name'], 0, $n-1);
+  }
+
+  $variables['not_yet_valid'] = $coupon->valid_from > time();
+  $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
+  $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
+
+  $variables['max_uses_per_user'] = $coupon->data['max_uses_per_user'];
+
+  $variables['include'] = array();
+  $variables['exclude'] = array();
+
+  if (isset($coupon->data['product_types'])) {
+    foreach ($coupon->data['product_types'] as $type) {
+      $variables['include'][] = node_get_types('name', $type);
+    }
+  }
+  
+  if (isset($coupon->data['products'])) {
+    $key = isset($coupon->data['negate_products']) ? 'exclude' : 'include';
+    foreach ($coupon->data['products'] as $nid) {
+      $node = node_load($nid);
+      $variables[$key][] = $node->title; 
+    }
+  }
+  
+  if (isset($coupon->data['skus'])) {
+    foreach($coupon->data['skus'] as $sku) {
+      $variables['include'][] = t('SKU') . ' '. $sku;
+    }
+  }
+
+  if (isset($coupon->data['terms'])) {
+    $key = isset($coupon->data['negate_terms']) ? 'exclude' : 'include';
+    foreach ($coupon->data['terms'] as $tid) {
+      $term = taxonomy_get_term($tid);
+      $variables[$key][] = $term->name;
+    }
+  }
+  
+  // Merge in global tokens.
+  $tokens = token_get_values();
+  foreach ($tokens->tokens as $key => $token) {
+    $value = $tokens->values[$key];
+    $variables[str_replace('-', '_', $token)] = $value;
+  }
+  
+  $variables['template_files'][] = 'uc_coupon-certificate-'. $variables['coupon']->cid;
+}
+
+/**
+ * Page template for printed coupons.
+ * @see uc_coupon-page.tpl.php
+ */
+function template_preprocess_uc_coupon_page(&$variables) {
+  $variables['styles'] = drupal_get_css();
 }
 
 /**
