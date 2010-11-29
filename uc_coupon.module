@@ -187,6 +187,10 @@ function uc_coupon_theme() {
       'arguments' => array('coupon' => NULL),
       'file' => 'uc_coupon.admin.inc',
     ),
+    'uc_coupon_code' => array(
+      'arguments' => array('code' => NULL, 'uses' => NULL, 'max_uses' => NULL),
+      'file' => 'uc_coupon.admin.inc',
+    ),
   );
 }
 

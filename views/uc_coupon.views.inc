@@ -72,6 +72,22 @@ function uc_coupon_views_data() {
     ),
   );
 
+  $data['uc_coupons']['bulk_codes'] = array(
+    'title' => t('Codes'),
+    'help' => t('All codes associated with this coupon.'),
+    'field' => array(
+      'handler' => 'uc_coupon_handler_field_codes',
+      'field' => 'cid',
+      'additional fields' => array(
+        'data' => 'data',
+        'bulk' => 'bulk',
+        'bulk_seed' => 'bulk_seed',
+        'code' => 'code',
+        'max_uses' => 'max_uses',
+      ),
+    ),
+  );
+
   $data['uc_coupons']['bulk'] = array(
     'title' => t('Bulk'),
     'help' => t('Whether the coupon is a bulk coupon with multiple suffixes.'),
@@ -241,6 +257,32 @@ function uc_coupon_views_data() {
     ),
   );
 
+  $data['uc_coupons']['product_type'] = array(
+    'title' => t('Product classes'),
+    'help' => t('Product classes for which this coupon is valid.'),
+    'field' => array(
+      'field' => 'cid',
+      'handler' => 'uc_coupon_handler_field_product_type',
+      'label' => t('Product types'),
+      'additional fields' => array(
+        'data' => 'data',    
+      ),
+    ),
+    'filter' => array(
+      'handler' => 'uc_coupon_handler_filter_product_type',
+      'label' => 'Is a product type',
+    ),
+  );  
+
+  $data['uc_coupons']['bulk_number'] = array(
+    'title' => t('Bulk number'),
+    'help' => t('Number of bulk codes based on this coupon.'),
+    'field' => array(
+      'handler' => 'uc_coupon_handler_field_bulk_number',
+      'field' => 'data',
+    ),
+  );
+
   return $data;
 }
 
@@ -258,6 +300,18 @@ function uc_coupon_views_handlers() {
       ),
       'uc_coupon_handler_field_actions' => array(
         'parent' => 'views_handler_field',
+      ),
+      'uc_coupon_handler_field_bulk_number' => array(
+        'parent' => 'views_handler_field_numeric',
+      ),
+      'uc_coupon_handler_field_codes' => array(
+        'parent' => 'views_handler_field_prerender_list',
+      ),
+      'uc_coupon_handler_filter_product_type' => array(
+        'parent' => 'views_handler_filter_in_operator',
+      ),
+      'uc_coupon_handler_field_product_type' => array(
+        'parent' => 'views_handler_field_prerender_list',
       ),
     ),
   );

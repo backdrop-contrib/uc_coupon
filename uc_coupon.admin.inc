@@ -811,3 +811,26 @@ function theme_uc_coupon_actions($coupon) {
   }
   return implode(' ', $actions);
 }
+
+/**
+ * Show coupon code in Views.
+ *
+ * @param string $code The coupon code to be formatted
+ * @param integer $uses The number of uses
+ * @param integer $max_uses The number of allowed uses
+ */
+function theme_uc_coupon_code($code, $uses = NULL, $max_uses = NULL) {
+  $class = "uc-coupon-code";
+
+  if (!is_null($uses) && !is_null($max_uses)) {
+    if ($max_uses == 0 || $max_uses > $uses) {
+      $class .= ' uc-coupon-code-available';
+      //$output = l($output,"user/".$user->uid."/coupons/$output"); // link the code to printing it
+    }
+    else {
+      $class .= ' uc-coupon-code-used';
+    }
+  }
+
+  return '<span class="' . $class . '">' . $code . '</span>';
+}
