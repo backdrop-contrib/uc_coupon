@@ -316,3 +316,13 @@ function uc_coupon_purchase_create($coupon, $qty, $order) {
   module_invoke_all('uc_coupon_purchase', $order, $coupon);
   ca_pull_trigger('uc_coupon_purchase', $order, $coupon);
 }
+
+/**
+ * Implementation of hook_views_api()
+ */
+function uc_coupon_purchase_views_api() {
+  return array(
+    'api' => '2.0',
+    'path' => drupal_get_path('module', 'uc_coupon_purchase') .'/views',
+  );
+}
