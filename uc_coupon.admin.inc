@@ -416,6 +416,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
         '#type' => 'textfield',
         '#default_value' => $title .' [nid:'. $nid .']',
         '#autocomplete_path' => 'uc_coupon/autocomplete/node',
+        '#maxlength' => 255,
       );
     }
   }
@@ -424,6 +425,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     $form['products'][] = array(
       '#type' => 'textfield',
       '#autocomplete_path' => 'uc_coupon/autocomplete/node',
+      '#maxlength' => 255,
     );
   }
 
