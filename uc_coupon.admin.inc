@@ -393,7 +393,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   $form['max_applicable_products'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of applicable products'),
-    '#description' => t('For coupons that are limited in application by product class, product node, SKU, or taxonomy term, specify the maximum number of applicable products to which the discount should be applied. Enter 0 to apply the discount to every product.'),
+    '#description' => t('Specify the number of products to which the discount should be applied, or 0 to apply the discount to every product.'),
     '#default_value' => isset($value->data['max_applicable_products']) ? $value->data['max_applicable_products'] : 0,
     '#size' => 5,
     '#required' => TRUE,
@@ -683,13 +683,6 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   $valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
   if ($valid_from > $valid_until) {
     form_set_error('valid_from', t('The coupon start date must be before the expiration date.'));
-  }
-
-  if ($form_state['values']['max_applicable_products']) {
-    $restrictions = array_filter(array_merge($form_state['values']['product_types'], $form_state['values']['products'], $form_state['values']['skus'], $form_state['values']['terms']));
-    if (empty($restrictions)) {
-      form_set_error('max_applicable_products', t('To use the maximum number of applicable products feature, you must restrict the coupon by product class, product node, SKU, or taxonomy term.'));
-    }
   }
 }
 

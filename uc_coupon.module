@@ -353,7 +353,11 @@ function uc_coupon_validate($code) {
 
     $cart_total += $price * $qty;
 
-    if ($per_product) {
+    if (!$per_product) {
+      // Unrestricted coupons apply to all products.
+      $include = TRUE;
+    }
+    else {
       // Product coupons apply to the subtotal and quantity of matching products.
       $include = FALSE;
       $terms = isset($node->taxonomy) ? array_keys($node->taxonomy) : array();
@@ -376,15 +380,15 @@ function uc_coupon_validate($code) {
       else if (isset($coupon->data['product_types']) && in_array($node->type, $coupon->data['product_types'])) {
         $include = TRUE;
       }
+    }
 
-      if ($include) {
-        $prices = array_pad($prices, count($prices) + $qty, $price);
-      }
+    if ($include) {
+      $prices = array_pad($prices, count($prices) + $qty, $price);
     }
   }
 
-  // If a maximum number of applicable products has been specified...
-  if ($per_product && isset($coupon->data['max_applicable_products']) && ($num = $coupon->data['max_applicable_products']) > 0) {
+  // Reduce applicable products if the option is set.
+  if (isset($coupon->data['max_applicable_products']) && ($num = $coupon->data['max_applicable_products']) > 0) {
     sort($prices);
 
     if ($coupon->data['max_applicable_products_value'] == 'cheapest') {
@@ -395,16 +399,8 @@ function uc_coupon_validate($code) {
     }
   }
 
-  if ($per_product) {
-    // Include all the relevant prices in the applicable totals.
-    $applicable_total = array_sum($prices);
-    $applicable_qty = count($prices);
-  }
-  else {
-    // Standard coupons apply once to the whole cart.
-    $applicable_total = $cart_total;
-    $applicable_qty = 1;
-  }
+  $applicable_total = array_sum($prices);
+  $applicable_qty = $per_product ? count($prices) : 1;
 
   if ($applicable_total == 0) {
     $result->message = t('You do not have applicable products in your cart.');
