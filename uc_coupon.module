@@ -336,73 +336,16 @@ function uc_coupon_validate($code) {
     return $result;
   }
 
-  $per_product = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
+  $cart = uc_cart_get_contents();
+  $items = uc_coupon_calculate_discounts($coupon, $cart);
 
-  $prices = array();
-  $context = array('revision' => 'altered', 'type' => 'cart_item');
-
-  foreach (uc_cart_get_contents() as $item) {
-    if ($item->module == 'uc_coupon') {
-      continue;
-    }
-
-    $node = node_load($item->nid);
-    $context['subject'] = array('cart_item' => $item, 'node' => $node);
-    $price = uc_price($item->price, $context);
-    $qty = $item->qty;
-
-    $cart_total += $price * $qty;
-
-    if (!$per_product) {
-      // Unrestricted coupons apply to all products.
-      $include = TRUE;
-    }
-    else {
-      // Product coupons apply to the subtotal and quantity of matching products.
-      $include = FALSE;
-      $terms = isset($node->taxonomy) ? array_keys($node->taxonomy) : array();
-
-      if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) xor in_array($item->nid, $coupon->data['products']))) {
-        $include = TRUE;
-      }
-      else if (isset($coupon->data['products']) && isset($coupon->data['negate_products']) && in_array($item->nid, $coupon->data['products'])) {
-        ;// always exclude if in list of negated products
-      }
-      else if (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
-        $include = TRUE;
-      }
-      else if (isset($coupon->data['terms']) && isset($coupon->data['negate_terms']) && count(array_intersect($terms, $coupon->data['terms']))) {
-        ;// always exclude if one of the terms is in the list of negated terms
-      }
-      else if (isset($coupon->data['skus']) && in_array($item->model, $coupon->data['skus'])) {
-        $include = TRUE;
-      }
-      else if (isset($coupon->data['product_types']) && in_array($node->type, $coupon->data['product_types'])) {
-        $include = TRUE;
-      }
-    }
-
-    if ($include) {
-      $prices = array_pad($prices, count($prices) + $qty, $price);
-    }
+  $amount = 0;
+  foreach ($items as $item) {
+    $amount += $item->discount;
   }
+  $amount = round($amount, variable_get('uc_currency_prec', 2));
 
-  // Reduce applicable products if the option is set.
-  if (isset($coupon->data['max_applicable_products']) && ($num = $coupon->data['max_applicable_products']) > 0) {
-    sort($prices);
-
-    if ($coupon->data['max_applicable_products_value'] == 'cheapest') {
-      $prices = array_slice($prices, 0, $num);
-    }
-    else {
-      $prices = array_slice($prices, -$num);
-    }
-  }
-
-  $applicable_total = array_sum($prices);
-  $applicable_qty = $per_product ? count($prices) : 1;
-
-  if ($applicable_total == 0) {
+  if ($amount == 0) {
     $result->message = t('You do not have applicable products in your cart.');
     return $result;
   }
@@ -426,9 +369,20 @@ function uc_coupon_validate($code) {
   }
 
   //  CHECK MINIMUM PURCHASE VALUE
-  if ($coupon->minimum_order > 0 && $coupon->minimum_order > $cart_total) {
-    $result->message = t('You have not reached the minimum order total for this coupon.');
-    return $result;
+  if ($coupon->minimum_order > 0) {
+    $total = 0;
+    $context = array('revision' => 'altered', 'type' => 'cart_item');
+
+    foreach ($cart as $item) {
+      $node = node_load($item->nid);
+      $context['subject'] = array('cart_item' => $item, 'node' => $node);
+      $total += uc_price($item->price, $context) * $item->qty;
+    }
+
+    if ($coupon->minimum_order > $total) {
+      $result->message = t('You have not reached the minimum order total for this coupon.');
+      return $result;
+    }
   }
 
   //  CHECK USER ID
@@ -477,15 +431,102 @@ function uc_coupon_validate($code) {
   $result->code = $code;
   $result->cid = $coupon->cid;
   $result->title = t('Coupon: @code', array('@code' => $code));
-
-  if ($coupon->type == 'percentage') {
-    $result->amount = round($applicable_total * $coupon->value / 100, variable_get('uc_currency_prec', 2));
-  }
-  else if ($coupon->type == 'price') {
-    $result->amount = min($applicable_total, $applicable_qty * $coupon->value);
-  }
+  $result->amount = $amount;
 
   return $result;
+}
+
+/**
+ * Find items that a coupon will apply to and calculate the discounts.
+ */
+function uc_coupon_calculate_discounts($coupon, $cart) {
+  $items = array();
+  $context = array('revision' => 'altered', 'type' => 'cart_item');
+
+  $per_product = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
+
+  foreach ($cart as $item) {
+    if ($item->module == 'uc_coupon') {
+      continue;
+    }
+
+    $node = node_load($item->nid);
+    $context['subject'] = array('cart_item' => $item, 'node' => $node);
+    $item->altered_price = uc_price($item->price, $context);
+    $qty = $item->qty;
+
+    if (!$per_product) {
+      // Unrestricted coupons apply to all products.
+      $include = TRUE;
+    }
+    else {
+      // Product coupons apply to the subtotal and quantity of matching products.
+      $include = FALSE;
+      $terms = isset($node->taxonomy) ? array_keys($node->taxonomy) : array();
+
+      if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) xor in_array($item->nid, $coupon->data['products']))) {
+        $include = TRUE;
+      }
+      else if (isset($coupon->data['products']) && isset($coupon->data['negate_products']) && in_array($item->nid, $coupon->data['products'])) {
+        ;// always exclude if in list of negated products
+      }
+      else if (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
+        $include = TRUE;
+      }
+      else if (isset($coupon->data['terms']) && isset($coupon->data['negate_terms']) && count(array_intersect($terms, $coupon->data['terms']))) {
+        ;// always exclude if one of the terms is in the list of negated terms
+      }
+      else if (isset($coupon->data['skus']) && in_array($item->model, $coupon->data['skus'])) {
+        $include = TRUE;
+      }
+      else if (isset($coupon->data['product_types']) && in_array($node->type, $coupon->data['product_types'])) {
+        $include = TRUE;
+      }
+    }
+
+    if ($include) {
+      $items = array_pad($items, count($items) + $qty, $item);
+    }
+  }
+
+  // Slice off applicable products if a limit was set.
+  if (isset($coupon->data['max_applicable_products']) && ($num = $coupon->data['max_applicable_products']) > 0) {
+    usort($items, '_uc_coupon_sort_products');
+
+    if ($coupon->data['max_applicable_products_value'] == 'cheapest') {
+      $items = array_slice($items, 0, $num);
+    }
+    else {
+      $items = array_slice($items, -$num);
+    }
+  }
+
+  $total = 0;
+  foreach ($items as $item) {
+    $total += $item->altered_price;
+  }
+
+  foreach ($items as &$item) {
+    if ($coupon->type == 'percentage') {
+      $item->discount = $item->price * $coupon->value / 100;
+    }
+    else if ($coupon->type == 'price' && $per_product) {
+      $item->discount = min($item->price, $coupon->value);
+    }
+    else if ($coupon->type == 'price' && !$per_product) {
+      // Apply single discount to the entire cart proportionally across the items.
+      $item->discount = $total == 0 ? 0 : min($item->price * $coupon->value / $total, $item->price);
+    }
+  }
+
+  return $items;
+}
+
+function _uc_coupon_sort_products($a, $b) {
+  if ($a->altered_price == $b->altered_price) {
+    return 0;
+  }
+  return $a->altered_price > $b->altered_price ? 1 : -1;
 }
 
 /**
