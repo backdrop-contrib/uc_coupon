@@ -826,6 +826,7 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
         'module' => 'uc_coupon',
         'coupon' => $coupon,
         'title' => $coupon->title,
+        'nid' => 0,
         'qty' => 1,
         'price' => uc_coupon_price(-$coupon->amount, 'altered'),
       );
