@@ -7,7 +7,8 @@ function getCoupon() {
     type: "POST",
     url: Drupal.settings.ucURL.applyCoupon,
     data: {
-      code: code.val()
+      code: code.val(),
+      order: serializeOrder()
     },
     dataType: "json",
     success: function(coupon) {

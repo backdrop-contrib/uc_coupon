@@ -318,12 +318,14 @@ function uc_coupon_find($code) {
  * Validate a coupon and calculate the coupon amount against the current cart contents.
  *
  * @param $code
- *  The coupon code entered at the checkout screen
+ *  The coupon code entered at the checkout screen.
+ * @param $order
+ *  The order that the coupon is being applied to.
  *
  * @return
  *  Returns a coupon result object with details about the validation
  */
-function uc_coupon_validate($code) {
+function uc_coupon_validate($code, $order = NULL) {
   global $user;
 
   $result->valid = FALSE;
@@ -336,8 +338,13 @@ function uc_coupon_validate($code) {
     return $result;
   }
 
-  $cart = uc_cart_get_contents();
-  $items = uc_coupon_calculate_discounts($coupon, $cart);
+  if (is_null($order)) {
+    $order = new stdClass;
+    $order->products = uc_cart_get_contents();
+  }
+
+  $order->data['coupon'] = $code;
+  $items = uc_coupon_calculate_discounts($coupon, $order);
 
   $amount = 0;
   foreach ($items as $item) {
@@ -371,11 +378,17 @@ function uc_coupon_validate($code) {
   //  CHECK MINIMUM PURCHASE VALUE
   if ($coupon->minimum_order > 0) {
     $total = 0;
-    $context = array('revision' => 'altered', 'type' => 'cart_item');
+    $context = array(
+      'revision' => 'altered',
+      'type' => 'cart_item',
+      'subject' => array(
+        'order' => $order,
+      ),
+    );
 
-    foreach ($cart as $item) {
-      $node = node_load($item->nid);
-      $context['subject'] = array('cart_item' => $item, 'node' => $node);
+    foreach ($order->products as $item) {
+      $context['subject']['cart_item'] = $item;
+      $context['subject']['node'] = node_load($item->nid);
       $total += uc_price($item->price, $context) * $item->qty;
     }
 
@@ -439,19 +452,26 @@ function uc_coupon_validate($code) {
 /**
  * Find items that a coupon will apply to and calculate the discounts.
  */
-function uc_coupon_calculate_discounts($coupon, $cart) {
+function uc_coupon_calculate_discounts($coupon, $order) {
   $items = array();
-  $context = array('revision' => 'altered', 'type' => 'cart_item');
+  $context = array(
+    'revision' => 'altered',
+    'type' => 'cart_item',
+    'subject' => array(
+      'order' => $order,
+    ),
+  );
 
   $per_product = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
 
-  foreach ($cart as $item) {
+  foreach ($order->products as $item) {
     if ($item->module == 'uc_coupon') {
       continue;
     }
 
     $node = node_load($item->nid);
-    $context['subject'] = array('cart_item' => $item, 'node' => $node);
+    $context['subject']['cart_item'] = $item;
+    $context['subject']['node'] = $node;
     $item->altered_price = uc_price($item->price, $context);
     $qty = $item->qty;
 
@@ -629,7 +649,7 @@ function uc_coupon_block_form_submit($form, &$form_state) {
  */
 function uc_coupon_order($op, &$arg1, $arg2) {
   if ($op == 'save' && isset($_SESSION['uc_coupon'])) {
-    $coupon = uc_coupon_validate($_SESSION['uc_coupon']);
+    $coupon = uc_coupon_validate($_SESSION['uc_coupon'], $arg1);
     if ($coupon->valid) {
       _uc_coupon_apply_to_order($arg1->order_id, $coupon);
     }
@@ -682,7 +702,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       }
 
       if ($code) {
-        $coupon = uc_coupon_validate($code);
+        $coupon = uc_coupon_validate($code, $arg1);
         if ($coupon->valid) {
           drupal_add_js('$(document).ready(function() {
             if (window.set_line_item) {
@@ -710,7 +730,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
     case 'process':
       if ($arg2['code']) {
         $arg1->data['coupon'] = $arg2['code'];
-        $coupon = uc_coupon_validate($arg1->data['coupon']);
+        $coupon = uc_coupon_validate($arg1->data['coupon'], $arg1);
         if (!$coupon->valid) {
           drupal_set_message($coupon->message, 'error');
           return FALSE;
@@ -734,7 +754,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
  * Checkout pane AJAX callback.
  **/
 function uc_coupon_checkout_apply() {
-  $coupon = uc_coupon_validate($_POST['code']);
+  $coupon = uc_coupon_validate($_POST['code'], unserialize($_POST['order']));
   if ($coupon->valid) {
     $coupon->message = t('The coupon has been applied to your order.');
     $_SESSION['uc_coupon'] = $_POST['code'];
@@ -770,6 +790,7 @@ function uc_coupon_line_item() {
   $items[] = array(
     'id' => 'coupon',
     'title' => t('Coupon discount'),
+    'tax_adjustment' => 'uc_coupon_tax_adjustment',
     'weight' => 2,
     'default' => FALSE,
     'stored' => TRUE,
@@ -777,6 +798,34 @@ function uc_coupon_line_item() {
     'calculated' => TRUE,
   );
   return $items;
+}
+
+/**
+ * Handle tax on coupons by calculating tax for individual discounted prices.
+ * This is currently only supported by the VAT module (uc_vat).
+ */
+function uc_coupon_tax_adjustment($price, $order, $tax) {
+  if (isset($order->data['coupon'])) {
+    $code = $order->data['coupon'];
+  }
+  else if (isset($_SESSION['uc_coupon'])) {
+    $code = $_SESSION['uc_coupon'];
+  }
+  else {
+    return;
+  }
+
+  $coupon = uc_coupon_find($code);
+  $items = uc_coupon_calculate_discounts($coupon, $order);
+  $amount = 0;
+  foreach ($items as $item) {
+    $node = node_load($item->nid);
+    if (in_array($node->type, $tax->taxed_product_types) && ($tax->shippable == 0 || $node->shippable == 1)) {
+      $amount += -$item->discount * $tax->rate;
+    }
+  }
+
+  return $amount;
 }
 
 /**
