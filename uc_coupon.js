@@ -16,7 +16,7 @@ function getCoupon() {
 
       if (coupon.valid) {
         if (window.set_line_item) {
-          set_line_item('coupon', coupon.title, -coupon.amount, 2);
+          set_line_item('coupon', coupon.title, -coupon.amount, 0);
         }
       }
       else {

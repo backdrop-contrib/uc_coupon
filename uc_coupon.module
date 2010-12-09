@@ -563,7 +563,7 @@ function uc_coupon_price($amount, $revision = 'formatted') {
       'line_item' => array(
         'type' => 'coupon',
         'amount' => $amount,
-        'weight' => 2,
+        'weight' => 0,
       ),
     ),
   );
@@ -707,7 +707,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
           drupal_add_js('$(document).ready(function() {
             if (window.set_line_item) {
               li_values["subtotal"] += ' . $coupon->amount . ';
-              set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 2);
+              set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 0);
             }
           });', 'inline');
         }
@@ -791,7 +791,7 @@ function uc_coupon_line_item() {
     'id' => 'coupon',
     'title' => t('Coupon discount'),
     'tax_adjustment' => 'uc_coupon_tax_adjustment',
-    'weight' => 2,
+    'weight' => 0,
     'default' => FALSE,
     'stored' => TRUE,
     'add_list' => TRUE,
