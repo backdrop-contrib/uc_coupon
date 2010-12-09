@@ -892,7 +892,8 @@ function uc_coupon_token_values($type, $object = NULL) {
 /**
  * Implementation of hook_uc_cart_alter().
  *
- * If a coupon is in use, add it as a cart item.
+ * If a coupon is in use, add it as a (fake) cart item.
+ * This will be converted to a real line item during checkout.
  */
 function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
   if (isset($_SESSION['uc_coupon'])) {
@@ -915,6 +916,7 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
  */
 function uc_coupon_cart_display($item) {
   return array(
+    'nid' => array('#type' => 'value', '#value' => 0),
     'title' => array('#value' => $item->title),
     '#total' => $item->price,
   );
