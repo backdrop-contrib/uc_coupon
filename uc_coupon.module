@@ -653,7 +653,6 @@ function uc_coupon_order($op, &$arg1, $arg2) {
     if ($coupon->valid) {
       _uc_coupon_apply_to_order($arg1->order_id, $coupon);
     }
-    unset($_SESSION['uc_coupon']);
   }
 }
 
@@ -940,7 +939,7 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
 }
 
 /**
- * Implementation of hook_checkout_complete().
+ * Implementation of hook_uc_checkout_complete().
  *
  * Ensure the stored coupon code is reset after checkout.
  */
