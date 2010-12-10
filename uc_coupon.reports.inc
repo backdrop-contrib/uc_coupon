@@ -5,6 +5,8 @@
  * Coupon report options form.
  */
 function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL, $statuses = NULL) {
+  module_load_include('inc', 'uc_coupon', 'uc_coupon.admin');
+ 
   if (is_null($start)) {
     $start = time();
   }
