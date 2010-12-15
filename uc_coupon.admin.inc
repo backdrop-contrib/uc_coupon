@@ -2,6 +2,19 @@
 // $Id$
 
 /**
+ * Store-wide coupon settings form.
+ */
+function uc_coupon_settings_form() {
+  $form['uc_coupon_show_in_cart'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show coupons as an item in the cart.'),
+    '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
  * Display a brief overview of system coupons
  *
  * @param $view_type

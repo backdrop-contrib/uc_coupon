@@ -117,6 +117,16 @@ function uc_coupon_menu() {
     'type' => MENU_CALLBACK,
   );
 
+  $items['admin/store/settings/coupon'] = array(
+    'title' => 'Coupon settings',
+    'description' => 'Configure the discount coupon settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('uc_coupon_settings_form', 3),
+    'access arguments' => array('administer store'),
+    'file' => 'uc_coupon.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
   $items['admin/store/reports/coupon'] = array(
     'title' => 'Coupon usage reports',
     'description' => 'View coupon usage reports.',
@@ -636,8 +646,17 @@ function uc_coupon_block_form_submit($form, &$form_state) {
     }
     else {
       $_SESSION['uc_coupon'] = $code;
-      drupal_set_message(t('A discount of !amount has been applied to your cart.', array('!amount' => uc_coupon_price($coupon->amount))));
+      $amount = uc_coupon_price($coupon->amount);
+      if (variable_get('uc_coupon_show_in_cart', TRUE)) {
+        drupal_set_message(t('A discount of !amount has been applied to your cart.', array('!amount' => $amount)));
+      }
+      else {
+        drupal_set_message(t('A discount of !amount will be applied in the checkout.', array('!amount' => $amount)));
+      }
     }
+  }
+  else {
+    unset($_SESSION['uc_coupon']);
   }
 }
 
@@ -820,7 +839,7 @@ function uc_coupon_tax_adjustment($price, $order, $tax) {
   foreach ($items as $item) {
     $node = node_load($item->nid);
     if (in_array($node->type, $tax->taxed_product_types) && ($tax->shippable == 0 || $node->shippable == 1)) {
-      $amount += -$item->discount * $tax->rate;
+      $amount += $item->discount * $tax->rate * ($price > 0 ? 1 : -1);
     }
   }
 
@@ -895,7 +914,7 @@ function uc_coupon_token_values($type, $object = NULL) {
  * This will be converted to a real line item during checkout.
  */
 function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
-  if (isset($_SESSION['uc_coupon'])) {
+  if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($_SESSION['uc_coupon'])) {
     $coupon = uc_coupon_validate($_SESSION['uc_coupon']);
     if ($coupon->valid) {
       $items[] = (object) array(
@@ -927,7 +946,7 @@ function uc_coupon_cart_display($item) {
  * Remove the coupon cart item, as it will be handled as a line item during checkout.
  */
 function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
-  if (isset($_SESSION['uc_coupon'])) {
+  if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($_SESSION['uc_coupon'])) {
     $items = unserialize($form['cart_contents']['#value']);
     foreach ($items as $key => $item) {
       if ($item->module == 'uc_coupon') {
