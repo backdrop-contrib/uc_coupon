@@ -722,9 +722,17 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       if ($code) {
         $coupon = uc_coupon_validate($code, $arg1);
         if ($coupon->valid) {
-          drupal_add_js('$(document).ready(function() {
+          if (variable_get('uc_coupon_show_in_cart', TRUE)) {
+            // Modify stored subtotal to ignore coupon cart item.
+            drupal_add_js('$(function() {
+              if (window.set_line_item) {
+                li_values["subtotal"] += ' . $coupon->amount . ';
+              }
+            });', 'inline');
+          }
+
+          drupal_add_js('$(function() {
             if (window.set_line_item) {
-              li_values["subtotal"] += ' . $coupon->amount . ';
               set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 0);
             }
           });', 'inline');
