@@ -121,7 +121,7 @@ function uc_coupon_menu() {
     'title' => 'Coupon settings',
     'description' => 'Configure the discount coupon settings.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('uc_coupon_settings_form', 3),
+    'page arguments' => array('uc_coupon_settings_form'),
     'access arguments' => array('administer store'),
     'file' => 'uc_coupon.admin.inc',
     'type' => MENU_NORMAL_ITEM,
