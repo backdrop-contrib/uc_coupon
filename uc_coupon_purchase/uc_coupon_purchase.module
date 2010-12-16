@@ -114,9 +114,14 @@ function uc_coupon_purchase_feature_form($form_state, $node, $feature) {
   }
 
   $coupons = array();
-  $result = db_query("SELECT cid, name, code FROM {uc_coupons}");
+  $result = db_query("SELECT cid, name, code FROM {uc_coupons} WHERE status = 0");
   while ($coupon = db_fetch_object($result)) {
     $coupons[$coupon->cid] = $coupon->name .' ('. $coupon->code .')';
+  }
+
+  if (!$coupons) {
+    drupal_set_message(t('No inactive coupons found. Please <a href="!url">create an inactive coupon</a> to use as a base coupon for purchases.', array('!url' => url('admin/store/coupons/add'))), 'error');
+    drupal_goto('node/' . arg(1) .'/edit/features');
   }
 
   $form['title'] = array(
@@ -138,7 +143,7 @@ function uc_coupon_purchase_feature_form($form_state, $node, $feature) {
     '#type' => 'select',
     '#title' => t('Base coupon'),
     '#default_value' => $data->base_cid,
-    '#description' => t('Select the coupon that will be cloned and activated when a user purchases this product.'),
+    '#description' => t('Select the coupon that will be cloned when a user purchases this product. Only inactive coupons are listed; the purchased coupon will automatically be activated.'),
     '#options' => $coupons,
   );
 
@@ -239,6 +244,8 @@ function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
     '#description' => t('Checking this box will make purchased coupons valid for the same time span as the base coupon, otherwise coupons will always be valid between the same dates.'),
     '#default_value' => isset($value->data['purchase_relative']) ? $value->data['purchase_relative'] : FALSE,
   );
+
+  $form['status']['#description'] .= '<br />' . t('Only inactive coupons can be selected as the base for a purchased coupon, subsequent purchased coupons will automatically be activated.');
 }
 
 /**

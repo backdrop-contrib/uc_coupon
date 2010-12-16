@@ -356,7 +356,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   $form['status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Active'),
-    '#description' => t('Check to enable the coupon, uncheck to disable the coupon.'),
+    '#description' => t('Coupons must be active to be usable at checkout.'),
     '#default_value' => $value->status,
   );
 
