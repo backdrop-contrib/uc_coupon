@@ -221,7 +221,7 @@ function uc_coupon_view($coupon) {
 /**
  * Print a coupon, or set of bulk coupons.
  */
-function uc_coupon_print($coupon, $code = NULL) {
+function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
   if ($code) {
     $codes = array($code);
   }
@@ -241,8 +241,13 @@ function uc_coupon_print($coupon, $code = NULL) {
   }
 
   drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
-  echo theme('uc_coupon_page', $output);
-  exit;
+
+  if ($op == 'print') {
+    echo theme('uc_coupon_page', $output);
+    exit;
+  }
+
+  return $output;
 }
 
 /**

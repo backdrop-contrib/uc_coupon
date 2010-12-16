@@ -17,8 +17,8 @@ function uc_coupon_purchase_menu() {
   $items = array();
 
   $items['user/%user/coupons'] = array(
-    'title' => t('Coupons'),
-    'description' => t('View your purchased coupons.'),
+    'title' => 'Coupons',
+    'description' => 'View your purchased coupons.',
     'page callback' => 'uc_coupon_purchase_view',
     'access callback' => 'uc_coupon_purchase_can_view',
     'page arguments' => array(1),
@@ -27,7 +27,17 @@ function uc_coupon_purchase_menu() {
     'file' => 'uc_coupon_purchase.pages.inc',
     'weight' => 5,
   );
-  
+  $items['user/%user/coupons/%uc_coupon'] = array(
+    'title' => 'Print preview',
+    'page callback' => 'uc_coupon_purchase_print',
+    'access callback' => 'uc_coupon_purchase_can_view',
+    'page arguments' => array(1, 3),
+    'access arguments' => array(1, 3),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'uc_coupon_purchase.pages.inc',
+    'weight' => 5,
+  );
+
   return $items;
 }
 
@@ -36,12 +46,14 @@ function uc_coupon_purchase_menu() {
  * 
  * User must have "view purchased coupons" permission, current user must have a
  * coupon to view, other users must have "administer users" permission.
+ *
+ * If a coupon is specified, user must have purchased that coupon.
  */
-function uc_coupon_purchase_can_view($account) {
+function uc_coupon_purchase_can_view($account, $coupon = NULL) {
   global $user;
 
   if (user_access('view purchased coupons')) {
-    if (user_access('administer users') || ($account->uid == $user->uid && uc_coupon_purchase_has_coupon($account))) {
+    if (user_access('administer users') || ($account->uid == $user->uid && uc_coupon_purchase_has_coupon($account, $coupon))) {
       return TRUE;
     }
   }
@@ -52,12 +64,13 @@ function uc_coupon_purchase_can_view($account) {
 /**
  * Check whether a given user has purchased any coupon, or the specific supplied coupon.
  */
-function uc_coupon_purchase_has_coupon($account, $cid = NULL) {
+function uc_coupon_purchase_has_coupon($account, $coupon = NULL) {
   $sql = 'SELECT COUNT(*) FROM {uc_coupon_purchase_users} WHERE uid = %d';
-  if (!empty($cid)) {
+  if (!empty($coupon)) {
     $sql .= ' AND cid = %d';
+    $coupon = $coupon->cid;
   }
-  return db_result(db_query($sql, $account->uid, $cid));
+  return db_result(db_query($sql, $account->uid, $coupon));
 }
 
 /**
