@@ -467,7 +467,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
       $form['products'][] = array(
         '#type' => 'textfield',
         '#default_value' => $title .' [nid:'. $nid .']',
-        '#autocomplete_path' => 'uc_coupon/autocomplete/node',
+        '#autocomplete_path' => 'admin/store/coupons/autocomplete/node',
         '#maxlength' => 255,
       );
     }
@@ -476,7 +476,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   for ($i = 0; $i < 3; $i++) {
     $form['products'][] = array(
       '#type' => 'textfield',
-      '#autocomplete_path' => 'uc_coupon/autocomplete/node',
+      '#autocomplete_path' => 'admin/store/coupons/autocomplete/node',
       '#maxlength' => 255,
     );
   }
@@ -530,7 +530,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
       $form['terms'][] = array(
         '#type' => 'textfield',
         '#default_value' => $name .' [tid:'. $tid .']',
-        '#autocomplete_path' => 'uc_coupon/autocomplete/term',
+        '#autocomplete_path' => 'admin/store/coupons/autocomplete/term',
       );
     }
   }
@@ -538,7 +538,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   for ($i = 0; $i < 3; $i++) {
     $form['terms'][] = array(
       '#type' => 'textfield',
-      '#autocomplete_path' => 'uc_coupon/autocomplete/term',
+      '#autocomplete_path' => 'admin/store/coupons/autocomplete/term',
     );
   }
 
@@ -557,7 +557,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
       $form['users'][] = array(
         '#type' => 'textfield',
         '#default_value' => $username .' [uid:'. $uid .']',
-        '#autocomplete_path' => 'uc_coupon/autocomplete/user',
+        '#autocomplete_path' => 'admin/store/coupons/autocomplete/user',
       );
     }
   }
@@ -565,7 +565,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   for ($i = 0; $i < 3; $i++) {
     $form['users'][] = array(
       '#type' => 'textfield',
-      '#autocomplete_path' => 'uc_coupon/autocomplete/user',
+      '#autocomplete_path' => 'admin/store/coupons/autocomplete/user',
     );
   }
 
@@ -583,7 +583,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
       $form['roles'][] = array(
         '#type' => 'textfield',
         '#default_value' => $role,
-        '#autocomplete_path' => 'uc_coupon/autocomplete/role',
+        '#autocomplete_path' => 'admin/store/coupons/autocomplete/role',
       );
     }
   }
@@ -591,7 +591,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   for ($i = 0; $i < 3; $i++) {
     $form['roles'][] = array(
       '#type' => 'textfield',
-      '#autocomplete_path' => 'uc_coupon/autocomplete/role',
+      '#autocomplete_path' => 'admin/store/coupons/autocomplete/role',
     );
   }
 

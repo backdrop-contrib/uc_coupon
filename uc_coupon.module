@@ -117,6 +117,35 @@ function uc_coupon_menu() {
     'type' => MENU_CALLBACK,
   );
 
+  $items['admin/store/coupons/autocomplete/node'] = array(
+    'title' => 'Node autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_node',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_coupon.admin.inc',
+  );
+  $items['admin/store/coupons/autocomplete/term'] = array(
+    'title' => 'Term autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_term',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_coupon.admin.inc',
+  );
+  $items['admin/store/coupons/autocomplete/user'] = array(
+    'title' => 'User autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_user',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_coupon.admin.inc',
+  );
+  $items['admin/store/coupons/autocomplete/role'] = array(
+    'title' => 'Role autocomplete',
+    'page callback' => 'uc_coupon_autocomplete_role',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_coupon.admin.inc',
+  );
+
   $items['admin/store/settings/coupon'] = array(
     'title' => 'Coupon settings',
     'description' => 'Configure the discount coupon settings.',
@@ -141,35 +170,6 @@ function uc_coupon_menu() {
     'page callback' => 'uc_coupon_checkout_apply',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
-  );
-
-  $items['uc_coupon/autocomplete/node'] = array(
-    'title' => 'Node autocomplete',
-    'page callback' => 'uc_coupon_autocomplete_node',
-    'access arguments' => array('manage store coupons'),
-    'type' => MENU_CALLBACK,
-    'file' => 'uc_coupon.admin.inc',
-  );
-  $items['uc_coupon/autocomplete/term'] = array(
-    'title' => 'Term autocomplete',
-    'page callback' => 'uc_coupon_autocomplete_term',
-    'access arguments' => array('manage store coupons'),
-    'type' => MENU_CALLBACK,
-    'file' => 'uc_coupon.admin.inc',
-  );
-  $items['uc_coupon/autocomplete/user'] = array(
-    'title' => 'User autocomplete',
-    'page callback' => 'uc_coupon_autocomplete_user',
-    'access arguments' => array('manage store coupons'),
-    'type' => MENU_CALLBACK,
-    'file' => 'uc_coupon.admin.inc',
-  );
-  $items['uc_coupon/autocomplete/role'] = array(
-    'title' => 'Role autocomplete',
-    'page callback' => 'uc_coupon_autocomplete_role',
-    'access arguments' => array('manage store coupons'),
-    'type' => MENU_CALLBACK,
-    'file' => 'uc_coupon.admin.inc',
   );
 
   return $items;
