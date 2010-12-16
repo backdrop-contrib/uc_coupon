@@ -750,6 +750,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
         '#type' => 'button',
         '#value' => t('Apply to order'),
         '#attributes' => array('onclick' => "getCoupon(); return false;"),
+        '#suffix' => '<span id="coupon-throbber"></span>',
       );
       return array('description' => $description, 'contents' => $contents);
 

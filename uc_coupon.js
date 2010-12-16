@@ -1,5 +1,8 @@
+// $Id$
+
 function getCoupon() {
   $('#coupon-message').remove();
+  $('#coupon-throbber').addClass('ubercart-throbber').html('&nbsp;&nbsp;&nbsp;&nbsp;');
 
   var code = $('#edit-panes-coupon-code');
 
@@ -12,7 +15,8 @@ function getCoupon() {
     },
     dataType: "json",
     success: function(coupon) {
-      code.parent().next().after('<div id="coupon-message">' + coupon.message + '</div>');
+      $('#coupon-throbber').removeClass('ubercart-throbber');
+      code.parent().parent().append('<div id="coupon-message">' + coupon.message + '</div>');
 
       if (coupon.valid) {
         if (window.set_line_item) {
