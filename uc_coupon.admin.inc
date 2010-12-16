@@ -429,18 +429,17 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#required' => TRUE,
   );
 
-  $options = array('' => '(none)');
-  foreach (module_invoke_all('product_types') as $type) {
-    $options[$type] = $type;
-  }
-
   $form['product_types'] = array(
-    '#type' => 'select',
-    '#title' => t('Product classes'),
-    '#description' => t('Selecting one or more product classes will apply this coupon to <strong>all</strong> products of this class, overriding other restrictions (except for specific products or terms explicitly excluded below). Select (none) if you only want to match more specific products below.'),
-    '#options' => $options,
-    '#default_value' => $value->data['product_types'],
-    '#multiple' => TRUE,
+    '#type' => 'fieldset',
+    '#title' => t('Applicable product classes'),
+    '#description' => t('Selecting a class will apply this coupon to <strong>all</strong> products of the class, overriding other restrictions except for products or terms explicitly excluded below.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($value->data['product_types']),
+  );
+  $form['product_types']['product_types'] = array(
+    '#type' => 'checkboxes',
+    '#options' => array_map('check_plain', array_intersect_key(node_get_types('names'), drupal_map_assoc(uc_product_types()))),
+    '#default_value' => isset($value->data['product_types']) ? $value->data['product_types'] : array(),
   );
 
   $form['products'] = array(
