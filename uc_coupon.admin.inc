@@ -11,6 +11,16 @@ function uc_coupon_settings_form() {
     '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
   );
 
+  $form['uc_coupon_default_usage'] = array(
+    '#type' => 'radios',
+    '#title' => t('Default redemption setting for new coupons'),
+    '#options' => array(
+      'single' => t('Single use per code.'),
+      'multi' => t('Multiple uses per code.'),
+    ),
+    '#default_value' => variable_get('uc_coupon_default_usage', 'single'),
+  );
+
   return system_settings_form($form);
 }
 
@@ -270,6 +280,14 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     $value->valid_from = time();
     $value->valid_until = time();
     $value->minimum_order = 0;
+    if (variable_get('uc_coupon_default_usage', 'single') == 'single') {
+      $value->max_uses = 1;
+      $value->data['max_uses_per_user'] = 1;
+    }
+    else {
+      $value->max_uses = 0;
+      $value->data['max_uses_per_user'] = 0;
+    }
     $used = 0;
   }
 
@@ -393,7 +411,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   $form['max_uses'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per code)'),
-    '#default_value' => isset($value->max_uses) ? $value->max_uses : '',
+    '#default_value' => $value->max_uses,
     '#description' => t('Enter the maximum number of times each code for this coupon can be used, or 0 for unlimited.'),
     '#size' => 5,
     '#required' => TRUE,
@@ -402,7 +420,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   $form['max_uses_per_user'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per user)'),
-    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : ($coupon ? '0' : ''),
+    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : 0,
     '#description' => t('Enter the maximum number of times this coupon can be used by a single user, or 0 for unlimited.'),
     '#size' => 5,
     '#required' => TRUE,
