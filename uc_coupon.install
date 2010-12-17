@@ -6,6 +6,9 @@
  * Ubercart uc_coupon.module schema
  */
 
+/**
+ * Implementation of hook_schema().
+ */
 function uc_coupon_schema() {
   $schema = array();
 
@@ -131,17 +134,23 @@ function uc_coupon_schema() {
   return $schema;
 }
 
+/**
+ * Implementation of hook_install().
+ */
 function uc_coupon_install() {
-   drupal_install_schema('uc_coupon');
+  drupal_install_schema('uc_coupon');
 }
 
+/**
+ * Implementation of hook_uninstall().
+ */
 function uc_coupon_uninstall() {
-   drupal_uninstall_schema('uc_coupon');
+  drupal_uninstall_schema('uc_coupon');
 
-   variable_del('uc_coupon_default_usage');
-   variable_del('uc_coupon_pane_description');
-   variable_del('uc_coupon_purchase_order_status');
-   variable_del('uc_coupon_show_in_cart');
+  variable_del('uc_coupon_default_usage');
+  variable_del('uc_coupon_pane_description');
+  variable_del('uc_coupon_purchase_order_status');
+  variable_del('uc_coupon_show_in_cart');
 }
 
 function uc_coupon_update_6000() {
