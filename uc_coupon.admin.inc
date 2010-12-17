@@ -5,6 +5,8 @@
  * Store-wide coupon settings form.
  */
 function uc_coupon_settings_form() {
+  global $base_url;
+ 
   $form['uc_coupon_show_in_cart'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show coupons as an item in the cart.'),
@@ -19,6 +21,14 @@ function uc_coupon_settings_form() {
       'multi' => t('Multiple uses per code.'),
     ),
     '#default_value' => variable_get('uc_coupon_default_usage', 'single'),
+  );
+
+  $form['uc_coupon_querystring'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Query string parameter'),
+    '#description' => t('If set, coupon codes can be applied by including them in any URL. Leave blank to disable this feature.<br />Example: if set to "coupon", visiting !base_url?coupon=CODE will apply the CODE coupon.', array('!base_url' => $base_url)),
+    '#default_value' => variable_get('uc_coupon_querystring', ''),
+    '#size' => 15,
   );
 
   return system_settings_form($form);

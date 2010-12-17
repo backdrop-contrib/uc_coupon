@@ -196,6 +196,13 @@ function uc_coupon_perm() {
 function uc_coupon_init() {
   global $conf;
   $conf['i18n_variables'][] = 'uc_coupon_pane_description';
+
+  // Auto apply coupon from query string, if configured.
+  if ($param = variable_get('uc_coupon_querystring', '')) {
+    if (isset($_GET[$param]) && $_GET[$param]) {
+      $_SESSION['uc_coupon'] = $_GET[$param];
+    }
+  }
 }
 
 /**
