@@ -51,8 +51,8 @@ function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL, $statu
 }
 
 function uc_coupon_reports_form_submit($form, &$form_state) {
-  $start = mktime(0, 0, 0, $form_state['values']['start']['month'], $form_state['values']['start']['day'], $form_state['values']['start']['year']);
-  $end = mktime(23, 59, 59, $form_state['values']['end']['month'], $form_state['values']['end']['day'], $form_state['values']['end']['year']);
+  $start = gmmktime(0, 0, 0, $form_state['values']['start']['month'], $form_state['values']['start']['day'], $form_state['values']['start']['year']);
+  $end = gmmktime(23, 59, 59, $form_state['values']['end']['month'], $form_state['values']['end']['day'], $form_state['values']['end']['year']);
   $statuses = implode(',', array_keys($form_state['values']['status']));
 
   $form_state['redirect'] = 'admin/store/reports/coupon/'. $start .'/'. $end .'/'. $statuses;

@@ -51,9 +51,9 @@ function uc_coupon_display($view_type = 'active') {
       check_plain($row->name),
       check_plain($row->code) . ($row->bulk ? '* '. t('(bulk)') : ''),
       $row->type == 'percentage' ? ($row->value . '%') : uc_currency_format($row->value),
-      format_date($row->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
-      format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
-      format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
+      format_date($row->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
+      format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
+      format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
     );
   }
 
@@ -92,13 +92,13 @@ function uc_coupon_view($coupon) {
     $status = t('Inactive');
   }
   else if (time() < $coupon->valid_from) {
-    $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
+    $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
   }
   else if (time() > $coupon->valid_until) {
-    $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
+    $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
   }
   else {
-    $status = t('Active until @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
+    $status = t('Active until @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
   }
   $rows[] = array(t('Status'), $status);
 
@@ -291,8 +291,8 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     $used = 0;
   }
 
-  $value->valid_from = array('year' => format_date($value->valid_from, 'custom', 'Y'), 'month' => format_date($value->valid_from, 'custom', 'n'), 'day' => format_date($value->valid_from, 'custom', 'j'));
-  $value->valid_until = array('year' => format_date($value->valid_until, 'custom', 'Y'), 'month' => format_date($value->valid_until, 'custom', 'n'), 'day' => format_date($value->valid_until, 'custom', 'j'));
+  $value->valid_from = array('year' => format_date($value->valid_from, 'custom', 'Y', 0), 'month' => format_date($value->valid_from, 'custom', 'n', 0), 'day' => format_date($value->valid_from, 'custom', 'j', 0));
+  $value->valid_until = array('year' => format_date($value->valid_until, 'custom', 'Y', 0), 'month' => format_date($value->valid_until, 'custom', 'n', 0), 'day' => format_date($value->valid_until, 'custom', 'j', 0));
 
   $form['name'] = array(
     '#type' => 'textfield',

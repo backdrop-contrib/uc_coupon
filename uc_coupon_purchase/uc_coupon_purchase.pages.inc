@@ -24,8 +24,8 @@ function uc_coupon_purchase_view($account) {
     }
 
     $value = $coupon->type == 'percentage' ? $coupon->value . '%' : uc_currency_format($coupon->value);
-    $valid_from = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
-    $valid_until = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
+    $valid_from = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
+    $valid_until = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
     $valid = $coupon->status ? "$valid_from - $valid_until" : t('Inactive');
     $uses = $coupon->max_uses > 0 ? $coupon->max_uses : t('Unlimited');
 
