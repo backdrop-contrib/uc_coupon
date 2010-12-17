@@ -203,6 +203,9 @@ function uc_coupon_init() {
  */
 function uc_coupon_theme() {
   return array(
+    'uc_checkout_pane_coupon' => array(
+      'arguments' => array('form' => NULL),
+    ),
     'uc_coupon_actions' => array(
       'arguments' => array('coupon' => NULL),
       'file' => 'uc_coupon.admin.inc',
@@ -222,6 +225,13 @@ function uc_coupon_theme() {
       'path' => drupal_get_path('module', 'uc_coupon') .'/theme',
     ),
   );
+}
+
+/**
+ * Default theme implementation for the checkout pane.
+ */
+function theme_uc_checkout_pane_coupon($form) {
+  return drupal_render($form);
 }
 
 /**
@@ -752,7 +762,11 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
         '#attributes' => array('onclick' => "getCoupon(); return false;"),
         '#suffix' => '<span id="coupon-throbber"></span>',
       );
-      return array('description' => $description, 'contents' => $contents);
+      return array(
+        'description' => $description,
+        'contents' => $contents,
+        'theme' => 'uc_checkout_pane_coupon',
+      );
 
     case 'process':
       if ($arg2['code']) {
