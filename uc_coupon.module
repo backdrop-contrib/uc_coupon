@@ -516,7 +516,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       else if (isset($coupon->data['terms']) && isset($coupon->data['negate_terms']) && count(array_intersect($terms, $coupon->data['terms']))) {
         ;// always exclude if one of the terms is in the list of negated terms
       }
-      else if (isset($coupon->data['skus']) && in_array($item->model, $coupon->data['skus'])) {
+      else if (isset($coupon->data['skus']) && _uc_coupon_match_sku($item->model, $coupon->data['skus'])) {
         $include = TRUE;
       }
       else if (isset($coupon->data['product_types']) && in_array($node->type, $coupon->data['product_types'])) {
@@ -560,6 +560,16 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   }
 
   return $items;
+}
+
+function _uc_coupon_match_sku($model, $skus) {
+  foreach ($skus as $match) {
+    if (preg_match('/^' . str_replace('\*', '.*?', preg_quote($match, '/')) . '$/', $model)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
 }
 
 function _uc_coupon_sort_products($a, $b) {
