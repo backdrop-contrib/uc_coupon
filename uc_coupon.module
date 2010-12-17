@@ -147,8 +147,8 @@ function uc_coupon_menu() {
   );
 
   $items['admin/store/settings/coupon'] = array(
-    'title' => 'Coupon settings',
-    'description' => 'Configure the discount coupon settings.',
+    'title' => 'Coupon module settings',
+    'description' => 'Configure the discount coupon module settings.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('uc_coupon_settings_form'),
     'access arguments' => array('administer store'),
