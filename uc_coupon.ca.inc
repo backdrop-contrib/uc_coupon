@@ -47,7 +47,32 @@ function uc_coupon_ca_condition() {
  * Check if an order has a coupon applied.
  */
 function uc_coupon_condition_order_has_coupon($order, $settings) {
-  return isset($order->data['coupon']);
+  if (isset($order->data['coupon'])) {
+    // If no codes specified, match any coupon.
+    if (empty($settings['codes'])) {
+      return TRUE;
+    }
+
+    // Check codes for exact or wildcard matches.
+    foreach (explode("\n", $settings['codes']) as $code) {
+      if (preg_match('/^' . str_replace('\*', '.*?', preg_quote(strtoupper(trim($code)), '/')) . '$/', $order->data['coupon'])) {
+        return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+function uc_coupon_condition_order_has_coupon_form($form_state, $settings = array()) {
+  $form['codes'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Coupon codes'),
+    '#description' => t('Enter coupon codes that this condition will apply to, one per line. Wildcards are allowed, e.g. COUPON* will match all codes beginning with COUPON. Leave blank to apply to any order with a coupon.'),
+    '#default_value' => $settings['codes'],
+  );
+
+  return $form;
 }
 
 /**
