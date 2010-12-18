@@ -147,6 +147,7 @@ function uc_coupon_install() {
 function uc_coupon_uninstall() {
   drupal_uninstall_schema('uc_coupon');
 
+  variable_del('uc_coupon_collapse_pane');
   variable_del('uc_coupon_default_usage');
   variable_del('uc_coupon_pane_description');
   variable_del('uc_coupon_purchase_order_status');

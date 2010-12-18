@@ -799,6 +799,11 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       return TRUE;
 
     case 'settings':
+      $form['uc_coupon_collapse_pane'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Collapse checkout pane by default.'),
+        '#default_value' => variable_get('uc_coupon_collapse_pane', FALSE),
+      );
       $form['uc_coupon_pane_description'] = array(
         '#type' => 'textarea',
         '#title' => t('Checkout pane message'),
@@ -993,6 +998,7 @@ function uc_coupon_cart_display($item) {
  * Implementation of hook_form_FORM_ID_alter() for uc_cart_checkout_form().
  *
  * Remove the coupon cart item, as it will be handled as a line item during checkout.
+ * Collapse coupon checkout pane, if configured to do so.
  */
 function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
   if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($_SESSION['uc_coupon'])) {
@@ -1003,6 +1009,10 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
       }
     }
     $form['cart_contents']['#value'] = serialize($items);
+  }
+
+  if (variable_get('uc_coupon_collapse_pane', FALSE) && isset($form['panes']['coupon'])) {
+    $form['panes']['coupon']['#collapsed'] = TRUE;
   }
 }
 
