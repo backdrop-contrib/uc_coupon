@@ -81,7 +81,7 @@ function uc_coupon_menu() {
     'title' => 'Print',
     'description' => 'Print coupon.',
     'page callback' => 'uc_coupon_print',
-    'page arguments' => array(3, 'print'),
+    'page arguments' => array(3, NULL, 'print'),
     'access arguments' => array('view store coupons'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'uc_coupon.admin.inc',
@@ -1039,7 +1039,7 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
     $variables['value'] = uc_currency_format($coupon->value);
   }
 
-  $variables['display_name'] = $coupon->name;
+  $variables['display_name'] = check_plain($coupon->name);
   $n = stripos($variables['display_name'], 'purchased by');
   if ($n) {
     $variables['display_name'] = substr($variables['display_name'], 0, $n-1);
