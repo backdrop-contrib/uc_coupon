@@ -418,6 +418,15 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
   );
 
+  $form['minimum_qty'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum order quantity'),
+    '#default_value' => isset($value->data['minimum_qty']) ? $value->data['minimum_qty'] : 0,
+    '#size' => 10,
+    '#description' => t('The minimum number of items that must be in the order for this coupon to apply, or 0 for no limit.'),
+    '#required' => TRUE,
+  );
+
   $form['max_uses'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per code)'),
@@ -758,6 +767,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->type = $form_state['values']['type'];
   $coupon->value = $form_state['values']['value'];
   $coupon->minimum_order = $form_state['values']['minimum_order'];
+  $coupon->data['minimum_qty'] = $form_state['values']['minimum_qty'];
   $coupon->max_uses = $form_state['values']['max_uses'];
   $coupon->data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
   $coupon->data['max_applicable_products'] = $form_state['values']['max_applicable_products'];

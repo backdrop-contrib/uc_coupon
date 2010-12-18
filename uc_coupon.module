@@ -402,7 +402,7 @@ function uc_coupon_validate($code, $order = NULL) {
     }
   }
 
-  //  CHECK MINIMUM PURCHASE VALUE
+  //  CHECK MINIMUM ORDER TOTAL
   if ($coupon->minimum_order > 0) {
     $total = 0;
     $context = array(
@@ -421,6 +421,19 @@ function uc_coupon_validate($code, $order = NULL) {
 
     if ($coupon->minimum_order > $total) {
       $result->message = t('You have not reached the minimum order total for this coupon.');
+      return $result;
+    }
+  }
+
+  //  CHECK MINIMUM ORDER QUANTITY
+  if (isset($coupon->data['minimum_qty'])) {
+    $qty = 0;
+    foreach ($order->products as $item) {
+      $qty += $item->qty;
+    }
+
+    if ($coupon->data['minimum_qty'] > $qty) {
+      $result->message = t('You do not have enough items in your cart to use this coupon.');
       return $result;
     }
   }
@@ -791,6 +804,8 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
         $coupon = uc_coupon_validate($arg1->data['coupon'], $arg1);
         if (!$coupon->valid) {
           drupal_set_message($coupon->message, 'error');
+          unset($_SESSION['uc_coupon']);
+          unset($arg1->data['coupon']);
           return FALSE;
         }
         $_SESSION['uc_coupon'] = $arg1->data['coupon'];
