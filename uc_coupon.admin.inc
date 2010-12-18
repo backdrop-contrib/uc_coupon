@@ -60,7 +60,7 @@ function uc_coupon_display($view_type = 'active') {
       theme('uc_coupon_actions', $row),
       check_plain($row->name),
       check_plain($row->code) . ($row->bulk ? '* '. t('(bulk)') : ''),
-      $row->type == 'percentage' ? ($row->value . '%') : uc_currency_format($row->value),
+      $row->type == 'percentage' ? ((float)$row->value . '%') : uc_currency_format($row->value),
       format_date($row->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
       format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
       format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
@@ -309,7 +309,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#title' => t('Coupon name'),
     '#default_value' => $value->name,
     '#required' => TRUE,
-    '#weight' => -10,
+    '#weight' => -15,
   );
 
   $form['code'] = array(
@@ -383,65 +383,17 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
 
   $form['status'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Active'),
-    '#description' => t('Coupons must be active to be usable at checkout.'),
+    '#title' => t('Coupon is active.'),
+    '#description' => t('Only active coupons can be used at checkout.'),
     '#default_value' => $value->status,
   );
 
-  $form['type'] = array(
-    '#type' => 'select',
-    '#title' => t('Discount type'),
-    '#default_value' => $value->type,
-    '#options' => array(
-      'percentage' => t('Percentage'),
-      'price' => t('Price')
-    ),
-  );
-
-  $form['value'] = array(
+  $form['discount'] = array(
     '#type' => 'textfield',
-    '#title' => t('Discount value'),
-    '#default_value' => $value->value,
+    '#title' => t('Discount'),
+    '#default_value' => $value->type == 'percentage' ? ((float)$value->value . '%') : $value->value,
     '#size' => 10,
-    '#description' => t('Enter values without symbols, for 15%, enter "15" and choose Percentage as the discount type.'),
-    '#required' => TRUE,
-  );
-
-  $form['minimum_order'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Minimum order total'),
-    '#default_value' => $value->minimum_order,
-    '#size' => 10,
-    '#description' => t('A minimum order total that applies to the coupon, or 0 for no minimum order limit.'),
-    '#required' => TRUE,
-    '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
-    '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
-  );
-
-  $form['minimum_qty'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Minimum order quantity'),
-    '#default_value' => isset($value->data['minimum_qty']) ? $value->data['minimum_qty'] : 0,
-    '#size' => 10,
-    '#description' => t('The minimum number of items that must be in the order for this coupon to apply, or 0 for no limit.'),
-    '#required' => TRUE,
-  );
-
-  $form['max_uses'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Maximum number of redemptions (per code)'),
-    '#default_value' => $value->max_uses,
-    '#description' => t('Enter the maximum number of times each code for this coupon can be used, or 0 for unlimited.'),
-    '#size' => 5,
-    '#required' => TRUE,
-  );
-
-  $form['max_uses_per_user'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Maximum number of redemptions (per user)'),
-    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : 0,
-    '#description' => t('Enter the maximum number of times this coupon can be used by a single user, or 0 for unlimited.'),
-    '#size' => 5,
+    '#description' => t('Enter a percentage (e.g. "15%") or a fixed price discount without currency symbols (e.g. "15" for $15.00)'),
     '#required' => TRUE,
   );
 
@@ -463,6 +415,53 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
       'expensive' => t('The most expensive product(s)'),
     ),
     '#default_value' => isset($value->data['max_applicable_products_value']) ? $value->data['max_applicable_products_value'] : 'cheapest',
+    '#required' => TRUE,
+  );
+
+  $form['redemption'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Redemption limits'),
+    '#collapsible' => TRUE,
+  );
+  $form['redemption']['max_uses'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum number of redemptions (per code)'),
+    '#default_value' => $value->max_uses,
+    '#description' => t('Enter the maximum number of times each code for this coupon can be used, or 0 for unlimited.'),
+    '#size' => 5,
+    '#required' => TRUE,
+  );
+  $form['redemption']['max_uses_per_user'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum number of redemptions (per user)'),
+    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : 0,
+    '#description' => t('Enter the maximum number of times this coupon can be used by a single user, or 0 for unlimited.'),
+    '#size' => 5,
+    '#required' => TRUE,
+  );
+
+  $form['order'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Minimum order limits'),
+    '#collapsible' => TRUE,
+    '#collapsed' => $value->minimum_order < 0.01 && !isset($value->data['minimum_qty']),
+  );
+  $form['order']['minimum_order'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum order total'),
+    '#default_value' => $value->minimum_order,
+    '#size' => 10,
+    '#description' => t('A minimum order total that applies to the coupon, or 0 for no minimum order limit.'),
+    '#required' => TRUE,
+    '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
+    '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
+  );
+  $form['order']['minimum_qty'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum order quantity'),
+    '#default_value' => isset($value->data['minimum_qty']) ? $value->data['minimum_qty'] : 0,
+    '#size' => 10,
+    '#description' => t('The minimum number of items that must be in the order for this coupon to apply, or 0 for no limit.'),
     '#required' => TRUE,
   );
 
@@ -632,10 +631,17 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     );
   }
 
-  $form['wholesale'] = array(
+  $form['deprecated'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Deprecated options'),
+    '#description' => t('These options will be removed in a future version.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => !isset($value->data['wholesale']) || $value->data['wholesale'] == 1,
+  );
+  $form['deprecated']['wholesale'] = array(
     '#type' => 'radios',
     '#title' => t('Wholesale permissions'),
-    '#description' => t('Select the groups who are able to use this coupon. This option is deprecated, it is recommended that you leave this option as "Both wholesale and retail" use the role selection above instead.'),
+    '#description' => t('Select the groups who are able to use this coupon. It is recommended that you leave this option as "Both wholesale and retail" use the role selection above instead.'),
     '#default_value' => isset($value->data['wholesale']) ? $value->data['wholesale'] : 1,
     '#options' => array(
       '1' => t('Both wholesale and retail'),
@@ -711,10 +717,13 @@ function uc_coupon_autocomplete_role($string) {
  * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form, &$form_state) {
-  // check to ensure a unique coupon code
   $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code = '%s' AND cid <> %d", strtoupper($form_state['values']['code']), $form['#uc_coupon_cid']));
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
+  }
+
+  if (!preg_match('/^[1-9]\d*(\.\d+)?%?$/', $form_state['values']['discount'])) {
+    form_set_error('discount', t('Invalid discount.'));
   }
 
   foreach ($form_state['values']['products'] as $key => $product) {
@@ -764,8 +773,8 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
   $coupon->valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
   $coupon->status = $form_state['values']['status'];
-  $coupon->type = $form_state['values']['type'];
-  $coupon->value = $form_state['values']['value'];
+  $coupon->type = substr($form_state['values']['discount'], -1) == '%' ? 'percentage' : 'price';
+  $coupon->value = str_replace('%', '', $form_state['values']['discount']);
   $coupon->minimum_order = $form_state['values']['minimum_order'];
   $coupon->data['minimum_qty'] = $form_state['values']['minimum_qty'];
   $coupon->max_uses = $form_state['values']['max_uses'];
