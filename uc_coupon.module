@@ -81,7 +81,7 @@ function uc_coupon_menu() {
     'title' => 'Print',
     'description' => 'Print coupon.',
     'page callback' => 'uc_coupon_print',
-    'page arguments' => array(3, NULL, 'print'),
+    'page arguments' => array(3, 5, 'print'),
     'access arguments' => array('view store coupons'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'uc_coupon.admin.inc',
