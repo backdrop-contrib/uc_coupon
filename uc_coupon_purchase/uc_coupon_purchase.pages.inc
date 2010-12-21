@@ -66,6 +66,9 @@ function uc_coupon_purchase_print($account, $coupon, $op = 'view', $code = NULL)
   $url = 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/print' . ($code ? "/$code" : '');
   $output = '<p>' . l($coupon->bulk && !$code ? t('Print coupons') : t('Print coupon'), $url) . '</p>';
 
+  // Add the owner account object to the coupon.
+  $coupon->owner = $account;
+  
   // Does not return if op = 'print'
   $output .= uc_coupon_print($coupon, $code, $op);
 

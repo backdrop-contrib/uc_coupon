@@ -15,7 +15,11 @@
  * $valid_until - the formatted date the coupon is valid from
  * $not_yet_valid - TRUE if the coupon is not yet valid
  * $max_uses_per_user - the number of times this coupon can be used per customer
- * 
+ *
+ * For purchased coupons, the following is also available:
+ *
+ * $coupon->owner - the account object of the purchaser
+ *
  * Also includes global tokens, and thus the global Ubercart store information.
  * 
  * Templates for specific coupons may be created after the following patterns:
@@ -25,7 +29,7 @@
  *     (where [cid] is the base cid for the coupon, if it was a purchased coupon)
  */
 ?>
-<div class="uc-coupon-certificate">     
+<div class="uc-coupon-certificate">
   <?php if ($site_logo): ?>
     <div class="site-logo"><?php print $site_logo; ?></div>
   <?php endif; ?>
