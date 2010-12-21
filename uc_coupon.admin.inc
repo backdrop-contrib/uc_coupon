@@ -276,7 +276,7 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
  * @param $coupon object
  *   Coupon object, or NULL to add a new coupon.
  */
-function uc_coupon_add_form($form_state, $coupon = NULL) {
+function uc_coupon_add_form(&$form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
   drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.admin.js');
@@ -304,8 +304,37 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     $used = 0;
   }
 
-  $value->valid_from = array('year' => format_date($value->valid_from, 'custom', 'Y', 0), 'month' => format_date($value->valid_from, 'custom', 'n', 0), 'day' => format_date($value->valid_from, 'custom', 'j', 0));
-  $value->valid_until = array('year' => format_date($value->valid_until, 'custom', 'Y', 0), 'month' => format_date($value->valid_until, 'custom', 'n', 0), 'day' => format_date($value->valid_until, 'custom', 'j', 0));
+  // Handle AHAH functionality.
+  $ahah_fields = array(
+    'products' => 'admin/store/coupons/autocomplete/node',
+    'skus' => '',
+    'terms' => 'admin/store/coupons/autocomplete/term',
+    'users' => 'admin/store/coupons/autocomplete/user',
+    'roles' => 'admin/store/coupons/autocomplete/role',
+  );
+
+  if (empty($form_state['ahah_submission'])) {
+    // Set the initial field count.
+    foreach (array_keys($ahah_fields) as $field) {
+      $form_state['storage']['field_count'][$field] = isset($value->data[$field]) ? (count($value->data[$field]) + 3) : 3;
+    }
+  }
+  else {
+    // Use data from the AHAH submission.
+    $value->data = $form_state['coupon_data'];
+
+    // Increase the count for the selected field.
+    $form_state['storage']['field_count'][$form_state['ahah_submission']] += 3;
+
+    // Reset form action, otherwise validation errors go wrong.
+    $form['#action'] = $form_state['action'];
+  }
+
+  foreach (array_keys($ahah_fields) as $field) {
+    if (!isset($value->data[$field])) {
+      $value->data[$field] = array();
+    }
+  }
 
   $form['name'] = array(
     '#type' => 'textfield',
@@ -371,7 +400,11 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   $form['valid_from'] = array(
     '#type' => 'date',
     '#title' => t('Start date'),
-    '#default_value' => $value->valid_from,
+    '#default_value' => array(
+      'year' => format_date($value->valid_from, 'custom', 'Y', 0),
+      'month' => format_date($value->valid_from, 'custom', 'n', 0),
+      'day' => format_date($value->valid_from, 'custom', 'j', 0),
+    ),
     '#required' => TRUE,
     '#after_build' => array('_uc_coupon_date_range'),
   );
@@ -379,7 +412,11 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
   $form['valid_until'] = array(
     '#type' => 'date',
     '#title' => t('Expiry date'),
-    '#default_value' => $value->valid_until,
+    '#default_value' => array(
+      'year' => format_date($value->valid_until, 'custom', 'Y', 0),
+      'month' => format_date($value->valid_until, 'custom', 'n', 0),
+      'day' => format_date($value->valid_until, 'custom', 'j', 0),
+    ),
     '#required' => TRUE,
     '#after_build' => array('_uc_coupon_date_range'),
   );
@@ -486,11 +523,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#type' => 'fieldset',
     '#title' => t('Applicable products'),
     '#description' => t('Enter one or more products below to restrict this coupon to a set of products, regardless of any product attributes. Discounts will apply to each matching product.'),
-    '#tree' => TRUE,
-    '#collapsible' => TRUE,
-    '#collapsed' => !isset($value->data['products']),
   );
-
   $form['products']['negate_products'] = array(
     '#type' => 'radios',
     '#default_value' => isset($value->data['negate_products']) ? 1 : 0,
@@ -500,22 +533,11 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     ),
     '#tree' => FALSE,
   );
-
-  if (isset($value->data['products'])) {
-    foreach ($value->data['products'] as $nid) {
-      $title = db_result(db_query('SELECT title FROM {node} WHERE nid = %d', $nid));
-      $form['products'][] = array(
-        '#type' => 'textfield',
-        '#default_value' => $title .' [nid:'. $nid .']',
-        '#autocomplete_path' => 'admin/store/coupons/autocomplete/node',
-        '#maxlength' => 255,
-      );
-    }
-  }
-
-  for ($i = 0; $i < 3; $i++) {
+  foreach ($value->data['products'] as $nid) {
+    $title = db_result(db_query('SELECT title FROM {node} WHERE nid = %d', $nid));
     $form['products'][] = array(
       '#type' => 'textfield',
+      '#default_value' => $title .' [nid:'. $nid .']',
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/node',
       '#maxlength' => 255,
     );
@@ -525,23 +547,11 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#type' => 'fieldset',
     '#title' => t('Applicable SKUs'),
     '#description' => t('Enter one or more SKUs below to restrict this coupon to a set of SKUs, allowing coupons to apply to specific products or attribute options. Discounts will apply to matching SKUs. Wildcards are supported, e.g. "E*" will match all products with SKUs beginning with E.'),
-    '#tree' => TRUE,
-    '#collapsible' => TRUE,
-    '#collapsed' => !isset($value->data['skus']),
   );
-
-  if (isset($value->data['skus'])) {
-    foreach ($value->data['skus'] as $sku) {
-      $form['skus'][] = array(
-        '#type' => 'textfield',
-        '#default_value' => $sku,
-      );
-    }
-  }
-
-  for ($i = 0; $i < 3; $i++) {
+  foreach ($value->data['skus'] as $sku) {
     $form['skus'][] = array(
       '#type' => 'textfield',
+      '#default_value' => $sku,
     );
   }
 
@@ -549,11 +559,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#type' => 'fieldset',
     '#title' => t('Applicable taxonomy terms'),
     '#description' => t('Enter one or more taxonomy terms (categories) below to restrict this coupon to a set of products. Discounts will apply to all matching products with these terms.'),
-    '#tree' => TRUE,
-    '#collapsible' => TRUE,
-    '#collapsed' => !isset($value->data['terms']),
   );
-
   $form['terms']['negate_terms'] = array(
     '#type' => 'radios',
     '#default_value' => isset($value->data['negate_terms']) ? 1 : 0,
@@ -563,21 +569,11 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     ),
     '#tree' => FALSE,
   );
-
-  if (isset($value->data['terms'])) {
-    foreach ($value->data['terms'] as $tid) {
-      $name = db_result(db_query('SELECT name FROM {term_data} WHERE tid = %d', $tid));
-      $form['terms'][] = array(
-        '#type' => 'textfield',
-        '#default_value' => $name .' [tid:'. $tid .']',
-        '#autocomplete_path' => 'admin/store/coupons/autocomplete/term',
-      );
-    }
-  }
-
-  for ($i = 0; $i < 3; $i++) {
+  foreach ($value->data['terms'] as $tid) {
+    $name = db_result(db_query('SELECT name FROM {term_data} WHERE tid = %d', $tid));
     $form['terms'][] = array(
       '#type' => 'textfield',
+      '#default_value' => $name .' [tid:'. $tid .']',
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/term',
     );
   }
@@ -586,25 +582,12 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#type' => 'fieldset',
     '#title' => t('User restrictions'),
     '#description' => t('Enter one or more user names and/or "anonymous users" below to make this coupon valid only for those users.'),
-    '#tree' => TRUE,
-    '#collapsible' => TRUE,
-    '#collapsed' => !isset($value->data['users']),
   );
-
-  if (isset($value->data['users'])) {
-    foreach ($value->data['users'] as $uid) {
-      $username = $uid ? db_result(db_query('SELECT name FROM {users} WHERE uid = %d', $uid)) : t('anonymous users');
-      $form['users'][] = array(
-        '#type' => 'textfield',
-        '#default_value' => $username .' [uid:'. $uid .']',
-        '#autocomplete_path' => 'admin/store/coupons/autocomplete/user',
-      );
-    }
-  }
-
-  for ($i = 0; $i < 3; $i++) {
+  foreach ($value->data['users'] as $uid) {
+    $username = $uid ? db_result(db_query('SELECT name FROM {users} WHERE uid = %d', $uid)) : t('anonymous users');
     $form['users'][] = array(
       '#type' => 'textfield',
+      '#default_value' => $username .' [uid:'. $uid .']',
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/user',
     );
   }
@@ -613,26 +596,43 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#type' => 'fieldset',
     '#title' => t('Role restrictions'),
     '#description' => t('Enter one or more role names below to make this coupon valid only for users with those roles.'),
-    '#tree' => TRUE,
-    '#collapsible' => TRUE,
-    '#collapsed' => !isset($value->data['roles']),
   );
-
-  if (isset($value->data['roles'])) {
-    foreach ($value->data['roles'] as $role) {
-      $form['roles'][] = array(
-        '#type' => 'textfield',
-        '#default_value' => $role,
-        '#autocomplete_path' => 'admin/store/coupons/autocomplete/role',
-      );
-    }
-  }
-
-  for ($i = 0; $i < 3; $i++) {
+  foreach ($value->data['roles'] as $role) {
     $form['roles'][] = array(
       '#type' => 'textfield',
+      '#default_value' => $role,
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/role',
     );
+  }
+
+  // Add common settings and AHAH functionality to restriction fieldsets.
+  foreach ($ahah_fields as $field => $path) {
+    $form[$field] = array_merge($form[$field], array(
+      '#tree' => TRUE,
+      '#collapsible' => TRUE,
+      '#collapsed' => empty($value->data[$field]) && empty($form_state['ahah_submission']),
+      '#prefix' => '<div id="ahah-' . $field . '">',
+      '#suffix' => '</div>',
+      'more_' . $field => array(
+        '#type' => 'submit',
+        '#value' => t('Add more items'),
+        '#weight' => 1,
+        '#ahah' => array(
+          'path' => 'admin/store/coupons/ahah/' . $field,
+          'wrapper' => 'ahah-' . $field,
+          'effect' => 'fade',
+        ),
+        '#tree' => FALSE,
+      ),
+    ));
+
+    // Add blank fields if needed.
+    for ($i = count($value->data[$field]); $i < $form_state['storage']['field_count'][$field]; $i++) {
+      $form[$field][] = array(
+        '#type' => 'textfield',
+        '#autocomplete_path' => $path ? $path : NULL,
+      );
+    }
   }
 
   $form['deprecated'] = array(
@@ -667,6 +667,25 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
 function _uc_coupon_date_range($form_element) {
   $form_element['year']['#options'] = drupal_map_assoc(range(2008, 2020));
   return $form_element;
+}
+
+function uc_coupon_ahah($type) {
+  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  $form_build_id = $_POST['form_build_id'];
+  $form = form_get_cache($form_build_id, $form_state);
+  $args = $form['#parameters'];
+  $form_id = array_shift($args);
+  $form_state['post'] = $form['#post'] = $_POST;
+  $form_state['action'] = $form['#action'];
+  $form_state['ahah_submission'] = $type;
+  $form['#programmed'] = $form['#redirect'] = FALSE;
+  drupal_process_form($form_id, $form, $form_state);
+  $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
+
+  unset($form[$type]['#prefix']);
+  unset($form[$type]['#suffix']);
+  $output = theme('status_messages') . drupal_render($form[$type]);
+  drupal_json(array('status' => TRUE, 'data' => $output));
 }
 
 function uc_coupon_autocomplete_node($string) {
@@ -812,6 +831,14 @@ function uc_coupon_add_form_submit($form, &$form_state) {
 
   // Remove zero values and empty arrays.
   $coupon->data = array_filter($coupon->data);
+
+  // Handle AHAH submissions.
+  if (!empty($form_state['ahah_submission'])) {
+    $form_state['coupon_data'] = $coupon->data;
+    return;
+  }
+  // Clear AHAH storage, or the redirect will fail.
+  unset($form_state['storage']['field_count']);
 
   uc_coupon_save($coupon, $form_state['values']);
 

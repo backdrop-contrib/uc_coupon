@@ -117,6 +117,12 @@ function uc_coupon_menu() {
     'type' => MENU_CALLBACK,
   );
 
+  $items['admin/store/coupons/ahah'] = array(
+    'page callback' => 'uc_coupon_ahah',
+    'access arguments' => array('manage store coupons'),
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_coupon.admin.inc',
+  );
   $items['admin/store/coupons/autocomplete/node'] = array(
     'title' => 'Node autocomplete',
     'page callback' => 'uc_coupon_autocomplete_node',
