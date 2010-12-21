@@ -18,9 +18,11 @@
  * 
  * Also includes global tokens, and thus the global Ubercart store information.
  * 
- * Templates for specific coupons may be created after the following pattern:
+ * Templates for specific coupons may be created after the following patterns:
  *   uc_coupon-certificate-[cid].tpl.php
- *   (where [cid] is the id of the coupon for which the template should be applied)
+ *     (where [cid] is the id of the coupon for which the template should be applied)
+ *   uc_coupon-certificate-base-[cid].tpl.php
+ *     (where [cid] is the base cid for the coupon, if it was a purchased coupon)
  */
 ?>
 <div class="uc-coupon-certificate">     

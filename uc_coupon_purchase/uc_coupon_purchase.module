@@ -294,6 +294,7 @@ function uc_coupon_purchase_create($coupon, $qty, $order) {
   $purchaser = $order->billing_company ? $order->billing_company : ($order->billing_first_name .' '. $order->billing_last_name);
   $coupon->name .= ' '. t('purchased by !name', array('!name' => $purchaser));
   $coupon->data['order_id'] = $order->order_id;
+  $coupon->data['base_cid'] = $coupon->cid;
 
   $suffix_length = isset($coupon->data['purchase_suffix_length']) ? $coupon->data['purchase_suffix_length'] : 12;
 

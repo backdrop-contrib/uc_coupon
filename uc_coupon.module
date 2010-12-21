@@ -1103,8 +1103,11 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
     $value = $tokens->values[$key];
     $variables[str_replace('-', '_', $token)] = $value;
   }
-  
-  $variables['template_files'][] = 'uc_coupon-certificate-'. $variables['coupon']->cid;
+
+  if (isset($variables['coupon']->data['base_cid'])) {
+    $variables['template_files'][] = 'uc_coupon-certificate-base-' . $variables['coupon']->data['base_cid'];
+  }
+  $variables['template_files'][] = 'uc_coupon-certificate-' . $variables['coupon']->cid;
 }
 
 /**
