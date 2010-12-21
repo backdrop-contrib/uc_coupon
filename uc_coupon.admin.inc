@@ -137,20 +137,23 @@ function uc_coupon_view($coupon) {
   $value = ($coupon->type == 'percentage') ? ((float)$coupon->value .'%') : uc_currency_format($coupon->value);
   $rows[] = array(t('Discount value'), $value);
 
-  if (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types'])) {
-    if (isset($coupon->data['max_applicable_products']) && ($num = $coupon->data['max_applicable_products']) > 0) {
-      if ($coupon->data['max_applicable_products_value'] == 'cheapest') {
-        $applies = format_plural($num, 'Cheapest product', '@count cheapest products');
-      }
-      else {
-        $applies = format_plural($num, 'Most expensive product', '@count most expensive products');
-      }
-    }
-    else {
-      $applies = t('Each product');
-    }
-    $rows[] = array(t('Applied to'), $applies);
-
+  switch ($coupon->data['apply_to']) {
+    case 'subtotal':
+      $applies = t('Order subtotal');
+      break;
+    case 'products':
+      $applies = t('Matching products');
+      break;
+    case 'cheapest':
+      $applies = format_plural($coupon->data['apply_count'], 'Cheapest product', '@count cheapest products');
+      break;
+    case 'expensive':
+      $applies = format_plural($coupon->data['apply_count'], 'Most expensive product', '@count most expensive products');
+      break;
+  }
+  $rows[] = array(t('Applied to'), $applies);
+  
+  if ($coupon->data['apply_to'] != 'subtotal') {
     $restrict = array();
     if (isset($coupon->data['product_types'])) {
       $key = format_plural(count($coupon->data['product_types']), 'All products in class', 'All products in classes');
@@ -194,9 +197,6 @@ function uc_coupon_view($coupon) {
       }
       $rows[] = array(t('Product restrictions'), implode($restrict, '<br />'));
     }
-  }
-  else {
-    $rows[] = array(t('Applied to'), t('Order subtotal'));
   }
 
   $restrict = array();
@@ -279,6 +279,8 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
 function uc_coupon_add_form($form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
+  drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.admin.js');
+
   if ($coupon) {
     $value = $coupon;
     $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} WHERE cid = %d", $value->cid));
@@ -290,6 +292,7 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     $value->valid_from = time();
     $value->valid_until = time();
     $value->minimum_order = 0;
+    $value->data['apply_to'] = 'subtotal';
     if (variable_get('uc_coupon_default_usage', 'single') == 'single') {
       $value->max_uses = 1;
       $value->data['max_uses_per_user'] = 1;
@@ -397,25 +400,24 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#required' => TRUE,
   );
 
-  $form['max_applicable_products'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Maximum number of applicable products'),
-    '#description' => t('Specify the number of products to which the discount should be applied, or 0 to apply the discount to every product.'),
-    '#default_value' => isset($value->data['max_applicable_products']) ? $value->data['max_applicable_products'] : 0,
-    '#size' => 5,
+  $form['apply_to'] = array(
+    '#type' => 'radios',
+    '#title' => t('Apply discount to'),
+    '#options' => array(
+      'subtotal' => t('Order subtotal'),
+      'products' => t('All matching product(s)'),
+      'cheapest' => t('The cheapest matching product(s)'),
+      'expensive' => t('The most expensive matching product(s)'),
+    ),
+    '#description' => t('Coupons with no restrictions will match all products.'),
+    '#default_value' => $value->data['apply_to'],
     '#required' => TRUE,
   );
-
-  $form['max_applicable_products_value'] = array(
-    '#type' => 'radios',
-    '#title' => t('Apply against which products'),
-    '#description' => t('For coupons that have a limited number of applicable products, specify to which products the discount should be applied.'),
-    '#options' => array(
-      'cheapest' => t('The cheapest product(s)'),
-      'expensive' => t('The most expensive product(s)'),
-    ),
-    '#default_value' => isset($value->data['max_applicable_products_value']) ? $value->data['max_applicable_products_value'] : 'cheapest',
-    '#required' => TRUE,
+  $form['apply_count'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum number of products to discount'),
+    '#default_value' => isset($value->data['apply_count']) ? $value->data['apply_count'] : '',
+    '#size' => 5,
   );
 
   $form['redemption'] = array(
@@ -726,6 +728,12 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     form_set_error('discount', t('Invalid discount.'));
   }
 
+  if ($form_state['values']['apply_to'] == 'cheapest' || $form_state['values']['apply_to'] == 'expensive') {
+    if (!$form_state['values']['apply_to']) {
+      form_set_error('apply_count', t('You must specify the maximum number of products to discount.'));
+    }
+  }
+
   foreach ($form_state['values']['products'] as $key => $product) {
     if ($product && !preg_match('/\[nid:(\d+)\]$/', $product)) {
       form_set_error('products]['. $key, t('Products must include the node ID.'));
@@ -779,8 +787,10 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data['minimum_qty'] = $form_state['values']['minimum_qty'];
   $coupon->max_uses = $form_state['values']['max_uses'];
   $coupon->data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
-  $coupon->data['max_applicable_products'] = $form_state['values']['max_applicable_products'];
-  $coupon->data['max_applicable_products_value'] = $form_state['values']['max_applicable_products_value'];
+  $coupon->data['apply_to'] = $form_state['values']['apply_to'];
+  if ($form_state['values']['apply_to'] == 'cheapest' || $form_state['values']['apply_to'] == 'expensive') {
+    $coupon->data['apply_count'] = $form_state['values']['apply_count'];
+  }
 
   // Map restrictions back to their IDs.
   array_walk($form_state['values']['products'], '_uc_coupon_map_restriction', 'nid');

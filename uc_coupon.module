@@ -281,9 +281,27 @@ function uc_coupon_save(&$coupon, $edit = array()) {
  */
 function uc_coupon_load($cid) {
   $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE cid = %d", $cid));
-  if ($coupon->data) {
-    $coupon->data = unserialize($coupon->data);
+  $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
+
+  // Convert old coupons that could not specify "per order" when restricted.
+  if (!isset($coupon->data['apply_to'])) {
+    if (isset($coupon->data['max_applicable_products_value']) && isset($coupon->data['max_applicable_products']) && $coupon->data['max_applicable_products']) {
+      // Coupon was restricted to X cheapest or most expensive products.
+      $coupon->data['apply_to'] = $coupon->data['max_applicable_products_value'];
+      $coupon->data['apply_count'] = $coupon->data['max_applicable_products'];
+    }
+    else if (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types'])) {
+      // Coupon has product restrictions, so was applied to each matching product.
+      $coupon->data['apply_to'] = 'products';
+    }
+    else {
+      // Coupon had no product restrictions, so was applied once to the subtotal.
+      $coupon->data['apply_to'] = 'subtotal';
+    }
   }
+  unset($coupon->data['max_applicable_products']);
+  unset($coupon->data['max_applicable_products_value']);
+
   return $coupon;
 }
 
@@ -301,16 +319,13 @@ function uc_coupon_get_bulk_code($coupon, $id) {
  */
 function uc_coupon_find($code) {
   // Look for matching single coupon first.
-  $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE code = '%s' AND status = 1 AND bulk = 0 AND valid_from < %d AND valid_until > %d", $code, time(), time()));
-  if ($coupon !== FALSE) {
-    if ($coupon->data) {
-      $coupon->data = unserialize($coupon->data);
-    }
-    return $coupon;
+  $coupon = db_fetch_object(db_query("SELECT cid FROM {uc_coupons} WHERE code = '%s' AND status = 1 AND bulk = 0 AND valid_from < %d AND valid_until > %d", $code, time(), time()));
+  if ($coupon) {
+    return uc_coupon_load($coupon->cid);
   }
 
   // Look through bulk coupons.
-  $result = db_query("SELECT * FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_from < %d AND valid_until > %d", time(), time());
+  $result = db_query("SELECT cid, code, data FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_from < %d AND valid_until > %d", time(), time());
   while ($coupon = db_fetch_object($result)) {
     // Check coupon prefix.
     $prefix_length = strlen($coupon->code);
@@ -334,7 +349,7 @@ function uc_coupon_find($code) {
 
     // Check complete coupon code.
     if ($code == uc_coupon_get_bulk_code($coupon, $id)) {
-      return $coupon;
+      return uc_coupon_load($coupon->cid);
     }
   }
 
@@ -502,7 +517,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     ),
   );
 
-  $per_product = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
+  $restricted = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
 
   foreach ($order->products as $item) {
     if ($item->module == 'uc_coupon') {
@@ -515,12 +530,12 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     $item->altered_price = uc_price($item->price, $context);
     $qty = $item->qty;
 
-    if (!$per_product) {
-      // Unrestricted coupons apply to all products.
+    if ($coupon->data['apply_to'] == 'subtotal' || !$restricted) {
+      // Order coupons and coupons with no restrictions apply to all products.
       $include = TRUE;
     }
     else {
-      // Product coupons apply to the subtotal and quantity of matching products.
+      // Other coupons only apply to the subtotal and quantity of matching products.
       $include = FALSE;
       $terms = isset($node->taxonomy) ? array_keys($node->taxonomy) : array();
 
@@ -550,15 +565,16 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   }
 
   // Slice off applicable products if a limit was set.
-  if (isset($coupon->data['max_applicable_products']) && ($num = $coupon->data['max_applicable_products']) > 0) {
-    usort($items, '_uc_coupon_sort_products');
+  switch ($coupon->data['apply_to']) {
+    case 'cheapest':
+      usort($items, '_uc_coupon_sort_products');
+      $items = array_slice($items, 0, $coupon->data['apply_count']);
+      break;
 
-    if ($coupon->data['max_applicable_products_value'] == 'cheapest') {
-      $items = array_slice($items, 0, $num);
-    }
-    else {
-      $items = array_slice($items, -$num);
-    }
+    case 'expensive':
+      usort($items, '_uc_coupon_sort_products');
+      $items = array_slice($items, -$coupon->data['apply_count']);
+      break;
   }
 
   $total = 0;
@@ -570,12 +586,13 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     if ($coupon->type == 'percentage') {
       $item->discount = $item->price * $coupon->value / 100;
     }
-    else if ($coupon->type == 'price' && $per_product) {
-      $item->discount = min($item->price, $coupon->value);
-    }
-    else if ($coupon->type == 'price' && !$per_product) {
+    else if ($coupon->type == 'price' && $coupon->data['apply_to'] == 'subtotal') {
       // Apply single discount to the entire cart proportionally across the items.
-      $item->discount = $total == 0 ? 0 : min($item->price * $coupon->value / $total, $item->price);
+      $item->discount = $total == 0 ? 0 : min($coupon->value * $item->price / $total, $item->price);
+    }
+    else if ($coupon->type == 'price') {
+      // Apply discount to each product's untaxed price.
+      $item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
     }
   }
 
