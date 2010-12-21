@@ -218,7 +218,7 @@ function uc_coupon_theme() {
       'file' => 'uc_coupon.admin.inc',
     ),
     'uc_coupon_code' => array(
-      'arguments' => array('code' => NULL, 'uses' => NULL, 'max_uses' => NULL),
+      'arguments' => array('cid' => NULL, 'code' => NULL, 'uses' => NULL, 'max_uses' => NULL),
       'file' => 'uc_coupon.admin.inc',
     ),
     'uc_coupon_certificate' => array(

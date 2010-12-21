@@ -93,6 +93,7 @@ class uc_coupon_handler_field_codes extends views_handler_field_prerender_list {
         $avail = ($mu==0) || ($mu-$u > 0);
         if ( $this->options['scope']==='all' || !($avail xor ($this->options['scope']==='avail')) ) {
           $this->items[$cid][] = array(
+            'cid'=>$cid,
             'code'=>$coupons[$cid]->code,
             'uses'=>$u,
             'max_uses'=>$mu,
@@ -110,6 +111,7 @@ class uc_coupon_handler_field_codes extends views_handler_field_prerender_list {
           $avail = ($mu==0) || ($mu-$u > 0); // any uses left?
           if ( $this->options['scope']==='all' || !($avail xor ($this->options['scope']==='avail')) ) { 
             $this->items[$cid][] = array(
+              'cid'=>$cid,
               'code'=>$code,
               'uses'=>$u,
               'max_uses'=>$mu,
@@ -121,6 +123,6 @@ class uc_coupon_handler_field_codes extends views_handler_field_prerender_list {
   }
 
   function render_item($count, $item) {
-    return theme('uc_coupon_code', $item['code'], $item['uses'], $item['max_uses']);
+    return theme('uc_coupon_code', $item['cid'], $item['code'], $item['uses'], $item['max_uses']);
   }  
 }
