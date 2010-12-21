@@ -395,8 +395,10 @@ function uc_coupon_add_form($form_state, $coupon = NULL) {
     '#type' => 'textfield',
     '#title' => t('Discount'),
     '#default_value' => $value->type == 'percentage' ? ((float)$value->value . '%') : $value->value,
-    '#size' => 10,
-    '#description' => t('Enter a percentage (e.g. "15%") or a fixed price discount without currency symbols (e.g. "15" for $15.00)'),
+    '#size' => 6,
+    '#description' => t('Enter a percentage (e.g. "15%") or a fixed price discount (e.g. "15" for $15.00)'),
+    '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
+    '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
     '#required' => TRUE,
   );
 
