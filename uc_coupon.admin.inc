@@ -750,7 +750,7 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   }
 
   if ($form_state['values']['apply_to'] == 'cheapest' || $form_state['values']['apply_to'] == 'expensive') {
-    if (!$form_state['values']['apply_to']) {
+    if (!preg_match('/^[1-9]\d*$/', $form_state['values']['apply_count'])) {
       form_set_error('apply_count', t('You must specify the maximum number of products to discount.'));
     }
   }
