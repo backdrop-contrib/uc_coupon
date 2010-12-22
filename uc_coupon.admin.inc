@@ -282,6 +282,7 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
 function uc_coupon_add_form(&$form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
   drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.admin.js');
 
   if ($coupon) {
@@ -296,14 +297,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     $use_validity = FALSE;
     $value->minimum_order = 0;
     $value->data['apply_to'] = 'subtotal';
-    if (variable_get('uc_coupon_default_usage', 'single') == 'single') {
-      $value->max_uses = 1;
-      $value->data['max_uses_per_user'] = 1;
-    }
-    else {
-      $value->max_uses = 0;
-      $value->data['max_uses_per_user'] = 0;
-    }
+    $value->max_uses = variable_get('uc_coupon_default_usage', 'single') == 'single' ? 1 : 0;
     $used = 0;
   }
 
@@ -405,32 +399,6 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#disabled' => $used,
   );
 
-  $form['use_validity'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Restrict coupon by date.'),
-    '#default_value' => $use_validity,
-  );
-  $form['valid_from'] = array(
-    '#type' => 'date',
-    '#title' => t('Start date'),
-    '#default_value' => array(
-      'year' => format_date($value->valid_from, 'custom', 'Y', 0),
-      'month' => format_date($value->valid_from, 'custom', 'n', 0),
-      'day' => format_date($value->valid_from, 'custom', 'j', 0),
-    ),
-    '#after_build' => array('_uc_coupon_date_range'),
-  );
-  $form['valid_until'] = array(
-    '#type' => 'date',
-    '#title' => t('Expiry date'),
-    '#default_value' => array(
-      'year' => format_date($value->valid_until, 'custom', 'Y', 0),
-      'month' => format_date($value->valid_until, 'custom', 'n', 0),
-      'day' => format_date($value->valid_until, 'custom', 'j', 0),
-    ),
-    '#after_build' => array('_uc_coupon_date_range'),
-  );
-
   $form['status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Coupon is active.'),
@@ -460,7 +428,6 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     ),
     '#description' => t('Coupons with no restrictions will match all products.'),
     '#default_value' => $value->data['apply_to'],
-    '#required' => TRUE,
   );
   $form['apply_count'] = array(
     '#type' => 'textfield',
@@ -469,26 +436,45 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#size' => 5,
   );
 
-  $form['redemption'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Redemption limits'),
-    '#collapsible' => TRUE,
+  $form['use_validity'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Restrict coupon by date.'),
+    '#default_value' => $use_validity,
   );
-  $form['redemption']['max_uses'] = array(
+  $form['valid_from'] = array(
+    '#type' => 'date',
+    '#title' => t('Start date'),
+    '#default_value' => array(
+      'year' => format_date($value->valid_from, 'custom', 'Y', 0),
+      'month' => format_date($value->valid_from, 'custom', 'n', 0),
+      'day' => format_date($value->valid_from, 'custom', 'j', 0),
+    ),
+    '#after_build' => array('_uc_coupon_date_range'),
+  );
+  $form['valid_until'] = array(
+    '#type' => 'date',
+    '#title' => t('Expiry date'),
+    '#default_value' => array(
+      'year' => format_date($value->valid_until, 'custom', 'Y', 0),
+      'month' => format_date($value->valid_until, 'custom', 'n', 0),
+      'day' => format_date($value->valid_until, 'custom', 'j', 0),
+    ),
+    '#after_build' => array('_uc_coupon_date_range'),
+  );
+
+  $form['max_uses'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per code)'),
-    '#default_value' => $value->max_uses,
-    '#description' => t('Enter the maximum number of times each code for this coupon can be used, or 0 for unlimited.'),
+    '#default_value' => $value->max_uses ? $value->max_uses : '',
+    '#description' => t('If set, the coupon can only be used this number of times. For bulk coupons, this applies to each available code.'),
     '#size' => 5,
-    '#required' => TRUE,
   );
-  $form['redemption']['max_uses_per_user'] = array(
+  $form['max_uses_per_user'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per user)'),
-    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : 0,
-    '#description' => t('Enter the maximum number of times this coupon can be used by a single user, or 0 for unlimited.'),
+    '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : '',
+    '#description' => t('If set, each user can only use the coupon this number of times.'),
     '#size' => 5,
-    '#required' => TRUE,
   );
 
   $form['order'] = array(
@@ -500,20 +486,18 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
   $form['order']['minimum_order'] = array(
     '#type' => 'textfield',
     '#title' => t('Minimum order total'),
-    '#default_value' => $value->minimum_order,
-    '#size' => 10,
-    '#description' => t('A minimum order total that applies to the coupon, or 0 for no minimum order limit.'),
-    '#required' => TRUE,
+    '#default_value' => $value->minimum_order < 0.01 ? '' : $value->minimum_order,
+    '#size' => 6,
+    '#description' => t('If set, the subtotal of products must be at least this amount for the coupon to be accepted.'),
     '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
     '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
   );
   $form['order']['minimum_qty'] = array(
     '#type' => 'textfield',
     '#title' => t('Minimum order quantity'),
-    '#default_value' => isset($value->data['minimum_qty']) ? $value->data['minimum_qty'] : 0,
-    '#size' => 10,
-    '#description' => t('The minimum number of items that must be in the order for this coupon to apply, or 0 for no limit.'),
-    '#required' => TRUE,
+    '#default_value' => isset($value->data['minimum_qty']) ? $value->data['minimum_qty'] : '',
+    '#size' => 5,
+    '#description' => t('If set, at least this many products must be in the cart for the coupon to be accepted.'),
   );
 
   $form['product_types'] = array(
@@ -750,6 +734,7 @@ function uc_coupon_autocomplete_role($string) {
  * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form, &$form_state) {
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
   drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.admin.js');
 
   $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code = '%s' AND cid <> %d", strtoupper($form_state['values']['code']), $form['#uc_coupon_cid']));
@@ -823,9 +808,9 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->status = $form_state['values']['status'];
   $coupon->type = substr($form_state['values']['discount'], -1) == '%' ? 'percentage' : 'price';
   $coupon->value = str_replace('%', '', $form_state['values']['discount']);
-  $coupon->minimum_order = $form_state['values']['minimum_order'];
+  $coupon->minimum_order = $form_state['values']['minimum_order'] ? $form_state['values']['minimum_order'] : 0;
   $coupon->data['minimum_qty'] = $form_state['values']['minimum_qty'];
-  $coupon->max_uses = $form_state['values']['max_uses'];
+  $coupon->max_uses = $form_state['values']['max_uses'] ? $form_state['values']['max_uses'] : 0;
   $coupon->data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
   $coupon->data['apply_to'] = $form_state['values']['apply_to'];
   if ($form_state['values']['apply_to'] == 'cheapest' || $form_state['values']['apply_to'] == 'expensive') {

@@ -18,3 +18,10 @@ div.uc-coupon-certificate {
   border: 1px solid blue;
   padding: 2%;
 }
+
+#uc-coupon-add-form #edit-valid-from-wrapper label,
+#uc-coupon-add-form #edit-valid-until-wrapper label {
+  float: left;
+  width: 8em;
+  margin-top: 2px;
+}

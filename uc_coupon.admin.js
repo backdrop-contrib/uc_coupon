@@ -8,7 +8,7 @@ Drupal.behaviors.ucCouponAdmin = function(context) {
     else {
       $(this).siblings('span').hide();
     }
-  });
+  }).keyup();
 
   $('input[name=apply_to]', context).click(function() {
     if (this.value == 'cheapest' || this.value == 'expensive') {
