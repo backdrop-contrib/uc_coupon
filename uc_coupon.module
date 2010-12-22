@@ -514,7 +514,6 @@ function uc_coupon_validate($code, $order = NULL) {
  * Find items that a coupon will apply to and calculate the discounts.
  */
 function uc_coupon_calculate_discounts($coupon, $order) {
-  $items = array();
   $context = array(
     'revision' => 'altered',
     'type' => 'cart_item',
@@ -525,6 +524,9 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
   $restricted = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
 
+  // Discover if any items match the restrictions, and which items the discount should be calculated against.
+  $matched = FALSE;
+  $items = array();
   foreach ($order->products as $item) {
     if ($item->module == 'uc_coupon') {
       continue;
@@ -536,12 +538,12 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     $item->altered_price = uc_price($item->price, $context);
     $qty = $item->qty;
 
-    if ($coupon->data['apply_to'] == 'subtotal' || !$restricted) {
-      // Order coupons and coupons with no restrictions apply to all products.
+    if (!$restricted) {
+      // Coupons with no restrictions apply to all products.
       $include = TRUE;
     }
     else {
-      // Other coupons only apply to the subtotal and quantity of matching products.
+      // Other coupons only apply to matching products.
       $include = FALSE;
       $terms = isset($node->taxonomy) ? array_keys($node->taxonomy) : array();
 
@@ -565,9 +567,20 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       }
     }
 
+    // A matching product was found.
     if ($include) {
+      $matched = TRUE;
+    }
+
+    // Coupons that apply to the order subtotal affect all products.
+    if ($include || $coupon->data['apply_to'] == 'subtotal') {
       $items = array_pad($items, count($items) + $qty, $item);
     }
+  }
+
+  // If no matches were found, there are no discounts to calculate.
+  if (!$matched) {
+    return array();
   }
 
   // Slice off applicable products if a limit was set.
