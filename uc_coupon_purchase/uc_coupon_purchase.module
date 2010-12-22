@@ -240,12 +240,20 @@ function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
   );
   $form['uc_coupon_purchase']['purchase_relative'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Alter coupon validity relative to the purchase date.'),
+    '#title' => t('Alter coupon date restrictions relative to the purchase date.'),
     '#description' => t('Checking this box will make purchased coupons valid for the same time span as the base coupon, otherwise coupons will always be valid between the same dates.'),
     '#default_value' => isset($value->data['purchase_relative']) ? $value->data['purchase_relative'] : FALSE,
   );
 
   $form['status']['#description'] .= '<br />' . t('Only inactive coupons can be selected as the base for a purchased coupon, subsequent purchased coupons will automatically be activated.');
+
+  $form['#validate'][] = 'uc_coupon_purchase_uc_coupon_add_form_validate';
+}
+
+function uc_coupon_purchase_uc_coupon_add_form_validate($form, &$form_state) {
+  if ($form_state['values']['purchase_relative'] && !$form_state['values']['use_validity']) {
+    form_set_error('purchase_relative', t('You must specify date restrictions to use the relative date feature with purchased coupons.'));
+  }
 }
 
 /**

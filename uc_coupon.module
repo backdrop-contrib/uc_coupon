@@ -325,13 +325,13 @@ function uc_coupon_get_bulk_code($coupon, $id) {
  */
 function uc_coupon_find($code) {
   // Look for matching single coupon first.
-  $coupon = db_fetch_object(db_query("SELECT cid FROM {uc_coupons} WHERE code = '%s' AND status = 1 AND bulk = 0 AND valid_from < %d AND valid_until > %d", $code, time(), time()));
+  $coupon = db_fetch_object(db_query("SELECT cid FROM {uc_coupons} WHERE code = '%s' AND status = 1 AND bulk = 0 AND valid_from < %d AND (valid_until = 0 OR valid_until > %d)", $code, time(), time()));
   if ($coupon) {
     return uc_coupon_load($coupon->cid);
   }
 
   // Look through bulk coupons.
-  $result = db_query("SELECT cid, code, data FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_from < %d AND valid_until > %d", time(), time());
+  $result = db_query("SELECT cid, code, data FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_from < %d AND (valid_until = 0 OR valid_until > %d)", time(), time());
   while ($coupon = db_fetch_object($result)) {
     // Check coupon prefix.
     $prefix_length = strlen($coupon->code);
@@ -1083,9 +1083,16 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
     $variables['display_name'] = substr($variables['display_name'], 0, $n-1);
   }
 
-  $variables['not_yet_valid'] = $coupon->valid_from > time();
-  $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
-  $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
+  if ($coupon->valid_until) {
+    $variables['not_yet_valid'] = $coupon->valid_from > time();
+    $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
+    $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
+  }
+  else {
+    $variables['not_yet_valid'] = FALSE;
+    $variables['valid_from'] = FALSE;
+    $variables['valid_until'] = FALSE;
+  }
 
   $variables['max_uses_per_user'] = $coupon->data['max_uses_per_user'];
 

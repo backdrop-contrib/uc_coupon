@@ -18,4 +18,10 @@ Drupal.behaviors.ucCouponAdmin = function(context) {
       $('#edit-apply-count-wrapper').hide();
     }
   }).filter(':checked').click();
+
+  if ($('input[name=use_validity]', context).change(function() {
+    $('#edit-valid-from-wrapper, #edit-valid-until-wrapper').toggle();
+  }).is(':not(:checked)')) {
+    $('#edit-valid-from-wrapper, #edit-valid-until-wrapper').hide();
+  }
 }

@@ -11,8 +11,8 @@
  * $display_name - the name of the coupon (with "purchased by..." stripped)
  * $include - an array of the items for which this coupon is valid, if any
  * $exclude - an array of the items for which this coupon is not valid, if any
- * $valid_from - the formatted date the coupon is valid from
- * $valid_until - the formatted date the coupon is valid from
+ * $valid_from - the formatted date the coupon is valid from, if set
+ * $valid_until - the formatted date the coupon is valid until, if set
  * $not_yet_valid - TRUE if the coupon is not yet valid
  * $max_uses_per_user - the number of times this coupon can be used per customer
  *
@@ -49,15 +49,12 @@
     <?php endif; ?>
   </p>
 
-  <p>Valid
-    <?php if ($not_yet_valid): ?>
-      from <?php print $valid_from; ?>
-    <?php endif; ?>
-    until <?php print $valid_until; ?>.
-    <?php if ($max_uses_per_user): ?>
-      <?php print format_plural($max_uses_per_user, 'Maximum one use per customer.', 'Maximum @count uses per customer.'); ?>
-    <?php endif; ?>
-  </p>
+  <?php if ($valid_until): ?>
+    <p>Valid <?php if ($not_yet_valid) print "from " . $valid_from; ?> until <?php print $valid_until; ?>.</p>
+  <?php endif; ?>
+  <?php if ($max_uses_per_user): ?>
+    <p><?php print format_plural($max_uses_per_user, 'Maximum one use per customer.', 'Maximum @count uses per customer.'); ?></p>
+  <?php endif; ?>
 
   <dl>
     <?php if ($include): ?>

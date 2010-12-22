@@ -62,8 +62,8 @@ function uc_coupon_display($view_type = 'active') {
       check_plain($row->code) . ($row->bulk ? '* '. t('(bulk)') : ''),
       $row->type == 'percentage' ? ((float)$row->value . '%') : uc_currency_format($row->value),
       format_date($row->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
-      format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
-      format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
+      $row->valid_from ? format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
+      $row->valid_until ? format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
     );
   }
 
@@ -100,6 +100,9 @@ function uc_coupon_view($coupon) {
 
   if (!$coupon->status) {
     $status = t('Inactive');
+  }
+  else if (!$coupon->valid_until) {
+    $status = t('Active');
   }
   else if (time() < $coupon->valid_from) {
     $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
@@ -287,10 +290,10 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     $form['#uc_coupon_cid'] = $value->cid;
     $form['#uc_coupon'] = $value;
     $form['#uc_coupon_used'] = $used;
+    $use_validity = $value->valid_until;
   }
   else {
-    $value->valid_from = time();
-    $value->valid_until = time();
+    $use_validity = FALSE;
     $value->minimum_order = 0;
     $value->data['apply_to'] = 'subtotal';
     if (variable_get('uc_coupon_default_usage', 'single') == 'single') {
@@ -302,6 +305,11 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
       $value->data['max_uses_per_user'] = 0;
     }
     $used = 0;
+  }
+
+  if (!$use_validity) {
+    $value->valid_from = time();
+    $value->valid_until = time();
   }
 
   // Handle AHAH functionality.
@@ -397,6 +405,11 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#disabled' => $used,
   );
 
+  $form['use_validity'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Restrict coupon by date.'),
+    '#default_value' => $use_validity,
+  );
   $form['valid_from'] = array(
     '#type' => 'date',
     '#title' => t('Start date'),
@@ -405,10 +418,8 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
       'month' => format_date($value->valid_from, 'custom', 'n', 0),
       'day' => format_date($value->valid_from, 'custom', 'j', 0),
     ),
-    '#required' => TRUE,
     '#after_build' => array('_uc_coupon_date_range'),
   );
-
   $form['valid_until'] = array(
     '#type' => 'date',
     '#title' => t('Expiry date'),
@@ -417,7 +428,6 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
       'month' => format_date($value->valid_until, 'custom', 'n', 0),
       'day' => format_date($value->valid_until, 'custom', 'j', 0),
     ),
-    '#required' => TRUE,
     '#after_build' => array('_uc_coupon_date_range'),
   );
 
@@ -740,6 +750,8 @@ function uc_coupon_autocomplete_role($string) {
  * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form, &$form_state) {
+  drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.admin.js');
+
   $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code = '%s' AND cid <> %d", strtoupper($form_state['values']['code']), $form['#uc_coupon_cid']));
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
@@ -771,10 +783,12 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     form_set_error('bulk_number', t('You must specify the number of codes to generate.'));
   }
 
-  $valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
-  $valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
-  if ($valid_from > $valid_until) {
-    form_set_error('valid_from', t('The coupon start date must be before the expiration date.'));
+  if ($form_state['values']['use_validity']) {
+    $valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
+    $valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+    if ($valid_from > $valid_until) {
+      form_set_error('valid_from', t('The coupon start date must be before the expiration date.'));
+    }
   }
 }
 
@@ -799,8 +813,13 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->bulk = $form_state['values']['bulk_generate'];
   $coupon->data['bulk_number'] = $form_state['values']['bulk_generate'] ? $form_state['values']['bulk_number'] : 0;
   $coupon->data['bulk_length'] = $form_state['values']['bulk_length'];
-  $coupon->valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
-  $coupon->valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  if ($form_state['values']['use_validity']) {
+    $coupon->valid_from = gmmktime(0, 0, 0, $form_state['values']['valid_from']['month'], $form_state['values']['valid_from']['day'], $form_state['values']['valid_from']['year']);
+    $coupon->valid_until = gmmktime(0, 0, 0, $form_state['values']['valid_until']['month'], $form_state['values']['valid_until']['day'], $form_state['values']['valid_until']['year']);
+  }
+  else {
+    $coupon->valid_from = $coupon->valid_until = 0;
+  }
   $coupon->status = $form_state['values']['status'];
   $coupon->type = substr($form_state['values']['discount'], -1) == '%' ? 'percentage' : 'price';
   $coupon->value = str_replace('%', '', $form_state['values']['discount']);

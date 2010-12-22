@@ -24,9 +24,17 @@ function uc_coupon_purchase_view($account) {
     }
 
     $value = $coupon->type == 'percentage' ? $coupon->value . '%' : uc_currency_format($coupon->value);
-    $valid_from = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
-    $valid_until = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
-    $valid = $coupon->status ? "$valid_from - $valid_until" : t('Inactive');
+    if (!$coupon->status) {
+      $valid = t('Inactive');
+    }
+    else if (!$coupon->valid_until) {
+      $valid = t('Unlimited');
+    }
+    else {
+      $valid_from = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
+      $valid_until = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
+      $valid = $valid_from . ' - ' . $valid_until;
+    }
     $uses = $coupon->max_uses > 0 ? $coupon->max_uses : t('Unlimited');
 
     $icon = theme('image', drupal_get_path('module', 'uc_store') .'/images/print.gif', t('Print'));
