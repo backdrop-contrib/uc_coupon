@@ -906,52 +906,9 @@ function uc_coupon_codes_csv($coupon) {
  */
 function theme_uc_coupon_actions($coupon) {
   $actions = array();
-
-  if (user_access('view store coupons')) {
-    $alt = t('View coupon: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid,
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_view.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-
-    $alt = t('Print coupon: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid . '/print',
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/print.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  if (user_access('view store coupons') && $coupon->bulk) {
-    $alt = t('Download codes as CSV: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/codes',
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/menu_reports_small.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  if (user_access('manage store coupons')) {
-    $alt = t('Edit coupon: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/edit',
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_edit.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  if (user_access('manage store coupons')) {
-    $alt = t('Delete coupon: @name', array('@name' => $coupon->name));
-    $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/delete',
-      'icon' => '<img src="'. base_path() . drupal_get_path('module', 'uc_store') .'/images/order_delete.gif" alt="'. $alt .'" />',
-      'title' => $alt,
-    );
-  }
-
-  foreach ($actions as &$action) {
-    $action = l($action['icon'], $action['url'], array('attributes' => array('title' => $action['title']), 'html' => TRUE));
+  foreach (module_invoke_all('uc_coupon_actions', $coupon) as $action) {
+    $icon = theme('image', $action['icon'], $action['title']);
+    $actions[] = l($icon, $action['url'], array('attributes' => array('title' => $action['title']), 'html' => TRUE));
   }
   return implode(' ', $actions);
 }

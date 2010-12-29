@@ -1166,6 +1166,51 @@ function template_preprocess_uc_coupon_page(&$variables) {
 }
 
 /**
+ * Implementation of hook_uc_coupon_actions().
+ */
+function uc_coupon_uc_coupon_actions($coupon) {
+  $actions = array();
+
+  if (user_access('view store coupons')) {
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid,
+      'icon' => drupal_get_path('module', 'uc_store') .'/images/order_view.gif',
+      'title' => t('View coupon: @name', array('@name' => $coupon->name)),
+    );
+
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid . '/print',
+      'icon' => drupal_get_path('module', 'uc_store') .'/images/print.gif',
+      'title' => t('Print coupon: @name', array('@name' => $coupon->name)),
+    );
+
+    if ($coupon->bulk) {
+      $actions[] = array(
+        'url' => 'admin/store/coupons/'. $coupon->cid .'/codes',
+        'icon' => drupal_get_path('module', 'uc_store') .'/images/menu_reports_small.gif',
+        'title' => t('Download codes as CSV: @name', array('@name' => $coupon->name)),
+      );
+    }
+  }
+
+  if (user_access('manage store coupons')) {
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid .'/edit',
+      'icon' => drupal_get_path('module', 'uc_store') .'/images/order_edit.gif',
+      'title' => t('Edit coupon: @name', array('@name' => $coupon->name)),
+    );
+
+    $actions[] = array(
+      'url' => 'admin/store/coupons/'. $coupon->cid .'/delete',
+      'icon' => drupal_get_path('module', 'uc_store') .'/images/order_delete.gif',
+      'title' => t('Delete coupon: @name', array('@name' => $coupon->name)),
+    );
+  }
+
+  return $actions;
+}
+
+/**
  * Implementation of hook_views_api().
  */
 function uc_coupon_views_api() {
