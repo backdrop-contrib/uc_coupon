@@ -261,6 +261,7 @@ function theme_uc_checkout_pane_coupon($form) {
  *   An optional array of extra data that other modules may need to save.
  */
 function uc_coupon_save(&$coupon, $edit = array()) {
+  // Allow other modules to alter the coupon before saving.
   foreach (module_implements('uc_coupon_presave') as $module) {
     $callback = $module . '_uc_coupon_presave';
     $callback($coupon, $edit);
@@ -274,6 +275,9 @@ function uc_coupon_save(&$coupon, $edit = array()) {
     $coupon->bulk_seed = md5(uniqid());
     drupal_write_record('uc_coupons', $coupon);
   }
+
+  // Notify other modules that a coupon has been saved.
+  module_invoke_all('uc_coupon_save' ,$coupon);
 }
 
 /**

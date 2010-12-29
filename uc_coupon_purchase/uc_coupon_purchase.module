@@ -283,7 +283,19 @@ function uc_coupon_purchase_order($op, $order, $status) {
           while ($row = db_fetch_object($result)) {
             if ($row->model == $product->model || empty($row->model)) {
               $coupon = uc_coupon_load($row->base_cid);
-              uc_coupon_purchase_create($coupon, $product->qty, $order);
+              
+              // Append purchaser data to the coupon name.
+              $purchaser = $order->billing_company ? $order->billing_company : ($order->billing_first_name .' '. $order->billing_last_name);
+              $coupon->name .= ' '. t('purchased by !name', array('!name' => $purchaser));
+              $coupon->data['order_id'] = $order->order_id;
+              
+              // Create new coupon and link to purchaser.
+              $new_coupon = uc_coupon_purchase_create($coupon, $product->qty, $order->uid);
+              uc_order_comment_save($order->order_id, 0, t('Coupon created with code %code.', array('%code' => $new_coupon->code)));
+              
+              // Fire hook and conditional actions to send emails for this coupon purchase.
+              module_invoke_all('uc_coupon_purchase', $order, $new_coupon);
+              ca_pull_trigger('uc_coupon_purchase', $order, $new_coupon);
             }
           }
         }
@@ -295,15 +307,7 @@ function uc_coupon_purchase_order($op, $order, $status) {
 /**
  * Create newly purchased coupons, based on the supplied coupon object.
  */
-function uc_coupon_purchase_create($coupon, $qty, $order) {
-  global $user;
-
-  // Append purchaser data to the coupon name.
-  $purchaser = $order->billing_company ? $order->billing_company : ($order->billing_first_name .' '. $order->billing_last_name);
-  $coupon->name .= ' '. t('purchased by !name', array('!name' => $purchaser));
-  $coupon->data['order_id'] = $order->order_id;
-  $coupon->data['base_cid'] = $coupon->cid;
-
+function uc_coupon_purchase_create($coupon, $qty, $uid = NULL) {
   $suffix_length = isset($coupon->data['purchase_suffix_length']) ? $coupon->data['purchase_suffix_length'] : 12;
 
   // If more than one coupon will be generated, ensure it is a bulk coupon.
@@ -331,19 +335,18 @@ function uc_coupon_purchase_create($coupon, $qty, $order) {
   }
   
   // Create a new, active coupon with the suffix applied.
+  $coupon->data['base_cid'] = $coupon->cid;
   unset($coupon->cid);
   $coupon->code .= strtoupper(user_password($suffix_length));
   $coupon->status = TRUE;
   uc_coupon_save($coupon);
-
-  uc_order_comment_save($order->order_id, $user->uid, t('Coupon created with code %code.', array('%code' => $coupon->code)));
-
-  // Record this coupon purchase.
-  db_query("INSERT INTO {uc_coupon_purchase_users} (uid, cid) VALUES (%d, %d)", $order->uid, $coupon->cid);
-
-  // Fire hook and conditional actions to send emails for this coupon purchase.
-  module_invoke_all('uc_coupon_purchase', $order, $coupon);
-  ca_pull_trigger('uc_coupon_purchase', $order, $coupon);
+  
+  // Associate this coupon with its owner.
+  if (!is_null($uid)) {
+    db_query("INSERT INTO {uc_coupon_purchase_users} (uid, cid) VALUES (%d, %d)", $uid, $coupon->cid);
+  }
+  
+  return $coupon;
 }
 
 /**
