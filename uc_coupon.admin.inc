@@ -53,17 +53,18 @@ function uc_coupon_display($view_type = 'active') {
     array('data' => t('Valid until'), 'field' => 'valid_until'),
   );
 
-  $result = pager_query('SELECT cid, name, value, code, type, created, valid_from, valid_until, bulk FROM {uc_coupons} WHERE status = %d'. tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
+  $result = pager_query('SELECT * FROM {uc_coupons} WHERE status = %d'. tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
   $rows = array();
-  while ($row = db_fetch_object($result)) {
+  while ($coupon = db_fetch_object($result)) {
+    $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
     $rows[] = array(
-      theme('uc_coupon_actions', $row),
-      check_plain($row->name),
-      check_plain($row->code) . ($row->bulk ? '* '. t('(bulk)') : ''),
-      $row->type == 'percentage' ? ((float)$row->value . '%') : uc_currency_format($row->value),
-      format_date($row->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
-      $row->valid_from ? format_date($row->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
-      $row->valid_until ? format_date($row->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
+      theme('uc_coupon_actions', $coupon),
+      check_plain($coupon->name),
+      check_plain($coupon->code) . ($coupon->bulk ? '* '. t('(bulk)') : ''),
+      $coupon->type == 'percentage' ? ((float)$coupon->value . '%') : uc_currency_format($coupon->value),
+      format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
+      $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
+      $coupon->valid_until ? format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
     );
   }
 
