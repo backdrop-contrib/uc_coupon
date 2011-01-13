@@ -335,7 +335,7 @@ function uc_coupon_find($code) {
   }
 
   // Look through bulk coupons.
-  $result = db_query("SELECT cid, code, data FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_from < %d AND (valid_until = 0 OR valid_until > %d)", time(), time());
+  $result = db_query("SELECT cid, code, data, bulk_seed FROM {uc_coupons} WHERE status = 1 AND bulk = 1 AND valid_from < %d AND (valid_until = 0 OR valid_until > %d)", time(), time());
   while ($coupon = db_fetch_object($result)) {
     // Check coupon prefix.
     $prefix_length = strlen($coupon->code);
