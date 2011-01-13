@@ -1007,7 +1007,7 @@ function uc_coupon_token_values($type, $object = NULL) {
         for ($id = 0; $id < $object->data['bulk_number']; $id++) {
           $codes[] = uc_coupon_get_bulk_code($object, $id);
         }
-        $values['coupon-bulk-codes'] .= implode("<br />", $codes);
+        $values['coupon-bulk-codes'] .= implode("\n", $codes);
       }
       break;
   }
