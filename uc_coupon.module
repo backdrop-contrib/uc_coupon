@@ -224,7 +224,7 @@ function uc_coupon_theme() {
       'file' => 'uc_coupon.admin.inc',
     ),
     'uc_coupon_code' => array(
-      'arguments' => array('cid' => NULL, 'code' => NULL, 'uses' => NULL, 'max_uses' => NULL),
+      'arguments' => array('coupon' => NULL),
       'file' => 'uc_coupon.admin.inc',
     ),
     'uc_coupon_certificate' => array(
@@ -312,7 +312,49 @@ function uc_coupon_load($cid) {
   unset($coupon->data['max_applicable_products']);
   unset($coupon->data['max_applicable_products_value']);
 
+  // Allow other modules to alter the coupon data.
+  drupal_alter('uc_coupon', $coupon);
+
   return $coupon;
+}
+
+/**
+ * Count usage of a coupon.
+ *
+ * @param $cid
+ *   The coupon id to count.
+ * @param $uid
+ *   (optional) The user id to count. Defaults to the current user.
+ *
+ * @return
+ *   An associative array containing:
+ *   - codes: An associative array of code => usage count.
+ *   - user: The usage count by the specified (or current) user.
+ */
+function uc_coupon_count_usage($cid, $uid = NULL) {
+  global $user;
+
+  $usage = array('codes' => array());
+  $result = db_query("SELECT uco.code, COUNT(*) uses FROM {uc_coupons_orders} AS uco
+    LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id
+    LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id
+    WHERE uos.weight > 0 AND uco.cid = %d GROUP BY uco.code", $cid);
+  while ($row = db_fetch_object($result)) {
+    $usage['codes'][$row->code] = $row->uses;
+  }
+
+  if (is_null($uid)) {
+    $uid = $user->uid;
+  }
+  $usage['user'] = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco
+    LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id
+    LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id
+    WHERE uos.weight > 0 AND uco.cid = %d AND uo.uid = %d", $cid, $uid));
+
+  // Allow other modules to implement usage counts.
+  drupal_alter('uc_coupon_usage', $usage, $uid);
+
+  return $usage;
 }
 
 /**
@@ -409,22 +451,18 @@ function uc_coupon_validate($code, $order = NULL) {
     return $result;
   }
 
+  $coupon->usage = uc_coupon_count_usage($coupon->cid);
+
   //  CHECK MAX USES
-  if ($coupon->max_uses > 0) {
-    $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d AND uco.code = '%s'", $coupon->cid, $code));
-    if ($used >= $coupon->max_uses) {
-      $result->message = t('This coupon has reached the maximum redemption limit.');
-      return $result;
-    }
+  if ($coupon->max_uses > 0 && $coupon->usage['codes'][$code] >= $coupon->max_uses) {
+    $result->message = t('This coupon has reached the maximum redemption limit.');
+    return $result;
   }
 
   //  CHECK MAX USES PER USER
-  if (isset($coupon->data['max_uses_per_user'])) {
-    $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d AND uo.uid = %d", $coupon->cid, $user->uid));
-    if ($used >= $coupon->data['max_uses_per_user']) {
-      $result->message = t('This coupon has reached the maximum redemption limit.');
-      return $result;
-    }
+  if (isset($coupon->data['max_uses_per_user']) && $coupon->usage['user'] >= $coupon->data['max_uses_per_user']) {
+    $result->message = t('This coupon has reached the maximum redemption limit.');
+    return $result;
   }
 
   //  CHECK MINIMUM ORDER TOTAL

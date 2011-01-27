@@ -78,13 +78,6 @@ function uc_coupon_views_data() {
     'field' => array(
       'handler' => 'uc_coupon_handler_field_codes',
       'field' => 'cid',
-      'additional fields' => array(
-        'data' => 'data',
-        'bulk' => 'bulk',
-        'bulk_seed' => 'bulk_seed',
-        'code' => 'code',
-        'max_uses' => 'max_uses',
-      ),
     ),
   );
 

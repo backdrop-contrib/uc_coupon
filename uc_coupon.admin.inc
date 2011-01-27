@@ -917,18 +917,21 @@ function theme_uc_coupon_actions($coupon) {
 /**
  * Show coupon code in Views.
  *
- * @param string $code The coupon code to be formatted
- * @param integer $uses The number of uses
- * @param integer $max_uses The number of allowed uses
+ * @param $coupon
+ *   The coupon object for which this code is to be formatted.
+ *   $coupon->usage can optionally be set.
+ *   For bulk coupons, $coupon->code should be set to the specific code to display,.
  */
-function theme_uc_coupon_code($cid, $code, $uses = NULL, $max_uses = NULL) {
-  $class = "uc-coupon-code";
+function theme_uc_coupon_code($coupon) {
+  $code = $coupon->code;
 
-  if (!is_null($uses) && !is_null($max_uses)) {
-    if ($max_uses == 0 || $max_uses > $uses) {
+  $class = "uc-coupon-code";
+  if (isset($coupon->usage)) {
+    $uses = $coupon->usage['codes'][$coupon->code];
+    if ($coupon->max_uses == 0 || $coupon->max_uses > $uses) {
       $class .= ' uc-coupon-code-available';
       if (arg(1) == 'user') {
-        $code = l($code, "user/" . arg(1) . "/coupons/$cid/view/$code");
+        $code = l($code, "user/" . arg(1) . '/coupons/' . $coupon->cid . "/view/$code");
       }
     }
     else {
