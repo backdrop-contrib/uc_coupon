@@ -358,6 +358,22 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
 }
 
 /**
+ * Format a coupon depending on the type, optionally including currency symbols.
+ */
+function uc_coupon_format_discount($coupon, $currency = TRUE) {
+  switch ($coupon->type) {
+    case 'price':
+      return $currency ? uc_currency_format($coupon->value) : $coupon->value;
+
+    case 'percentage':
+      return (float)$coupon->value . '%';
+
+    case 'set_price':
+      return '=' . ($currency ? uc_currency_format($coupon->value) : $coupon->value);
+  }
+}
+
+/**
  * Generate a single bulk coupon code.
  */
 function uc_coupon_get_bulk_code($coupon, $id) {
@@ -644,16 +660,24 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   }
 
   foreach ($items as &$item) {
-    if ($coupon->type == 'percentage') {
-      $item->discount = $item->price * $coupon->value / 100;
-    }
-    else if ($coupon->type == 'price' && $coupon->data['apply_to'] == 'subtotal') {
-      // Apply single discount to the entire cart proportionally across the items.
-      $item->discount = $total == 0 ? 0 : min($coupon->value * $item->price / $total, $item->price);
-    }
-    else if ($coupon->type == 'price') {
-      // Apply discount to each product's untaxed price.
-      $item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
+    switch ($coupon->type) {
+      case 'price':
+        if ($coupon->data['apply_to'] == 'subtotal') {
+          // Apply single discount to the entire cart proportionally across the items.
+          $item->discount = $total == 0 ? 0 : min($coupon->value * $item->price / $total, $item->price);
+        }
+        else {
+          // Apply discount to each product's untaxed price.
+          $item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
+        }
+
+      case 'percentage':
+        $item->discount = $item->price * $coupon->value / 100;
+        break;
+
+      case 'set_price':
+        $item->discount = max($item->price - ($coupon->value * $item->price / $item->altered_price), 0);
+        break;
     }
   }
 
@@ -1125,12 +1149,7 @@ function uc_coupon_uc_checkout_complete($order, $account) {
 function template_preprocess_uc_coupon_certificate(&$variables) {
   $coupon = $variables['coupon'];
 
-  if ($coupon->type == 'percentage') {
-    $variables['value'] = (float)$coupon->value . '%';
-  }
-  else {
-    $variables['value'] = uc_currency_format($coupon->value);
-  }
+  $variables['value'] = uc_coupon_format_discount($coupon);
 
   $variables['display_name'] = check_plain($coupon->name);
   $n = stripos($variables['display_name'], 'purchased by');

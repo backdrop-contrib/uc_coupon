@@ -61,7 +61,7 @@ function uc_coupon_display($view_type = 'active') {
       theme('uc_coupon_actions', $coupon),
       check_plain($coupon->name),
       check_plain($coupon->code) . ($coupon->bulk ? '* '. t('(bulk)') : ''),
-      $coupon->type == 'percentage' ? ((float)$coupon->value . '%') : uc_currency_format($coupon->value),
+      uc_coupon_format_discount($coupon),
       format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
       $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
       $coupon->valid_until ? format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
@@ -138,8 +138,7 @@ function uc_coupon_view($coupon) {
     }
   }
 
-  $value = ($coupon->type == 'percentage') ? ((float)$coupon->value .'%') : uc_currency_format($coupon->value);
-  $rows[] = array(t('Discount value'), $value);
+  $rows[] = array(t('Discount value'), uc_coupon_format_discount($coupon));
 
   switch ($coupon->data['apply_to']) {
     case 'subtotal':
@@ -410,9 +409,13 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
   $form['discount'] = array(
     '#type' => 'textfield',
     '#title' => t('Discount'),
-    '#default_value' => $value->type == 'percentage' ? ((float)$value->value . '%') : $value->value,
+    '#default_value' => uc_coupon_format_discount($value, FALSE),
     '#size' => 6,
-    '#description' => t('Enter a percentage (e.g. "15%") or a fixed price discount (e.g. "15" for $15.00)'),
+    '#description' => t('Three discount types are possible:') . theme('item_list', array(
+      t('Fixed price discount; enter "15" for $15.00 off.'),
+      t('Percentage discount; enter "15%" for 15% off.'),
+      t('Set product price; enter "=15" to make all matching products $15.00 after discount.'),
+    )),
     '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
     '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
     '#required' => TRUE,
@@ -743,8 +746,12 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
 
-  if (!preg_match('/^[1-9]\d*(\.\d+)?%?$/', $form_state['values']['discount'])) {
+  if (!preg_match('/^(=(?!.*%))?\d+(\.\d+)?%?$/', $form_state['values']['discount'])) {
     form_set_error('discount', t('Invalid discount.'));
+  }
+
+  if (substr($form_state['values']['discount'], 0, 1) == '=' && $form_state['values']['apply_to'] == 'subtotal') {
+    form_set_error('apply_to', t('Set prices cannot be applied to the order subtotal.'));
   }
 
   if ($form_state['values']['apply_to'] == 'cheapest' || $form_state['values']['apply_to'] == 'expensive') {
@@ -807,8 +814,14 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     $coupon->valid_from = $coupon->valid_until = 0;
   }
   $coupon->status = $form_state['values']['status'];
-  $coupon->type = substr($form_state['values']['discount'], -1) == '%' ? 'percentage' : 'price';
-  $coupon->value = str_replace('%', '', $form_state['values']['discount']);
+  $coupon->type = 'price';
+  if (substr($form_state['values']['discount'], -1) == '%') {
+    $coupon->type = 'percentage';
+  }
+  if (substr($form_state['values']['discount'], 0, 1) == '=') {
+    $coupon->type = 'set_price';
+  }
+  $coupon->value = str_replace(array('%', '='), '', $form_state['values']['discount']);
   $coupon->minimum_order = $form_state['values']['minimum_order'] ? $form_state['values']['minimum_order'] : 0;
   $coupon->data['minimum_qty'] = $form_state['values']['minimum_qty'];
   $coupon->max_uses = $form_state['values']['max_uses'] ? $form_state['values']['max_uses'] : 0;
