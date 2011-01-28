@@ -58,7 +58,7 @@ class uc_coupon_handler_field_codes extends views_handler_field_prerender_list {
 
       // Find the maximum number of codes to display.
       $limit = $coupon->bulk ? $coupon->data['bulk_number'] : 1;
-      if ($this->options['max_num'] && $this->options['max_num'] > $max) {
+      if ($this->options['max_num'] && $this->options['max_num'] < $limit) {
         $limit = $this->options['max_num'];
       }
 
