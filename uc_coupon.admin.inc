@@ -943,7 +943,7 @@ function theme_uc_coupon_code($coupon) {
     $uses = $coupon->usage['codes'][$coupon->code];
     if ($coupon->max_uses == 0 || $coupon->max_uses > $uses) {
       $class .= ' uc-coupon-code-available';
-      if (arg(1) == 'user') {
+      if (arg(0) == 'user') {
         $code = l($code, "user/" . arg(1) . '/coupons/' . $coupon->cid . "/view/$code");
       }
     }
