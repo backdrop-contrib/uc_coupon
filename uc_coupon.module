@@ -352,7 +352,7 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
     WHERE uos.weight > 0 AND uco.cid = %d AND uo.uid = %d", $cid, $uid));
 
   // Allow other modules to implement usage counts.
-  drupal_alter('uc_coupon_usage', $usage, $uid);
+  drupal_alter('uc_coupon_usage', $usage, $cid, $uid);
 
   return $usage;
 }
@@ -425,64 +425,123 @@ function uc_coupon_find($code) {
 }
 
 /**
- * Validate a coupon and calculate the coupon amount against the current cart contents.
+ * Validate a coupon, and optionally calculate the order discount.
  *
  * @param $code
- *  The coupon code entered at the checkout screen.
+ *   The coupon code entered at the checkout screen.
  * @param $order
- *  The order that the coupon is being applied to.
+ *   The order that the coupon is being applied to.
+ *   If NULL, the current cart contents will be used.
+ *   If FALSE, product and order validation will be bypassed.
+ * @param $account
+ *   The user who is attempting to use the coupon.
+ *   If NULL, the current user will be assumed.
+ *   If FALSE, user validation will be bypassed.
  *
  * @return
- *  Returns a coupon result object with details about the validation
+ *   A coupon object with extended information about the validation:
+ *   - $coupon->valid: TRUE if the code was valid, FALSE otherwise.
+ *   - $coupon->code: The specific code to be applied (even for bulk coupons).
+ *   - $coupon->title: The line item title for the discount.
+ *   - $coupon->amount: If $order !== FALSE, the discount that should be applied.
+ *   - $coupon->message: If $coupon->valid == FALSE, the rejection reason.
  */
-function uc_coupon_validate($code, $order = NULL) {
+function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   global $user;
 
-  $result->valid = FALSE;
-
-  $code = trim(strtoupper($code));
-  $coupon = uc_coupon_find($code);
-
-  if (!$coupon) {
-    $result->message = t('This coupon code is invalid or has expired.');
-    return $result;
-  }
-
   if (is_null($order)) {
-    $order = new stdClass;
+    $order = new stdClass();
     $order->products = uc_cart_get_contents();
   }
 
-  $order->data['coupon'] = $code;
-  $items = uc_coupon_calculate_discounts($coupon, $order);
-
-  $amount = 0;
-  foreach ($items as $item) {
-    $amount += $item->discount;
-  }
-  $amount = round($amount, variable_get('uc_currency_prec', 2));
-
-  if ($amount == 0) {
-    $result->message = t('You do not have applicable products in your cart.');
-    return $result;
+  if (is_null($account)) {
+    $account = $user;
   }
 
-  $coupon->usage = uc_coupon_count_usage($coupon->cid);
-
-  //  CHECK MAX USES
-  if ($coupon->max_uses > 0 && $coupon->usage['codes'][$code] >= $coupon->max_uses) {
-    $result->message = t('This coupon has reached the maximum redemption limit.');
-    return $result;
+  // Look for an active coupon matching the code.
+  $code = trim(strtoupper($code));
+  $coupon = uc_coupon_find($code);
+  if (!$coupon) {
+    $coupon = new stdClass();
+    $coupon->valid = FALSE;
+    $coupon->message = t('This coupon code is invalid or has expired.');
+    return $coupon;
   }
 
-  //  CHECK MAX USES PER USER
-  if (isset($coupon->data['max_uses_per_user']) && $coupon->usage['user'] >= $coupon->data['max_uses_per_user']) {
-    $result->message = t('This coupon has reached the maximum redemption limit.');
-    return $result;
+  // Assume the coupon is valid, unless a validation hook fails.
+  $coupon->code = $code;
+  $coupon->valid = TRUE;
+  $coupon->title = t('Coupon: @code', array('@code' => $code));
+  $coupon->usage = uc_coupon_count_usage($coupon->cid, $account ? $account->uid : NULL);
+
+  // Calculate the discount.
+  if ($order) {
+    $order->data['coupon'] = $code;
+    $items = uc_coupon_calculate_discounts($coupon, $order);
+
+    $coupon->amount = 0;
+    foreach ($items as $item) {
+      $coupon->amount += $item->discount;
+    }
+    $coupon->amount = round($coupon->amount, variable_get('uc_currency_prec', 2));
   }
 
-  //  CHECK MINIMUM ORDER TOTAL
-  if ($coupon->minimum_order > 0) {
+  // Invoke validation hook.
+  foreach (module_implements('uc_coupon_validate') as $module) {
+    $callback = $module . '_uc_coupon_validate';
+    $result = $callback($coupon, $order, $account);
+
+    if ($result === TRUE) {
+      // Further validation should be skipped.
+      break;
+    }
+    else if (!is_null($result)) {
+      // Validation failed.
+      $coupon->valid = FALSE;
+      $coupon->message = $result;
+      break;
+    }
+  }
+
+  return $coupon;
+}
+
+/**
+ * Implementation of hook_uc_coupon_validate().
+ * 
+ * @param $coupon
+ * 	 The coupon object to validate, with special fields set as follows:
+ *   - $coupon->code: The specific code to be applied (even for bulk coupons).
+ *   - $coupon->amount: If $order !== FALSE, the discount that should be applied.
+ *   - $coupon->usage: Coupon usage data from uc_coupon_count_usage().
+ * @param $order
+ *   The order against which this coupon is to be applied, or FALSE to bypass order validation.
+ * @param $account
+ *   The account of the user trying to use the coupon, or FALSE to bypass user validation.
+ *
+ * @return
+ *   TRUE if the coupon should be immediately accepted.
+ *   NULL to allow other modules to continue validation.
+ *   Otherwise, a string describing the reason for failure.
+ */
+function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
+  // Check for applicable products.
+  if ($order && $coupon->amount == 0) {
+    return t('You do not have applicable products in your cart.');
+  }
+
+  // Check maximum usage per code.
+  if ($coupon->max_uses > 0 && $coupon->usage['codes'][$coupon->code] >= $coupon->max_uses) {
+    return t('This coupon has reached the maximum redemption limit.');
+  }
+
+  // Check maximum usage per user.
+  if ($account && isset($coupon->data['max_uses_per_user']) && $coupon->usage['user'] >= $coupon->data['max_uses_per_user']) {
+    return t('This coupon has reached the maximum redemption limit.');
+  }
+  
+  // Check minimum order total.
+  if ($order && $coupon->minimum_order > 0) {
     $total = 0;
     $context = array(
       'revision' => 'altered',
@@ -499,73 +558,52 @@ function uc_coupon_validate($code, $order = NULL) {
     }
 
     if ($coupon->minimum_order > $total) {
-      $result->message = t('You have not reached the minimum order total for this coupon.');
-      return $result;
+      return t('You have not reached the minimum order total for this coupon.');
     }
   }
 
-  //  CHECK MINIMUM ORDER QUANTITY
-  if (isset($coupon->data['minimum_qty'])) {
+  // Check minimum quantity.
+  if ($order && isset($coupon->data['minimum_qty'])) {
     $qty = 0;
     foreach ($order->products as $item) {
       $qty += $item->qty;
     }
 
     if ($coupon->data['minimum_qty'] > $qty) {
-      $result->message = t('You do not have enough items in your cart to use this coupon.');
-      return $result;
+      return t('You do not have enough items in your cart to use this coupon.');
     }
   }
 
-  //  CHECK USER ID
-  if (isset($coupon->data['users'])) {
-    if (!in_array("$user->uid", $coupon->data['users'], TRUE)) {
-      $result->message = t('Your user ID is not allowed to use this coupon.');
-      return $result;
+  // Check user ID.
+  if ($account && isset($coupon->data['users'])) {
+    if (!in_array("$account->uid", $coupon->data['users'], TRUE)) {
+      return t('Your user ID is not allowed to use this coupon.');
     }
   }
 
-  // CHECK ROLES
-  if (isset($coupon->data['roles'])) {
+  // Check roles.
+  if ($account && isset($coupon->data['roles'])) {
     $role_found = FALSE;
     foreach ($coupon->data['roles'] as $role) {
-      if (in_array($role, $user->roles)) {
+      if (in_array($role, $account->roles)) {
         $role_found = TRUE;
         break;
       }
     }
     if (!$role_found) {
-      $result->message = t('You do not have the correct permission to use this coupon.');
-      return $result;
+      return t('You do not have the correct permission to use this coupon.');
     }
   }
 
-  // CHECK USER PERMISSIONS
-  // 1 - both wholesale and retail any user
-  // 2 - wholesale only -> users with 'coupon wholesale pricing'
-  // 3 - retail only -> users without 'coupon wholesale pricing'
-  if ($coupon->data['wholesale'] > 1) {
-    if ($coupon->data['wholesale'] == 2) {
-      if (!user_access('coupon wholesale pricing')) {
-        $result->message = t('You do not have the correct permission to use this coupon.');
-        return $result;
-      }
+  // Check wholesale permissions.
+  if ($account) {
+    if ($coupon->data['wholesale'] == 2 && !user_access('coupon wholesale pricing', $account)) {
+      return t('You do not have the correct permission to use this coupon.');
     }
-    else if ($coupon->data['wholesale'] == 3) {
-      if (user_access('coupon wholesale pricing')) {
-        $result->message = t('You do not have the correct permission to use this coupon.');
-        return $result;
-      }
+    else if ($coupon->data['wholesale'] == 3 && user_access('coupon wholesale pricing', $account)) {
+      return t('You do not have the correct permission to use this coupon.');
     }
   }
-
-  $result->valid = TRUE;
-  $result->code = $code;
-  $result->cid = $coupon->cid;
-  $result->title = t('Coupon: @code', array('@code' => $code));
-  $result->amount = $amount;
-
-  return $result;
 }
 
 /**
