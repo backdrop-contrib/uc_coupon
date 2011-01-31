@@ -708,6 +708,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
           // Apply discount to each product's untaxed price.
           $item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
         }
+        break;
 
       case 'percentage':
         $item->discount = $item->price * $coupon->value / 100;
