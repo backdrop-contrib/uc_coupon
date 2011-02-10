@@ -13,6 +13,13 @@ function uc_coupon_settings_form() {
     '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
   );
 
+  $form['uc_coupon_line_item_format'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Line item title format'),
+    '#description' => t('You may use [coupon-name] and [coupon-code] tokens.'),
+    '#default_value' => variable_get('uc_coupon_line_item_format', t('Coupon: [coupon-code]')),
+  );
+
   $form['uc_coupon_default_usage'] = array(
     '#type' => 'radios',
     '#title' => t('Default redemption setting for new coupons'),

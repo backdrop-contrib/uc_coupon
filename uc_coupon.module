@@ -471,8 +471,10 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   // Assume the coupon is valid, unless a validation hook fails.
   $coupon->code = $code;
   $coupon->valid = TRUE;
-  $coupon->title = t('Coupon: @code', array('@code' => $code));
   $coupon->usage = uc_coupon_count_usage($coupon->cid, $account ? $account->uid : NULL);
+
+  $format = variable_get('uc_coupon_line_item_format', t('Coupon: [coupon-code]'));
+  $coupon->title = token_replace_multiple($format, array('coupon' => $coupon));
 
   // Calculate the discount.
   if ($order) {
