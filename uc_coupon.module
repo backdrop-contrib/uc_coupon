@@ -916,7 +916,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 
           drupal_add_js('$(function() {
             if (window.set_line_item) {
-              set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', 0);
+              set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', ' . _line_item_data('coupon', 'weight') . ');
             }
           });', 'inline');
         }
