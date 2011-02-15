@@ -269,6 +269,13 @@ function uc_coupon_purchase_uc_coupon_presave(&$coupon, $edit) {
 }
 
 /**
+ * Implementation of hook_uc_coupon_delete().
+ */
+function uc_coupon_purchase_uc_coupon_delete($cid) {
+  db_query('DELETE FROM {uc_coupon_purchase_users} WHERE cid = %d', $cid);
+}
+
+/**
  * Implementation of hook_order().
  */
 function uc_coupon_purchase_order($op, $order, $status) {

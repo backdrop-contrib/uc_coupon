@@ -897,6 +897,8 @@ function uc_coupon_delete_confirm(&$form_state, $coupon) {
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
   $coupon = uc_coupon_load($form['#uc_coupon_cid']);
 
+  module_invoke_all('uc_coupon_delete', $coupon);
+
   db_query("DELETE FROM {uc_coupons} WHERE cid = %d", $form['#uc_coupon_cid']);
   db_query("DELETE FROM {uc_coupons_orders} WHERE cid = %d", $form['#uc_coupon_cid']);
 
