@@ -36,6 +36,7 @@ function uc_coupon_purchase_view($account) {
       $valid = $valid_from . ' - ' . $valid_until;
     }
     $uses = $coupon->max_uses > 0 ? $coupon->max_uses : t('Unlimited');
+    $usage = uc_coupon_count_usage($coupon->cid);
 
     $icon = theme('image', drupal_get_path('module', 'uc_store') .'/images/print.gif', t('Print'));
     foreach ($codes as $code) {
@@ -47,7 +48,7 @@ function uc_coupon_purchase_view($account) {
       else {
         $link = l($code, 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/view/' . $code);
         $link .= ' ' . l($icon, 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/print/' . $code, array('html' => TRUE));
-        $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id WHERE uos.weight > 0 AND uco.cid = %d AND uco.code = '%s'", $coupon->cid, $code));
+        $used = $usage['codes'][$code];
       }
 
       $rows[] = array($link, $value, $valid, $uses, $used);
@@ -69,6 +70,8 @@ function uc_coupon_purchase_view($account) {
  * Print a purchased coupon.
  */
 function uc_coupon_purchase_print($account, $coupon, $op = 'view', $code = NULL) {
+  drupal_set_title(t('Coupon #@cid', array('@cid' => $coupon->cid)));
+
   module_load_include('inc', 'uc_coupon', 'uc_coupon.admin');
 
   $url = 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/print' . ($code ? "/$code" : '');

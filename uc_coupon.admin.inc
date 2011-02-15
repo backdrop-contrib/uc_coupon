@@ -802,7 +802,8 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     $form_state['values']['bulk_number'] = $form['#uc_coupon']->data['bulk_number'];
   }
 
-  $coupon = new stdClass;
+  // Ensure all fields of original coupon object propagate to presave hook.
+  $coupon = (isset($form['#uc_coupon'])) ? $form['#uc_coupon'] : new stdClass;
   if (isset($form['#uc_coupon_cid'])) {
     $coupon->cid = $form['#uc_coupon_cid'];
   }
