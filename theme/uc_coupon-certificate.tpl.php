@@ -1,5 +1,4 @@
 <?php 
-// $Id$
 
 /**
  * Basic template for a printed coupon certificate.

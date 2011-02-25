@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * Display a list of purchased coupons.

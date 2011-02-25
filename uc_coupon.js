@@ -1,4 +1,3 @@
-// $Id$
 
 function getCoupon() {
   $('#coupon-message').remove();

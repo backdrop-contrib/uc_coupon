@@ -1,5 +1,4 @@
 <?php
-// $Id$
 /**
  * @file
  * Views handler for a list of bulk codes based on a coupon

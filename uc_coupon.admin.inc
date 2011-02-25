@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * Store-wide coupon settings form.

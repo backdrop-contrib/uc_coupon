@@ -1,4 +1,3 @@
-// $Id$
 
 Drupal.behaviors.ucCouponAdmin = function(context) {
   $('#edit-discount', context).keyup(function() {

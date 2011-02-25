@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 function uc_coupon_purchase_schema() {
   $schema = array();

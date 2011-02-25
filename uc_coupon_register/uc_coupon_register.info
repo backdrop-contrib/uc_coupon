@@ -1,4 +1,3 @@
-; $Id$
 name = Discount Coupon User Registration
 description = Issues a coupon after a new user is registered.
 dependencies[] = uc_coupon

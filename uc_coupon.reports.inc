@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * Coupon report options form.

@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 require_once 'uc_coupon_purchase.ca.inc';
 

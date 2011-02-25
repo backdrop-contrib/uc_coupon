@@ -1,5 +1,4 @@
 <?php
-// $Id$
 /**
  * @file
  * Views handler: Coupon filter on "product-type".
