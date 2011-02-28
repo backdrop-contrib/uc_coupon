@@ -376,9 +376,16 @@ function uc_coupon_format_discount($coupon, $currency = TRUE) {
  * Generate a single bulk coupon code.
  */
 function uc_coupon_get_bulk_code($coupon, $id) {
+  // If this coupon has been validated, then $coupon->code is already a bulk code.
+  if (isset($coupon->valid)) {
+    $prefix = substr($coupon->code, 0, strlen($coupon->code) - $coupon->data['bulk_length']);
+  }
+  else {
+    $prefix = $coupon->code;
+  }
   $id = str_pad(dechex($id), strlen(dechex($coupon->data['bulk_number'])), '0', STR_PAD_LEFT);
-  $length = strlen($coupon->code) + $coupon->data['bulk_length'];
-  return strtoupper(substr($coupon->code . $id . md5($coupon->bulk_seed . $id), 0, $length));
+  $length = strlen($prefix) + $coupon->data['bulk_length'];
+  return strtoupper(substr($prefix . $id . md5($coupon->bulk_seed . $id), 0, $length));
 }
 
 /**
@@ -493,14 +500,13 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
     $result = $callback($coupon, $order, $account);
 
     if ($result === TRUE) {
-      // Further validation should be skipped.
-      break;
+      // This module wishes the coupon to be accepted.
+      $coupon->valid = TRUE;
     }
     else if (!is_null($result)) {
-      // Validation failed.
+      // This module wishes the coupon to be rejected.
       $coupon->valid = FALSE;
       $coupon->message = $result;
-      break;
     }
   }
 
@@ -521,8 +527,8 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
  *   The account of the user trying to use the coupon, or FALSE to bypass user validation.
  *
  * @return
- *   TRUE if the coupon should be immediately accepted.
- *   NULL to allow other modules to continue validation.
+ *   TRUE if the coupon should be accepted.
+ *   NULL to allow other modules to determine validation.
  *   Otherwise, a string describing the reason for failure.
  */
 function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
@@ -830,10 +836,10 @@ function uc_coupon_block_form_submit($form, &$form_state) {
       $_SESSION['uc_coupon'] = $code;
       $amount = uc_coupon_price($coupon->amount);
       if (variable_get('uc_coupon_show_in_cart', TRUE)) {
-        drupal_set_message(t('A discount of !amount has been applied to your cart.', array('!amount' => $amount)));
+        drupal_set_message((isset($coupon->message)) ? $coupon->message : t('A discount of !amount has been applied to your cart.', array('!amount' => $amount)));
       }
       else {
-        drupal_set_message(t('A discount of !amount will be applied in the checkout.', array('!amount' => $amount)));
+        drupal_set_message((isset($coupon->message)) ? $coupon->message : t('A discount of !amount will be applied in the checkout.', array('!amount' => $amount)));
       }
     }
   }
@@ -976,7 +982,9 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 function uc_coupon_checkout_apply() {
   $coupon = uc_coupon_validate($_POST['code'], unserialize($_POST['order']));
   if ($coupon->valid) {
-    $coupon->message = t('The coupon has been applied to your order.');
+    if (!isset($coupon->message)) {
+      $coupon->message = t('The coupon has been applied to your order.');
+    }
     $_SESSION['uc_coupon'] = $_POST['code'];
   }
   else {
