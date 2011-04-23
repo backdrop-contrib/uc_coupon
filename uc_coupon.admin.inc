@@ -509,7 +509,14 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#size' => 5,
     '#description' => t('If set, at least this many products must be in the cart for the coupon to be accepted.'),
   );
-
+  $form['order']['minimum_qty_restrict'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Only count applicable products'),
+    '#default_value' => isset($value->data['minimum_qty_restrict']) ? TRUE : FALSE,
+    '#description' => t('If checked, only applicable products as configured below will count towards the minimum quantity.'),
+  );
+  
+  
   $form['product_types'] = array(
     '#type' => 'fieldset',
     '#title' => t('Applicable product classes'),
@@ -831,6 +838,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->value = str_replace(array('%', '='), '', $form_state['values']['discount']);
   $coupon->minimum_order = $form_state['values']['minimum_order'] ? $form_state['values']['minimum_order'] : 0;
   $coupon->data['minimum_qty'] = $form_state['values']['minimum_qty'];
+  $coupon->data['minimum_qty_restrict'] = $form_state['values']['minimum_qty_restrict'];
   $coupon->max_uses = $form_state['values']['max_uses'] ? $form_state['values']['max_uses'] : 0;
   $coupon->data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
   $coupon->data['apply_to'] = $form_state['values']['apply_to'];
