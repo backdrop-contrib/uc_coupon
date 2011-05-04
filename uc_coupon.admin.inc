@@ -78,9 +78,15 @@ function uc_coupon_display($view_type = 'active') {
     ),
   );
 
-  $result = pager_query('SELECT * FROM {uc_coupons} WHERE status = %d' . tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
+  $query = db_select('uc_coupons','c')
+    ->extend('TableSort')
+    ->orderByHeader($header);
+  $query->range(0,20);
+  $query->condition('c.status', $view_type == 'inactive' ? 0 : 1)->fields('c');
+  
   $rows = array();
-  while ($coupon = db_fetch_object($result)) {
+  $result = $query->execute();
+  foreach ($result as $coupon) {
     $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
     $rows[] = array(
       theme('uc_coupon_actions', array('coupon' => $coupon)),
@@ -737,9 +743,8 @@ function uc_coupon_autocomplete_node($string) {
   $matches = array();
   $product_types = module_invoke_all('product_types');
 
-  // TODO Please convert this statement to the D7 database API syntax.
-  $result = db_query_range("SELECT nid, title FROM {node} WHERE type IN ('" . implode("','", $product_types) . "') AND title LIKE '%%%s%'", $string);
-  while ($row = db_fetch_object($result)) {
+  $result = db_query("SELECT nid, title FROM {node} WHERE type IN (:types) AND title LIKE ':title'", array( ':types'=>$product_types, ':title'=>"%$string%"));
+  foreach ($result as $row) {
     $title = check_plain($row->title);
     $matches[$title . ' [nid:' . $row->nid . ']'] = $title;
   }
@@ -753,9 +758,8 @@ function uc_coupon_autocomplete_node($string) {
  */
 function uc_coupon_autocomplete_term($string) {
   $matches = array();
-  // TODO Please convert this statement to the D7 database API syntax.
-  $result = db_query_range("SELECT tid, name FROM {taxonomy_term_data} WHERE name LIKE '%%%s%'", $string);
-  while ($row = db_fetch_object($result)) {
+  $result = db_query("SELECT tid, name FROM {taxonomy_term_data} WHERE name LIKE ':name'", array(':name' => "%$string%"));
+  foreach ($result as $row) {
     $matches[$row->name . ' [tid:' . $row->tid . ']'] = $row->name;
   }
   print drupal_json_encode($matches);
@@ -775,7 +779,7 @@ function uc_coupon_autocomplete_user($string) {
 
   // TODO Please convert this statement to the D7 database API syntax.
   $result = db_query_range("SELECT uid, name FROM {users} WHERE name LIKE '%%%s%'", $string);
-  while ($row = db_fetch_object($result)) {
+  foreach ($result as $row) {
     $matches[$row->name . ' [uid:' . $row->uid . ']'] = $row->name;
   }
   print drupal_json_encode($matches);
@@ -788,9 +792,8 @@ function uc_coupon_autocomplete_user($string) {
  */
 function uc_coupon_autocomplete_role($string) {
   $matches = array();
-  // TODO Please convert this statement to the D7 database API syntax.
-  $result = db_query_range("SELECT name FROM {role} WHERE name LIKE '%%%s%'", $string);
-  while ($row = db_fetch_object($result)) {
+  $result = db_query_range("SELECT name FROM {role} WHERE name LIKE ':name'", array(':name'=>"%$string%"));
+  foreach ($result as $row) {
     $matches[$row->name] = $row->name;
   }
   print drupal_json_encode($matches);
@@ -961,16 +964,12 @@ function uc_coupon_delete_confirm_submit($form, &$form_state) {
 
   module_invoke_all('uc_coupon_delete', $coupon);
 
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {uc_coupons} WHERE cid = %d", $form['#uc_coupon_cid']) */
   db_delete('uc_coupons')
-  ->condition('cid', $form['#uc_coupon_cid'])
-  ->execute();
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {uc_coupons_orders} WHERE cid = %d", $form['#uc_coupon_cid']) */
+    ->condition('cid', $form['#uc_coupon_cid'])
+    ->execute();
   db_delete('uc_coupons_orders')
-  ->condition('cid', $form['#uc_coupon_cid'])
-  ->execute();
+    ->condition('cid', $form['#uc_coupon_cid'])
+    ->execute();
 
   drupal_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
   $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');

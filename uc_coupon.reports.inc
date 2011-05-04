@@ -85,14 +85,17 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
   $output = drupal_get_form('uc_coupon_reports_form', $start, $end, $statuses);
 
   if (isset($start) && isset($end)) {
-    // TODO Please convert this statement to the D7 database API syntax.
-    $query = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) WHERE o.created > %d AND o.created < %d AND o.order_status IN ('" . implode("', '", $statuses) . "') ORDER BY co.cid, o.created ASC", $start, $end);
+    $result = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co 
+    	LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) 
+    	WHERE o.created > :start AND o.created < :end AND o.order_status IN (:statuses) 
+    	ORDER BY co.cid, o.created ASC", 
+      array(':start'=>$start, ':end'=>$end, ':statuses'=>$statuses));
     $total = 0;
 
     $row_header = array(t('Order #'), t('Purchase date'), t('Total'), t('Coupon value'));
     $last_cid = 0;
 
-    while ($row = db_fetch_object($query)) {
+    foreach ($result as $row) {
       // Display the table of coupons if this is the next set of coupons
       if ($row->cid != $last_cid AND $last_cid != 0) {
         $td[] = array('', '<b>' . t('Uses: @total', array('@total' => $num_uses)) . '</b>', '<b>' . uc_currency_format($coupon_sale_amount) . '</b>', '<b>' . uc_currency_format($coupon_amount) . '</b>');

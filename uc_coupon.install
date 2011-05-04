@@ -167,7 +167,7 @@ function uc_coupon_update_6000() {
     db_add_field('uc_coupons', 'data', array('type' => 'text'));
 
     $result = db_query('SELECT cid, products, users, roles FROM {uc_coupons}');
-    while ($row = db_fetch_object($result)) {
+    foreach ($result as $row) {
       $data = array('wholesale' => $row->roles);
       if ($row->products) {
         $data['products'] = explode(',', $row->products);
@@ -176,14 +176,12 @@ function uc_coupon_update_6000() {
         // substr() removes the final comma that was present in the previous strings.
         $data['users'] = explode(',', substr($row->users, 0, -1));
       }
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query("UPDATE {uc_coupons} SET data = '%s' WHERE cid = %d", serialize($data), $row->cid) */
       db_update('uc_coupons')
-  ->fields(array(
-        'data' => serialize($data),
-      ))
-  ->condition('cid', $row->cid)
-  ->execute();
+        ->fields(array(
+          'data' => serialize($data),
+        ))
+        ->condition('cid', $row->cid)
+        ->execute();
     }
 
     db_drop_field('uc_coupons', 'products');

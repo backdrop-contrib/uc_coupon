@@ -94,11 +94,7 @@ function uc_coupon_purchase_install() {
 function uc_coupon_purchase_uninstall() {
   // TODO The drupal_(un)install_schema functions are called automatically in D7.
   // drupal_uninstall_schema('uc_coupon_purchase')
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {variable} WHERE name LIKE 'uc_coupon_purchase_%%'") */
-  db_delete('variable')
-  ->condition('name', 'uc_coupon_purchase_%%', 'LIKE')
-  ->execute();
+  variable_del('uc_coupon_purchase_order_status');
 }
 
 /**

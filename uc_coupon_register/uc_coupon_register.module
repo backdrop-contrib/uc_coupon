@@ -6,7 +6,7 @@
 function uc_coupon_register_form_user_admin_settings_alter(&$form, &$form_state) {
   $coupons = array(0 => t('None'));
   $result = db_query("SELECT cid, name, code FROM {uc_coupons} WHERE status = :status ORDER BY name ASC", array(':status' => 1));
-  while ($coupon = db_fetch_object($result)) {
+  foreach ($result as $coupon) {
     $coupons[$coupon->cid] = $coupon->name . ' (' . $coupon->code . ')';
   }
 

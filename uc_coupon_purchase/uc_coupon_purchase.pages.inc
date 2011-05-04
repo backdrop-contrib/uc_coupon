@@ -10,7 +10,7 @@ function uc_coupon_purchase_view($account) {
 
   $header = array(t('Code'), t('Value'), t('Validity'), t('Max uses'), t('Used'));
   $rows = array();
-  while ($coupon = db_fetch_object($result)) {
+  foreach ($result as $coupon) {
     if ($coupon->bulk) {
       $coupon->data = unserialize($coupon->data);
       $codes = array($coupon->code . '*');

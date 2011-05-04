@@ -1,7 +1,7 @@
 <?php
 
-require_once DRUPAL_ROOT . '/' . 'uc_coupon.ca.inc';
-
+//require_once DRUPAL_ROOT . '/' . 'uc_coupon.ca.inc';
+module_load_include('inc','uc_coupon','uc_coupon.ca');
 /**
  * @file
  * Provides discount coupons for Ubercart.
@@ -308,7 +308,7 @@ function uc_coupon_save(&$coupon, $edit = array()) {
  */
 function uc_coupon_load($cids) {
   foreach ($cids as $nid => &$cid) {
-    $coupon = db_fetch_object(db_query("SELECT * FROM {uc_coupons} WHERE cid = :cid", array(':cid' => $cid)));
+    $coupon = db_query("SELECT * FROM {uc_coupons} WHERE cid = :cid", array(':cid' => $cid))->fetchObject();
     $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
 
     // Convert old coupons that could not specify "per order" when restricted.
@@ -360,7 +360,7 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
     LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id
     LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id
     WHERE uos.weight > :uos.weight AND uco.cid = :uco.cid GROUP BY uco.code", array(':uos.weight' => 0, ':uco.cid' => $cid));
-  while ($row = db_fetch_object($result)) {
+  foreach ($result as $row) {
     $usage['codes'][$row->code] = $row->uses;
   }
 
@@ -415,14 +415,17 @@ function uc_coupon_get_bulk_code($coupon, $id) {
  */
 function uc_coupon_find($code) {
   // Look for matching single coupon first.
-  $coupon = db_fetch_object(db_query("SELECT cid FROM {uc_coupons} WHERE code = :code AND status = :status AND bulk = :bulk AND valid_from < :valid_from AND (valid_until = :(valid_until OR valid_until > :valid_until)", array(':code' => $code, ':status' => 1, ':bulk' => 0, ':valid_from' => REQUEST_TIME, ':(valid_until' => 0, ':valid_until' => REQUEST_TIME)));
+  $coupon = db_query("SELECT cid FROM {uc_coupons} 
+  	WHERE code = :code AND status = :status AND bulk = :bulk AND valid_from < :valid_from AND (valid_until = :(valid_until OR valid_until > :valid_until)", 
+    array(':code' => $code, ':status' => 1, ':bulk' => 0, ':valid_from' => REQUEST_TIME, ':(valid_until' => 0, ':valid_until' => REQUEST_TIME))
+    ->fetchObject();
   if ($coupon) {
     return uc_coupon_load($coupon->cid);
   }
 
   // Look through bulk coupons.
   $result = db_query("SELECT cid, code, data, bulk_seed FROM {uc_coupons} WHERE status = :status AND bulk = :bulk AND valid_from < :valid_from AND (valid_until = :(valid_until OR valid_until > :valid_until)", array(':status' => 1, ':bulk' => 1, ':valid_from' => REQUEST_TIME, ':(valid_until' => 0, ':valid_until' => REQUEST_TIME));
-  while ($coupon = db_fetch_object($result)) {
+  foreach ($result as $coupon) {
     // Check coupon prefix.
     $prefix_length = strlen($coupon->code);
     if (substr($code, 0, $prefix_length) != $coupon->code) {
@@ -1029,29 +1032,25 @@ function uc_coupon_checkout_apply() {
 function _uc_coupon_apply_to_order($order_id, $coupon) {
   $lid = db_query("SELECT line_item_id FROM {uc_order_line_items} WHERE order_id = :order_id AND type = :type", array(':order_id' => $order_id, ':type' => 'coupon'))->fetchField();
   if ($lid) {
-    // TODO Please review the conversion of this statement to the D7 database API syntax.
-    /* db_query("UPDATE {uc_coupons_orders} SET cid = %d, code = '%s', value = %f WHERE oid = %d", $coupon->cid, $coupon->code, $coupon->amount, $order_id) */
     db_update('uc_coupons_orders')
-  ->fields(array(
-      'cid' => $coupon->cid,
-      'code' => $coupon->code,
-      'value' => $coupon->amount,
-    ))
-  ->condition('oid', $order_id)
-  ->execute();
+      ->fields(array(
+          'cid' => $coupon->cid,
+          'code' => $coupon->code,
+          'value' => $coupon->amount,
+        ))
+      ->condition('oid', $order_id)
+      ->execute();
     uc_order_update_line_item($lid, $coupon->title, -$coupon->amount);
   }
   else {
-    // TODO Please review the conversion of this statement to the D7 database API syntax.
-    /* db_query("INSERT INTO {uc_coupons_orders} (cid, oid, code, value) VALUES (%d, %d, '%s', %f)", $coupon->cid, $order_id, $coupon->code, $coupon->amount) */
     $id = db_insert('uc_coupons_orders')
-  ->fields(array(
-      'cid' => $coupon->cid,
-      'oid' => $order_id,
-      'code' => $coupon->code,
-      'value' => $coupon->amount,
-    ))
-  ->execute();
+      ->fields(array(
+          'cid' => $coupon->cid,
+          'oid' => $order_id,
+          'code' => $coupon->code,
+          'value' => $coupon->amount,
+        ))
+      ->execute();
     uc_order_line_item_add($order_id, 'coupon', $coupon->title, -$coupon->amount);
   }
 }
