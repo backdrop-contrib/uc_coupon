@@ -15,6 +15,6 @@ class uc_coupon_handler_field_actions extends views_handler_field {
     $coupon->name = $values->{$this->aliases['name']};
     $coupon->bulk = $values->{$this->aliases['bulk']};
 
-    return theme('uc_coupon_actions', $coupon);
+    return theme('uc_coupon_actions', array('coupon' => $coupon));
   }
 }

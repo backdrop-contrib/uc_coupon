@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Implementation of hook_ca_predicate().
+ * Implements hook_ca_predicate().
  */
 function uc_coupon_purchase_ca_predicate() {
   $predicates = array();
@@ -90,7 +90,7 @@ function uc_coupon_purchase_ca_predicate() {
 }
 
 /**
- * Implementation of hook_ca_action().
+ * Implements hook_ca_action().
  */
 function uc_coupon_purchase_ca_action() {
   $actions['uc_coupon_purchase_email'] = array(
@@ -113,7 +113,7 @@ function uc_coupon_purchase_ca_action() {
 }
 
 /**
- * Implementation of hook_ca_trigger().
+ * Implements hook_ca_trigger().
  */
 function uc_coupon_purchase_ca_trigger() {
   $triggers['uc_coupon_purchase'] = array(
@@ -208,6 +208,7 @@ function uc_coupon_purchase_email_form($form_state, $settings = array()) {
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
     );
+    // TODO Please change this theme call to use an associative array for the $variables parameter.
     $form['token_help'][$name]['content'] = array(
       '#value' => theme('token_help', $name),
     );

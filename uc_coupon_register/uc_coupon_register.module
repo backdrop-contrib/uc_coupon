@@ -1,11 +1,11 @@
 <?php
 
 /**
- * Implementation of hook_form_FORM_ID_alter().
+ * Implements hook_form_FORM_ID_alter().
  */
 function uc_coupon_register_form_user_admin_settings_alter(&$form, &$form_state) {
   $coupons = array(0 => t('None'));
-  $result = db_query("SELECT cid, name, code FROM {uc_coupons} WHERE status = 1 ORDER BY name ASC");
+  $result = db_query("SELECT cid, name, code FROM {uc_coupons} WHERE status = :status ORDER BY name ASC", array(':status' => 1));
   while ($coupon = db_fetch_object($result)) {
     $coupons[$coupon->cid] = $coupon->name . ' (' . $coupon->code . ')';
   }
@@ -38,7 +38,7 @@ function uc_coupon_register_form_user_admin_settings_alter(&$form, &$form_state)
 }
 
 /**
- * Implementation of hook_form_FORM_ID_alter().
+ * Implements hook_form_FORM_ID_alter().
  */
 function uc_coupon_register_form_user_register_alter(&$form, &$form_state) {
   if ($coupon = uc_coupon_load(variable_get('uc_coupon_register_cid', 0))) {
@@ -68,10 +68,10 @@ function uc_coupon_register_form_user_register_alter(&$form, &$form_state) {
 }
 
 /**
- * Implementation of hook_user().
+ * Implements hook_user_insert().
  */
-function uc_coupon_register_user($type, &$edit, &$account, $category = NULL) {
-  if ($type == 'insert') {
+function uc_coupon_register_user_insert(&$edit, $account, $category) {
+  if (TRUE) {
     if (isset($edit['uc_coupon_register']) && $edit['uc_coupon_register']) {
       $uid = $edit['uid'];
 
@@ -93,7 +93,12 @@ function uc_coupon_register_user($type, &$edit, &$account, $category = NULL) {
 }
 
 /**
- * Implementation of hook_mail().
+ * Implements hook_user().
+ */
+function uc_coupon_register_user_OLD($type, &$edit, &$account, $category = NULL) { }
+
+/**
+ * Implements hook_mail().
  */
 function uc_coupon_register_mail($key, &$message, $params) {
   $language = $message['language'];

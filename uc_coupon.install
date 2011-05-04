@@ -6,13 +6,13 @@
  */
 
 /**
- * Implementation of hook_schema().
+ * Implements hook_schema().
  */
 function uc_coupon_schema() {
   $schema = array();
 
   $schema['uc_coupons'] = array(
-    'description' => t('Ubercart Coupons'),
+    'description' => 'Ubercart Coupons',
     'fields' => array(
       'cid' => array(
         'type' => 'serial',
@@ -95,7 +95,7 @@ function uc_coupon_schema() {
   );
 
   $schema['uc_coupons_orders'] = array(
-    'description' => t('Ubercart Coupons used on Orders'),
+    'description' => 'Ubercart Coupons used on Orders',
     'fields' => array(
       'cuid' => array(
         'type' => 'serial',
@@ -134,17 +134,19 @@ function uc_coupon_schema() {
 }
 
 /**
- * Implementation of hook_install().
+ * Implements hook_install().
  */
 function uc_coupon_install() {
-  drupal_install_schema('uc_coupon');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('uc_coupon')
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function uc_coupon_uninstall() {
-  drupal_uninstall_schema('uc_coupon');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('uc_coupon')
 
   variable_del('uc_coupon_collapse_pane');
   variable_del('uc_coupon_default_usage');
@@ -154,11 +156,15 @@ function uc_coupon_uninstall() {
   variable_del('uc_coupon_show_in_cart');
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_update_6000() {
   $ret = array();
 
-  if (!db_column_exists('uc_coupons', 'data')) {
-    db_add_field($ret, 'uc_coupons', 'data', array('type' => 'text'));
+  if (!db_field_exists('uc_coupons', 'data')) {
+    db_add_field('uc_coupons', 'data', array('type' => 'text'));
 
     $result = db_query('SELECT cid, products, users, roles FROM {uc_coupons}');
     while ($row = db_fetch_object($result)) {
@@ -170,31 +176,45 @@ function uc_coupon_update_6000() {
         // substr() removes the final comma that was present in the previous strings.
         $data['users'] = explode(',', substr($row->users, 0, -1));
       }
-      db_query("UPDATE {uc_coupons} SET data = '%s' WHERE cid = %d", serialize($data), $row->cid);
+      // TODO Please review the conversion of this statement to the D7 database API syntax.
+      /* db_query("UPDATE {uc_coupons} SET data = '%s' WHERE cid = %d", serialize($data), $row->cid) */
+      db_update('uc_coupons')
+  ->fields(array(
+        'data' => serialize($data),
+      ))
+  ->condition('cid', $row->cid)
+  ->execute();
     }
 
-    db_drop_field($ret, 'uc_coupons', 'products');
-    db_drop_field($ret, 'uc_coupons', 'users');
-    db_drop_field($ret, 'uc_coupons', 'roles');
+    db_drop_field('uc_coupons', 'products');
+    db_drop_field('uc_coupons', 'users');
+    db_drop_field('uc_coupons', 'roles');
 
-    db_drop_field($ret, 'uc_coupons_orders', 'user');
-    db_drop_field($ret, 'uc_coupons_orders', 'role');
+    db_drop_field('uc_coupons_orders', 'user');
+    db_drop_field('uc_coupons_orders', 'role');
   }
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_update_6001() {
   $ret = array();
 
-  if (!db_column_exists('uc_coupons', 'bulk')) {
+  if (!db_field_exists('uc_coupons', 'bulk')) {
     $field = array(
       'type' => 'int',
       'size' => 'tiny',
       'not null' => TRUE,
       'default' => 0,
     );
-    db_add_field($ret, 'uc_coupons', 'bulk', $field);
+    db_add_field('uc_coupons', 'bulk', $field);
 
     $field = array(
       'type' => 'char',
@@ -202,44 +222,74 @@ function uc_coupon_update_6001() {
       'not null' => TRUE,
       'default' => '',
     );
-    db_add_field($ret, 'uc_coupons', 'bulk_seed', $field);
-    $ret[] = update_sql("UPDATE {uc_coupons} SET bulk_seed = MD5(CAST(RAND() AS CHAR(32))) WHERE bulk_seed = ''");
+    db_add_field('uc_coupons', 'bulk_seed', $field);
+    // TODO update_sql has been removed. Use the database API for any schema or data changes.
+    $ret[] = array() /* update_sql("UPDATE {uc_coupons} SET bulk_seed = MD5(CAST(RAND() AS CHAR(32))) WHERE bulk_seed = ''") */;
   }
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_update_6002() {
   $ret = array();
 
-  if (!db_column_exists('uc_coupons', 'valid_from')) {
-    db_add_field($ret, 'uc_coupons', 'valid_from', array('type' => 'int'));
-    $ret[] = update_sql("UPDATE {uc_coupons} SET valid_from = 0");
+  if (!db_field_exists('uc_coupons', 'valid_from')) {
+    db_add_field('uc_coupons', 'valid_from', array('type' => 'int'));
+    // TODO update_sql has been removed. Use the database API for any schema or data changes.
+    $ret[] = array() /* update_sql("UPDATE {uc_coupons} SET valid_from = 0") */;
   }
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
 // Increase coupon name length to 255 characters.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_update_6003() {
   $ret = array();
 
-  db_change_field($ret, 'uc_coupons', 'name', 'name', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
+  db_change_field('uc_coupons', 'name', 'name', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
 // Increase precision of value and minimum_order fields.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_update_6004() {
   $ret = array();
 
-  db_change_field($ret, 'uc_coupons', 'value', 'value', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
-  db_change_field($ret, 'uc_coupons', 'minimum_order', 'minimum_order', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
+  db_change_field('uc_coupons', 'value', 'value', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
+  db_change_field('uc_coupons', 'minimum_order', 'minimum_order', array('type' => 'numeric', 'precision' => 10, 'scale' => 2, 'not null' => TRUE, 'default' => 0));
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
 // Increase coupon code length to 100 characters.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_update_6005() {
   $ret = array();
 
@@ -249,24 +299,35 @@ function uc_coupon_update_6005() {
     'not null' => TRUE,
     'default' => '',
   );
-  db_change_field($ret, 'uc_coupons', 'code', 'code', $field);
-  db_change_field($ret, 'uc_coupons_orders', 'code', 'code', $field);
+  db_change_field('uc_coupons', 'code', 'code', $field);
+  db_change_field('uc_coupons_orders', 'code', 'code', $field);
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
 // Add creation timestamp.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_update_6006() {
   $ret = array();
 
-  if (!db_column_exists('uc_coupons', 'created')) {
-    db_add_field($ret, 'uc_coupons', 'created', array(
+  if (!db_field_exists('uc_coupons', 'created')) {
+    db_add_field('uc_coupons', 'created', array(
       'type' => 'int',
       'not null' => TRUE,
       'default' => 0,
     ));
-    $ret[] = update_sql("UPDATE {uc_coupons} SET created = " . time());
+    // TODO update_sql has been removed. Use the database API for any schema or data changes.
+    $ret[] = array() /* update_sql("UPDATE {uc_coupons} SET created = " . REQUEST_TIME) */;
   }
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }

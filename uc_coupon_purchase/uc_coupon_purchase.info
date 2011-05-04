@@ -2,4 +2,11 @@ name = Discount Coupon Purchase
 description = Allows coupons to be purchased as a product feature.
 dependencies[] = uc_coupon
 package = Ubercart - payment
-core = 6.x
+core = 7.x
+
+files[] = uc_coupon_purchase.ca.inc
+files[] = uc_coupon_purchase.install
+files[] = uc_coupon_purchase.module
+files[] = uc_coupon_purchase.pages.inc
+files[] = views/uc_coupon_purchase.views.inc
+files[] = views/uc_coupon_purchase_handler_field_base_name.inc

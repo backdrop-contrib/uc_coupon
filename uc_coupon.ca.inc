@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Implementation of hook_ca_entity().
+ * Implements hook_ca_entity().
  */
 function uc_coupon_ca_entity() {
   $entities['uc_coupon'] = array(
@@ -13,7 +13,7 @@ function uc_coupon_ca_entity() {
 }
 
 /**
- * Implementation of hook_ca_condition().
+ * Implements hook_ca_condition().
  */
 function uc_coupon_ca_condition() {
   $conditions['uc_coupon_condition_order_has_coupon'] = array(
@@ -63,6 +63,10 @@ function uc_coupon_condition_order_has_coupon($order, $settings) {
   return FALSE;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_condition_order_has_coupon_form($form_state, $settings = array()) {
   $form['codes'] = array(
     '#type' => 'textarea',

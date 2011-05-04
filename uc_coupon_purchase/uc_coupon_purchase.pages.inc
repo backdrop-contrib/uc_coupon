@@ -6,7 +6,7 @@
 function uc_coupon_purchase_view($account) {
   drupal_set_title(t('My coupons'));
 
-  $result = db_query('SELECT c.* FROM {uc_coupon_purchase_users} u INNER JOIN {uc_coupons} c ON u.cid = c.cid WHERE u.uid = %d ORDER BY valid_until ASC, code ASC', $account->uid);
+  $result = db_query('SELECT c.* FROM {uc_coupon_purchase_users} u INNER JOIN {uc_coupons} c ON u.cid = c.cid WHERE u.uid = :u.uid ORDER BY valid_until ASC, code ASC', array(':u.uid' => $account->uid));
 
   $header = array(t('Code'), t('Value'), t('Validity'), t('Max uses'), t('Used'));
   $rows = array();
@@ -37,7 +37,7 @@ function uc_coupon_purchase_view($account) {
     $uses = $coupon->max_uses > 0 ? $coupon->max_uses : t('Unlimited');
     $usage = uc_coupon_count_usage($coupon->cid);
 
-    $icon = theme('image', drupal_get_path('module', 'uc_store') . '/images/print.gif', t('Print'));
+    $icon = theme('image', array('path' => drupal_get_path('module', 'uc_store') . '/images/print.gif', 'width' => t('Print')));
     foreach ($codes as $code) {
       if (substr($code, -1) == '*') {
         $link = l($code, 'user/' . $account->uid . '/coupons/' . $coupon->cid);
@@ -56,7 +56,7 @@ function uc_coupon_purchase_view($account) {
 
   if (count($rows)) {
     $output = "<p>" . t("The table below lists the coupons you have purchased.  Please take care that you do not provide any one code to more customers than are allowed in the 'max uses' column") . "</p>";
-    $output .= theme('table', $header, $rows);
+    $output .= theme('table', array('header' => $header, 'rows' => $rows));
   }
   else {
     $output = "<p>" . t('You currently have no coupons available.') . "</p>";
@@ -69,7 +69,7 @@ function uc_coupon_purchase_view($account) {
  * Print a purchased coupon.
  */
 function uc_coupon_purchase_print($account, $coupon, $op = 'view', $code = NULL) {
-  drupal_set_title(t('Coupon #@cid', array('@cid' => $coupon->cid)));
+  drupal_set_title(t('Coupon #@cid', array('@cid' => $coupon->cid)), PASS_THROUGH);
 
   module_load_include('inc', 'uc_coupon', 'uc_coupon.admin');
 

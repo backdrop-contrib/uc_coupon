@@ -3,7 +3,7 @@
 /**
  * Store-wide coupon settings form.
  */
-function uc_coupon_settings_form() {
+function uc_coupon_settings_form($form, &$form_state) {
   global $base_url;
 
   $form['uc_coupon_show_in_cart'] = array(
@@ -83,7 +83,7 @@ function uc_coupon_display($view_type = 'active') {
   while ($coupon = db_fetch_object($result)) {
     $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
     $rows[] = array(
-      theme('uc_coupon_actions', $coupon),
+      theme('uc_coupon_actions', array('coupon' => $coupon)),
       check_plain($coupon->name),
       check_plain($coupon->code) . ($coupon->bulk ? '* ' . t('(bulk)') : ''),
       uc_coupon_format_discount($coupon),
@@ -94,8 +94,8 @@ function uc_coupon_display($view_type = 'active') {
   }
 
   if (count($rows)) {
-    $output = theme('table', $header, $rows, array('width' => '100%'));
-    $output .= theme('pager', NULL, 20);
+    $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('width' => '100%')));
+    $output .= theme('pager', array('tags' => NULL));
   }
   else {
     switch ($view_type) {
@@ -130,10 +130,10 @@ function uc_coupon_view($coupon) {
   else if (!$coupon->valid_until) {
     $status = t('Active');
   }
-  else if (time() < $coupon->valid_from) {
+  else if (REQUEST_TIME < $coupon->valid_from) {
     $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
   }
-  else if (time() > $coupon->valid_until) {
+  else if (REQUEST_TIME > $coupon->valid_until) {
     $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
   }
   else {
@@ -190,7 +190,7 @@ function uc_coupon_view($coupon) {
     if (isset($coupon->data['products'])) {
       $products = array();
       foreach ($coupon->data['products'] as $nid) {
-        $products[] = check_plain(db_result(db_query("SELECT title FROM {node} WHERE nid = %d", $nid)));
+        $products[] = check_plain(db_query("SELECT title FROM {node} WHERE nid = :nid", array(':nid' => $nid))->fetchField());
       }
       if (isset($coupon->data['negate_products'])) {
         $restrict[t('All products except')] = $products;
@@ -205,7 +205,7 @@ function uc_coupon_view($coupon) {
     if (isset($coupon->data['terms'])) {
       $terms = array();
       foreach ($coupon->data['terms'] as $tid) {
-        $terms[] = check_plain(db_result(db_query("SELECT name FROM {term_data} WHERE tid = %d", $tid)));
+        $terms[] = check_plain(db_query("SELECT name FROM {taxonomy_term_data} WHERE tid = :tid", array(':tid' => $tid))->fetchField());
       }
       if (isset($coupon->data['negate_terms'])) {
         $restrict[t('All taxonomy terms except')] = $terms;
@@ -231,7 +231,7 @@ function uc_coupon_view($coupon) {
   if (isset($coupon->data['users'])) {
     $users = array();
     foreach ($coupon->data['users'] as $uid) {
-      $users[] = check_plain(db_result(db_query("SELECT name FROM {users} WHERE uid = %d", $uid)));
+      $users[] = check_plain(db_query("SELECT name FROM {users} WHERE uid = :uid", array(':uid' => $uid))->fetchField());
     }
     $restrict['Users'] = $users;
   }
@@ -265,7 +265,7 @@ function uc_coupon_view($coupon) {
     );
   }
 
-  $output = theme('table', array(), $rows);
+  $output = theme('table', array('header' => array(), 'rows' => $rows));
   return $output;
 }
 
@@ -288,13 +288,13 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
 
   $output = '';
   foreach ($codes as $code) {
-    $output .= theme('uc_coupon_certificate', $coupon, $code);
+    $output .= theme('uc_coupon_certificate', array('coupon' => $coupon, 'code' => $code));
   }
 
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
 
   if ($op == 'print') {
-    echo theme('uc_coupon_page', $output);
+    echo theme('uc_coupon_page', array('content' => $output));
     exit;
   }
 
@@ -307,15 +307,15 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
  * @param $coupon object
  *   Coupon object, or NULL to add a new coupon.
  */
-function uc_coupon_add_form(&$form_state, $coupon = NULL) {
+function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
   drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
   if ($coupon) {
     $value = $coupon;
-    $used = db_result(db_query("SELECT COUNT(*) FROM {uc_coupons_orders} WHERE cid = %d", $value->cid));
+    $used = db_query("SELECT COUNT(*) FROM {uc_coupons_orders} WHERE cid = :cid", array(':cid' => $value->cid))->fetchField();
     $form['#uc_coupon_cid'] = $value->cid;
     $form['#uc_coupon'] = $value;
     $form['#uc_coupon_used'] = $used;
@@ -330,8 +330,8 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
   }
 
   if (!$use_validity) {
-    $value->valid_from = time();
-    $value->valid_until = time();
+    $value->valid_from = REQUEST_TIME;
+    $value->valid_until = REQUEST_TIME;
   }
 
   // Handle AHAH functionality.
@@ -439,11 +439,11 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#title' => t('Discount'),
     '#default_value' => uc_coupon_format_discount($value, FALSE),
     '#size' => 6,
-    '#description' => t('Three discount types are possible:') . theme('item_list', array(
-      t('Fixed price discount; enter "15" for $15.00 off.'),
-      t('Percentage discount; enter "15%" for 15% off.'),
-      t('Set product price; enter "=15" to make all matching products $15.00 after discount.'),
-    )),
+    '#description' => t('Three discount types are possible:') . theme('item_list', array('items' => array(
+        t('Fixed price discount; enter "15" for $15.00 off.'),
+        t('Percentage discount; enter "15%" for 15% off.'),
+        t('Set product price; enter "=15" to make all matching products $15.00 after discount.'),
+      ))),
     '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
     '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
     '#required' => TRUE,
@@ -548,7 +548,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
   );
   $form['product_types']['product_types'] = array(
     '#type' => 'checkboxes',
-    '#options' => array_map('check_plain', array_intersect_key(node_get_types('names'), drupal_map_assoc(uc_product_types()))),
+    '#options' => array_map('check_plain', array_intersect_key(node_type_get_names(), drupal_map_assoc(uc_product_types()))),
     '#default_value' => isset($value->data['product_types']) ? $value->data['product_types'] : array(),
   );
 
@@ -567,7 +567,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#tree' => FALSE,
   );
   foreach ($value->data['products'] as $nid) {
-    $title = db_result(db_query('SELECT title FROM {node} WHERE nid = %d', $nid));
+    $title = db_query('SELECT title FROM {node} WHERE nid = :nid', array(':nid' => $nid))->fetchField();
     $form['products'][] = array(
       '#type' => 'textfield',
       '#default_value' => $title . ' [nid:' . $nid . ']',
@@ -603,7 +603,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#tree' => FALSE,
   );
   foreach ($value->data['terms'] as $tid) {
-    $name = db_result(db_query('SELECT name FROM {term_data} WHERE tid = %d', $tid));
+    $name = db_query('SELECT name FROM {taxonomy_term_data} WHERE tid = :tid', array(':tid' => $tid))->fetchField();
     $form['terms'][] = array(
       '#type' => 'textfield',
       '#default_value' => $name . ' [tid:' . $tid . ']',
@@ -617,7 +617,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#description' => t('Enter one or more user names and/or "anonymous users" below to make this coupon valid only for those users.'),
   );
   foreach ($value->data['users'] as $uid) {
-    $username = $uid ? db_result(db_query('SELECT name FROM {users} WHERE uid = %d', $uid)) : t('anonymous users');
+    $username = $uid ? db_query('SELECT name FROM {users} WHERE uid = :uid', array(':uid' => $uid))->fetchField() : t('anonymous users');
     $form['users'][] = array(
       '#type' => 'textfield',
       '#default_value' => $username . ' [uid:' . $uid . ']',
@@ -702,6 +702,10 @@ function _uc_coupon_date_range($form_element) {
   return $form_element;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_ahah($type) {
   $form_state = array(
     'storage' => NULL,
@@ -714,39 +718,54 @@ function uc_coupon_ahah($type) {
   $form_state['post'] = $form['#post'] = $_POST;
   $form_state['action'] = $form['#action'];
   $form_state['ahah_submission'] = $type;
-  $form['#programmed'] = $form['#redirect'] = FALSE;
+  $form['#programmed'] = $form_state['#redirect'] = FALSE;
   drupal_process_form($form_id, $form, $form_state);
   $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
 
   unset($form[$type]['#prefix']);
   unset($form[$type]['#suffix']);
+  // TODO Please change this theme call to use an associative array for the $variables parameter.
   $output = theme('status_messages') . drupal_render($form[$type]);
-  drupal_json(array('status' => TRUE, 'data' => $output));
+  drupal_json_output(array('status' => TRUE, 'data' => $output));
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_autocomplete_node($string) {
   $matches = array();
   $product_types = module_invoke_all('product_types');
 
-  $result = db_query_range("SELECT nid, title FROM {node} WHERE type IN ('" . implode("','", $product_types) . "') AND title LIKE '%%%s%'", $string, 0, 10);
+  // TODO Please convert this statement to the D7 database API syntax.
+  $result = db_query_range("SELECT nid, title FROM {node} WHERE type IN ('" . implode("','", $product_types) . "') AND title LIKE '%%%s%'", $string);
   while ($row = db_fetch_object($result)) {
     $title = check_plain($row->title);
     $matches[$title . ' [nid:' . $row->nid . ']'] = $title;
   }
-  print drupal_to_js($matches);
+  print drupal_json_encode($matches);
   exit;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_autocomplete_term($string) {
   $matches = array();
-  $result = db_query_range("SELECT tid, name FROM {term_data} WHERE name LIKE '%%%s%'", $string, 0, 10);
+  // TODO Please convert this statement to the D7 database API syntax.
+  $result = db_query_range("SELECT tid, name FROM {taxonomy_term_data} WHERE name LIKE '%%%s%'", $string);
   while ($row = db_fetch_object($result)) {
     $matches[$row->name . ' [tid:' . $row->tid . ']'] = $row->name;
   }
-  print drupal_to_js($matches);
+  print drupal_json_encode($matches);
   exit;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_autocomplete_user($string) {
   $matches = array();
   $anonymous = t('anonymous users');
@@ -754,21 +773,27 @@ function uc_coupon_autocomplete_user($string) {
     $matches[$anonymous . ' [uid:0]'] = $anonymous;
   }
 
-  $result = db_query_range("SELECT uid, name FROM {users} WHERE name LIKE '%%%s%'", $string, 0, 10);
+  // TODO Please convert this statement to the D7 database API syntax.
+  $result = db_query_range("SELECT uid, name FROM {users} WHERE name LIKE '%%%s%'", $string);
   while ($row = db_fetch_object($result)) {
     $matches[$row->name . ' [uid:' . $row->uid . ']'] = $row->name;
   }
-  print drupal_to_js($matches);
+  print drupal_json_encode($matches);
   exit;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_autocomplete_role($string) {
   $matches = array();
-  $result = db_query_range("SELECT name FROM {role} WHERE name LIKE '%%%s%'", $string, 0, 10);
+  // TODO Please convert this statement to the D7 database API syntax.
+  $result = db_query_range("SELECT name FROM {role} WHERE name LIKE '%%%s%'", $string);
   while ($row = db_fetch_object($result)) {
     $matches[$row->name] = $row->name;
   }
-  print drupal_to_js($matches);
+  print drupal_json_encode($matches);
   exit;
 }
 
@@ -776,10 +801,10 @@ function uc_coupon_autocomplete_role($string) {
  * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form, &$form_state) {
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
   drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
-  $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code = '%s' AND cid <> %d", strtoupper($form_state['values']['code']), $form['#uc_coupon_cid']));
+  $name = db_query("SELECT name FROM {uc_coupons} WHERE code = :code AND cid <> :cid", array(':code' => strtoupper($form_state['values']['code']), ':cid' => $form['#uc_coupon_cid']))->fetchField();
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
@@ -922,18 +947,30 @@ function _uc_coupon_map_restriction(&$value, $key, $prefix) {
  * @return $confirm
  *  Return a drupal confirm form.
  */
-function uc_coupon_delete_confirm(&$form_state, $coupon) {
+function uc_coupon_delete_confirm($form, &$form_state, $coupon) {
   $form['#uc_coupon_cid'] = $coupon->cid;
   return confirm_form($form, t('Are you sure you want to delete coupon %name with code %code?', array('%name' => $coupon->name, '%code' => $coupon->code)), 'admin/store/coupons', t('This action cannot be undone. Deleting this coupon will remove all records of past uses as well.'), t('Delete'));
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
   $coupon = uc_coupon_load($form['#uc_coupon_cid']);
 
   module_invoke_all('uc_coupon_delete', $coupon);
 
-  db_query("DELETE FROM {uc_coupons} WHERE cid = %d", $form['#uc_coupon_cid']);
-  db_query("DELETE FROM {uc_coupons_orders} WHERE cid = %d", $form['#uc_coupon_cid']);
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {uc_coupons} WHERE cid = %d", $form['#uc_coupon_cid']) */
+  db_delete('uc_coupons')
+  ->condition('cid', $form['#uc_coupon_cid'])
+  ->execute();
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {uc_coupons_orders} WHERE cid = %d", $form['#uc_coupon_cid']) */
+  db_delete('uc_coupons_orders')
+  ->condition('cid', $form['#uc_coupon_cid'])
+  ->execute();
 
   drupal_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
   $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
@@ -960,10 +997,11 @@ function uc_coupon_codes_csv($coupon) {
 /**
  * Show the actions a user may perform on a coupon.
  */
-function theme_uc_coupon_actions($coupon) {
+function theme_uc_coupon_actions($variables) {
+  $coupon = $variables['coupon'];
   $actions = array();
   foreach (module_invoke_all('uc_coupon_actions', $coupon) as $action) {
-    $icon = theme('image', $action['icon'], $action['title']);
+    $icon = theme('image', array('path' => $action['icon'], 'width' => $action['title']));
     $actions[] = l($icon, $action['url'], array('attributes' => array('title' => $action['title']), 'html' => TRUE));
   }
   return implode(' ', $actions);
@@ -977,7 +1015,8 @@ function theme_uc_coupon_actions($coupon) {
  *   $coupon->usage can optionally be set.
  *   For bulk coupons, $coupon->code should be set to the specific code to display,.
  */
-function theme_uc_coupon_code($coupon) {
+function theme_uc_coupon_code($variables) {
+  $coupon = $variables['coupon'];
   $code = $coupon->code;
 
   $class = "uc-coupon-code";

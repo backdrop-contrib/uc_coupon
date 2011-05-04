@@ -3,14 +3,14 @@
 /**
  * Coupon report options form.
  */
-function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL, $statuses = NULL) {
+function uc_coupon_reports_form($form, &$form_state, $start = NULL, $end = NULL, $statuses = NULL) {
   module_load_include('inc', 'uc_coupon', 'uc_coupon.admin');
 
   if (is_null($start)) {
-    $start = time();
+    $start = REQUEST_TIME;
   }
   if (is_null($end)) {
-    $end = time();
+    $end = REQUEST_TIME;
   }
   if (is_null($statuses)) {
     $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
@@ -57,6 +57,10 @@ function uc_coupon_reports_form(&$form_state, $start = NULL, $end = NULL, $statu
   return $form;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_reports_form_submit($form, &$form_state) {
   $start = gmmktime(0, 0, 0, $form_state['values']['start']['month'], $form_state['values']['start']['day'], $form_state['values']['start']['year']);
   $end = gmmktime(23, 59, 59, $form_state['values']['end']['month'], $form_state['values']['end']['day'], $form_state['values']['end']['year']);
@@ -69,7 +73,7 @@ function uc_coupon_reports_form_submit($form, &$form_state) {
  * Output coupon report.
  */
 function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/reports.css', 'uc_coupon');
+  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/reports.css', array('type' => 'uc_coupon'));
 
   if (is_null($statuses)) {
     $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
@@ -81,6 +85,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
   $output = drupal_get_form('uc_coupon_reports_form', $start, $end, $statuses);
 
   if (isset($start) && isset($end)) {
+    // TODO Please convert this statement to the D7 database API syntax.
     $query = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) WHERE o.created > %d AND o.created < %d AND o.order_status IN ('" . implode("', '", $statuses) . "') ORDER BY co.cid, o.created ASC", $start, $end);
     $total = 0;
 
@@ -91,7 +96,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
       // Display the table of coupons if this is the next set of coupons
       if ($row->cid != $last_cid AND $last_cid != 0) {
         $td[] = array('', '<b>' . t('Uses: @total', array('@total' => $num_uses)) . '</b>', '<b>' . uc_currency_format($coupon_sale_amount) . '</b>', '<b>' . uc_currency_format($coupon_amount) . '</b>');
-        $data .= theme('table', $row_header, $td, array('width' => '100%'));
+        $data .= theme('table', array('header' => $row_header, 'rows' => $td, 'attributes' => array('width' => '100%')));
         $td = array();
         $num_uses = 0;
         $coupon_amount = 0;
@@ -111,7 +116,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
       $total++;
     }
     $td[] = array('', '<b>' . t('Uses: @total', array('@total' => $num_uses)) . '</b>', '<b>' . uc_currency_format($coupon_sale_amount) . '</b>', '<b>' . uc_currency_format($coupon_amount) . '</b>');
-    $data .= theme('table', $row_header, $td, array('width' => '100%'));
+    $data .= theme('table', array('header' => $row_header, 'rows' => $td, 'attributes' => array('width' => '100%')));
 
     $output .= '<h2>' . t('Coupon usage report') . '</h2>';
     $output .= $data;

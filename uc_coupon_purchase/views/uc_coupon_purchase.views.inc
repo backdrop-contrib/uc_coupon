@@ -6,7 +6,7 @@
  */
 
 /**
- * Implementation of hook_views_data().
+ * Implements hook_views_data().
  */
 function uc_coupon_purchase_views_data() {
   $data['uc_coupon_purchase_users']['table']['join']['users'] = array(
@@ -24,7 +24,7 @@ function uc_coupon_purchase_views_data() {
 }
 
 /**
- * Implementation of hook_views_data_alter().
+ * Implements hook_views_data_alter().
  */
 function uc_coupon_purchase_views_data_alter(&$data) {
   $data['uc_coupons']['table']['join']['users'] = array(
@@ -63,7 +63,7 @@ function uc_coupon_purchase_views_data_alter(&$data) {
 }
 
 /**
- * Implementation of hook_views_handlers().
+ * Implements hook_views_handlers().
  */
 function uc_coupon_purchase_views_handlers() {
   return array(

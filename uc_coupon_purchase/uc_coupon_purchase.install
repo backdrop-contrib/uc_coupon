@@ -1,33 +1,43 @@
 <?php
+/**
+ * @file
+ * Install, update and uninstall functions for the uc_coupon_purchase module.
+ *
+ */
 
+
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_purchase_schema() {
   $schema = array();
 
   $schema['uc_coupon_purchase'] = array(
-    'description' => t('Ubercart Purchased Coupons'),
+    'description' => 'Ubercart Purchased Coupons',
     'fields' => array(
       'pfid' => array(
-        'description' => t('The product feature id.'),
+        'description' => 'The product feature id.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
       'nid' => array(
-        'description' => t('The identifier of the node that has a feature.'),
+        'description' => 'The identifier of the node that has a feature.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
       ),
       'model' => array(
-        'description' => t('The SKU of the product that has a feature.'),
+        'description' => 'The SKU of the product that has a feature.',
         'type' => 'varchar',
         'length' => 30,
         'not null' => TRUE,
         'default' => '',
       ),
       'base_cid' => array(
-        'description' => t('The base coupon ID to use when purchasing this feature.'),
+        'description' => 'The base coupon ID to use when purchasing this feature.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -42,7 +52,7 @@ function uc_coupon_purchase_schema() {
   );
 
   $schema['uc_coupon_purchase_users'] = array(
-    'description' => t('Ubercart Purchased Coupons Per Purchaser'),
+    'description' => 'Ubercart Purchased Coupons Per Purchaser',
     'fields' => array(
       'cpuid' => array(
         'type' => 'serial',
@@ -50,13 +60,13 @@ function uc_coupon_purchase_schema() {
         'not null' => TRUE,
       ),
       'uid' => array(
-        'description' => t('The user id.'),
+        'description' => 'The user id.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
       'cid' => array(
-        'description' => t('The coupon id.'),
+        'description' => 'The coupon id.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -68,13 +78,27 @@ function uc_coupon_purchase_schema() {
   return $schema;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_purchase_install() {
-  drupal_install_schema('uc_coupon_purchase');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('uc_coupon_purchase')
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_purchase_uninstall() {
-  drupal_uninstall_schema('uc_coupon_purchase');
-  db_query("DELETE FROM {variable} WHERE name LIKE 'uc_coupon_purchase_%%'");
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('uc_coupon_purchase')
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {variable} WHERE name LIKE 'uc_coupon_purchase_%%'") */
+  db_delete('variable')
+  ->condition('name', 'uc_coupon_purchase_%%', 'LIKE')
+  ->execute();
 }
 
 /**
@@ -107,7 +131,10 @@ function uc_coupon_purchase_update_6000() {
     'primary key' => array('cpuid'),
   );
 
-  db_create_table($ret, 'uc_coupon_purchase_users', $schema['uc_coupon_purchase_users']);
+  db_create_table('uc_coupon_purchase_users', $schema['uc_coupon_purchase_users']);
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }

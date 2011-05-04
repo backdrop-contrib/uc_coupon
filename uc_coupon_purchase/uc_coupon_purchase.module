@@ -1,16 +1,21 @@
 <?php
 
-require_once 'uc_coupon_purchase.ca.inc';
+require_once DRUPAL_ROOT . '/' . 'uc_coupon_purchase.ca.inc';
 
 /**
- * Implementation of hook_perm().
+ * Implements hook_permission().
  */
-function uc_coupon_purchase_perm() {
-  return array('view purchased coupons');
+function uc_coupon_purchase_permission() {
+  return array(
+    'view purchased coupons' => array(
+      'title' => t('view purchased coupons'),
+      'description' => t('TODO Add a description for \'view purchased coupons\''),
+    ),
+  );
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function uc_coupon_purchase_menu() {
   $items = array();
@@ -74,6 +79,10 @@ function uc_coupon_purchase_can_view($account, $coupon = NULL) {
 /*
  * Implementation of hook_uc_coupon_actions for purchased coupons
  */
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_purchase_uc_coupon_actions($coupon) {
   $actions = array();
   if (!user_access('manage store coupons')) {
@@ -115,11 +124,11 @@ function uc_coupon_purchase_has_coupon($account, $coupon = NULL) {
     $sql .= ' AND cid = %d';
     $coupon = $coupon->cid;
   }
-  return db_result(db_query($sql, $account->uid, $coupon));
+  return db_query($sql, $account->uid, $coupon)->fetchField();
 }
 
 /**
- * Implementation of hook_product_feature().
+ * Implements hook_product_feature().
  */
 function uc_coupon_purchase_product_feature() {
   $features[] = array(
@@ -142,7 +151,7 @@ function uc_coupon_purchase_feature_form($form_state, $node, $feature) {
     $node->model => $node->model,
   );
   if (module_exists('uc_attribute')) {
-    $adjustments = db_query("SELECT model FROM {uc_product_adjustments} WHERE nid = %d", $node->nid);
+    $adjustments = db_query("SELECT model FROM {uc_product_adjustments} WHERE nid = :nid", array(':nid' => $node->nid));
     while ($adjustment = db_fetch_object($adjustments)) {
       if (!in_array($adjustment->model, $models)) {
         $models[$adjustment->model] = $adjustment->model;
@@ -151,7 +160,7 @@ function uc_coupon_purchase_feature_form($form_state, $node, $feature) {
   }
 
   if (!empty($feature)) {
-    $data = db_fetch_object(db_query("SELECT * FROM {uc_coupon_purchase} WHERE pfid = %d", $feature['pfid']));
+    $data = db_fetch_object(db_query("SELECT * FROM {uc_coupon_purchase} WHERE pfid = :pfid", array(':pfid' => $feature['pfid'])));
     $form['pfid'] = array(
       '#type' => 'value',
       '#value' => $feature['pfid'],
@@ -162,7 +171,7 @@ function uc_coupon_purchase_feature_form($form_state, $node, $feature) {
   }
 
   $coupons = array();
-  $result = db_query("SELECT cid, name, code FROM {uc_coupons} WHERE status = 0");
+  $result = db_query("SELECT cid, name, code FROM {uc_coupons} WHERE status = :status", array(':status' => 0));
   while ($coupon = db_fetch_object($result)) {
     $coupons[$coupon->cid] = $coupon->name . ' (' . $coupon->code . ')';
   }
@@ -198,6 +207,10 @@ function uc_coupon_purchase_feature_form($form_state, $node, $feature) {
   return uc_product_feature_form($form);
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_purchase_feature_form_submit($form, &$form_state) {
   $coupon = uc_coupon_load($form_state['values']['base_cid']);
 
@@ -218,17 +231,34 @@ function uc_coupon_purchase_feature_form_submit($form, &$form_state) {
   }
   else {
     $pfid = $form_state['values']['pfid'];
-    db_query("DELETE FROM {uc_coupon_purchase} WHERE pfid = %d", $pfid);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("DELETE FROM {uc_coupon_purchase} WHERE pfid = %d", $pfid) */
+    db_delete('uc_coupon_purchase')
+  ->condition('pfid', $pfid)
+  ->execute();
   }
 
-  db_query("INSERT INTO {uc_coupon_purchase} (pfid, nid, model, base_cid) VALUES (%d, %d, '%s', %d)", $pfid, $form_state['values']['nid'], $form_state['values']['model'], $form_state['values']['base_cid']);
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("INSERT INTO {uc_coupon_purchase} (pfid, nid, model, base_cid) VALUES (%d, %d, '%s', %d)", $pfid, $form_state['values']['nid'], $form_state['values']['model'], $form_state['values']['base_cid']) */
+  $id = db_insert('uc_coupon_purchase')
+  ->fields(array(
+    'pfid' => $pfid,
+    'nid' => $form_state['values']['nid'],
+    'model' => $form_state['values']['model'],
+    'base_cid' => $form_state['values']['base_cid'],
+  ))
+  ->execute();
 }
 
 /**
  * Delete callback for product feature.
  */
 function uc_coupon_purchase_feature_delete($pfid) {
-  db_query("DELETE FROM {uc_coupon_purchase} WHERE pfid = %d", $pfid);
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {uc_coupon_purchase} WHERE pfid = %d", $pfid) */
+  db_delete('uc_coupon_purchase')
+  ->condition('pfid', $pfid)
+  ->execute();
 }
 
 /**
@@ -251,7 +281,7 @@ function uc_coupon_purchase_feature_settings() {
 }
 
 /**
- * Implementation of hook_uc_message().
+ * Implements hook_uc_message().
  */
 function uc_coupon_purchase_uc_message() {
   $messages['uc_coupon_purchase_single_subject'] = t('[store-name]: coupon purchase');
@@ -264,7 +294,7 @@ function uc_coupon_purchase_uc_message() {
 
 
 /**
- * Implementation of hook_form_FORM_ID_alter() for uc_coupon_add_form().
+ * Implements hook_form_FORM_ID_alter() for uc_coupon_add_form().
  *
  * Modify the coupon add form to include coupon purchase options.
  */
@@ -298,6 +328,10 @@ function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
   $form['#validate'][] = 'uc_coupon_purchase_uc_coupon_add_form_validate';
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function uc_coupon_purchase_uc_coupon_add_form_validate($form, &$form_state) {
   if ($form_state['values']['purchase_relative'] && !$form_state['values']['use_validity']) {
     form_set_error('purchase_relative', t('You must specify date restrictions to use the relative date feature with purchased coupons.'));
@@ -305,7 +339,7 @@ function uc_coupon_purchase_uc_coupon_add_form_validate($form, &$form_state) {
 }
 
 /**
- * Implementation of hook_uc_coupon_presave().
+ * Implements hook_uc_coupon_presave().
  */
 function uc_coupon_purchase_uc_coupon_presave(&$coupon, $edit) {
   if (isset($edit['purchase_suffix_length'])) {
@@ -317,14 +351,18 @@ function uc_coupon_purchase_uc_coupon_presave(&$coupon, $edit) {
 }
 
 /**
- * Implementation of hook_uc_coupon_delete().
+ * Implements hook_uc_coupon_delete().
  */
 function uc_coupon_purchase_uc_coupon_delete($cid) {
-  db_query('DELETE FROM {uc_coupon_purchase_users} WHERE cid = %d', $cid);
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query('DELETE FROM {uc_coupon_purchase_users} WHERE cid = %d', $cid) */
+  db_delete('uc_coupon_purchase_users')
+  ->condition('cid', $cid)
+  ->execute();
 }
 
 /**
- * Implementation of hook_order().
+ * Implements hook_order().
  */
 function uc_coupon_purchase_order($op, $order, $status) {
   switch ($op) {
@@ -332,9 +370,9 @@ function uc_coupon_purchase_order($op, $order, $status) {
       if ($status == variable_get('uc_coupon_purchase_order_status', 'completed') &&
           $order->status != $status &&
           $order->uid > 0 &&
-          ($order_user = user_load(array('uid' => $order->uid))) !== FALSE) {
+          ($order_user = user_load($order->uid)) !== FALSE) {
         foreach ($order->products as $product) {
-          $result = db_query("SELECT * FROM {uc_coupon_purchase} WHERE nid = %d", $product->nid);
+          $result = db_query("SELECT * FROM {uc_coupon_purchase} WHERE nid = :nid", array(':nid' => $product->nid));
           while ($row = db_fetch_object($result)) {
             if ($row->model == $product->model || empty($row->model)) {
               $coupon = uc_coupon_load($row->base_cid);
@@ -398,14 +436,21 @@ function uc_coupon_purchase_create($coupon, $qty, $uid = NULL) {
 
   // Associate this coupon with its owner.
   if (!is_null($uid)) {
-    db_query("INSERT INTO {uc_coupon_purchase_users} (uid, cid) VALUES (%d, %d)", $uid, $coupon->cid);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("INSERT INTO {uc_coupon_purchase_users} (uid, cid) VALUES (%d, %d)", $uid, $coupon->cid) */
+    $id = db_insert('uc_coupon_purchase_users')
+  ->fields(array(
+    'uid' => $uid,
+    'cid' => $coupon->cid,
+  ))
+  ->execute();
   }
 
   return $coupon;
 }
 
 /**
- * Implementation of hook_views_api()
+ * Implements hook_views_api().
  */
 function uc_coupon_purchase_views_api() {
   return array(

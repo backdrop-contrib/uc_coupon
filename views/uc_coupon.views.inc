@@ -6,7 +6,7 @@
  */
 
 /**
- * Implementation of hook_views_data().
+ * Implements hook_views_data().
  */
 function uc_coupon_views_data() {
   $data['uc_coupons']['table']['group'] = t('Coupon');
@@ -279,7 +279,7 @@ function uc_coupon_views_data() {
 }
 
 /**
- * Implementation of hook_views_handlers().
+ * Implements hook_views_handlers().
  */
 function uc_coupon_views_handlers() {
   return array(

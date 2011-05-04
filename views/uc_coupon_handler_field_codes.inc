@@ -92,6 +92,6 @@ class uc_coupon_handler_field_codes extends views_handler_field_prerender_list {
    * Render a single coupon code.
    */
   function render_item($count, $item) {
-    return theme('uc_coupon_code', $item['coupon']);
+    return theme('uc_coupon_code', array('coupon' => $item['coupon']));
   }
 }
