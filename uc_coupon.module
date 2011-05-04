@@ -358,7 +358,7 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
   $result = db_query("SELECT uco.code, COUNT(*) uses FROM {uc_coupons_orders} AS uco
     LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id
     LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id
-    WHERE uos.weight > :uos.weight AND uco.cid = :uco.cid GROUP BY uco.code", array(':uos.weight' => 0, ':uco.cid' => $cid));
+    WHERE uos.weight > 0 AND uco.cid = :cid GROUP BY uco.code", array( ':cid' => $cid));
   foreach ($result as $row) {
     $usage['codes'][$row->code] = $row->uses;
   }
@@ -369,7 +369,7 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
   $usage['user'] = db_query("SELECT COUNT(*) FROM {uc_coupons_orders} AS uco
     LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id
     LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id
-    WHERE uos.weight > :uos.weight AND uco.cid = :uco.cid AND uo.uid = :uo.uid", array(':uos.weight' => 0, ':uco.cid' => $cid, ':uo.uid' => $uid))->fetchField();
+    WHERE uos.weight > 0 AND uco.cid = :cid AND uo.uid = :uid", array( ':cid' => $cid, ':uid' => $uid))->fetchField();
 
   // Allow other modules to implement usage counts.
   drupal_alter('uc_coupon_usage', $usage, $cid, $uid);
@@ -415,15 +415,17 @@ function uc_coupon_get_bulk_code($coupon, $id) {
 function uc_coupon_find($code) {
   // Look for matching single coupon first.
   $coupon = db_query("SELECT cid FROM {uc_coupons} 
-  	WHERE code = :code AND status = :status AND bulk = :bulk AND valid_from < :valid_from AND (valid_until = :(valid_until OR valid_until > :valid_until)", 
-    array(':code' => $code, ':status' => 1, ':bulk' => 0, ':valid_from' => REQUEST_TIME, ':(valid_until' => 0, ':valid_until' => REQUEST_TIME))
+  	WHERE code = :code AND status = 1 AND bulk = 0 AND valid_from < :now AND (valid_until = 0 OR valid_until > :now)", 
+    array(':code' => $code, ':now' => REQUEST_TIME))
     ->fetchObject();
   if ($coupon) {
     return uc_coupon_load($coupon->cid);
   }
 
   // Look through bulk coupons.
-  $result = db_query("SELECT cid, code, data, bulk_seed FROM {uc_coupons} WHERE status = :status AND bulk = :bulk AND valid_from < :valid_from AND (valid_until = :(valid_until OR valid_until > :valid_until)", array(':status' => 1, ':bulk' => 1, ':valid_from' => REQUEST_TIME, ':(valid_until' => 0, ':valid_until' => REQUEST_TIME));
+  $result = db_query("SELECT cid, code, data, bulk_seed FROM {uc_coupons} 
+  	WHERE status = 1 AND bulk = 1 AND valid_from < :now AND (valid_until = 0 OR valid_until > :now)", 
+    array(':now' => REQUEST_TIME));
   foreach ($result as $coupon) {
     // Check coupon prefix.
     $prefix_length = strlen($coupon->code);
