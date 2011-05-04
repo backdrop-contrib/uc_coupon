@@ -587,7 +587,8 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
     foreach ($order->products as $item) {
       $context['subject']['cart_item'] = $item;
       $context['subject']['node'] = node_load($item->nid);
-      $total += uc_price($item->price, $context) * $item->qty;
+      //$total += uc_price($item->price, $context) * $item->qty;
+      $total += $item->price * $item->qty;
     }
 
     if ($coupon->minimum_order > $total) {
@@ -653,7 +654,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     $node = node_load($item->nid);
     $context['subject']['cart_item'] = $item;
     $context['subject']['node'] = $node;
-    $item->altered_price = uc_price($item->price, $context);
+    //$item->altered_price = uc_price($item->price, $context);
     $qty = $item->qty;
 
     if (!$restricted) {
@@ -721,7 +722,8 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
   $total = 0;
   foreach ($items as $item) {
-    $total += $item->altered_price;
+    //$total += $item->altered_price;
+    $total += $item->price;
   }
 
   foreach ($items as &$item) {
@@ -733,7 +735,8 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         }
         else {
           // Apply discount to each product's untaxed price.
-          $item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
+          //$item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
+          $item->discount = min($coupon->value, $item->price); // !TODO - work out VAT compatibility
         }
         break;
 
@@ -742,7 +745,8 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         break;
 
       case 'set_price':
-        $item->discount = max($item->price - ($coupon->value * $item->price / $item->altered_price), 0);
+        $item->discount = max($item->price - $coupon->value, 0); 
+        //$item->discount = max($item->price - ($coupon->value * $item->price / $item->altered_price), 0);
         break;
     }
   }
@@ -771,6 +775,8 @@ function _uc_coupon_sort_products($a, $b) {
  * Run price alterers on a coupon value.
  */
 function uc_coupon_price($amount, $revision = 'formatted') {
+  return $amount;
+  /*
   $context = array(
     'revision' => $revision,
     'type' => 'line_item',
@@ -786,6 +792,7 @@ function uc_coupon_price($amount, $revision = 'formatted') {
     ),
   );
   return uc_price($amount, $context);
+  */
 }
 
 /**
