@@ -257,14 +257,14 @@ function uc_coupon_views_data() {
       'handler' => 'uc_coupon_handler_field_product_type',
       'label' => t('Product types'),
       'additional fields' => array(
-        'data' => 'data',    
+        'data' => 'data',
       ),
     ),
     'filter' => array(
       'handler' => 'uc_coupon_handler_filter_product_type',
       'label' => 'Is a product type',
     ),
-  );  
+  );
 
   $data['uc_coupons']['bulk_number'] = array(
     'title' => t('Bulk number'),
@@ -284,7 +284,7 @@ function uc_coupon_views_data() {
 function uc_coupon_views_handlers() {
   return array(
     'info' => array(
-      'path' => drupal_get_path('module', 'uc_coupon') .'/views',
+      'path' => drupal_get_path('module', 'uc_coupon') . '/views',
     ),
     'handlers' => array(
       'uc_coupon_handler_field_value' => array(

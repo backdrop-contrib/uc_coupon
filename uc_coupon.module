@@ -229,12 +229,12 @@ function uc_coupon_theme() {
     'uc_coupon_certificate' => array(
       'arguments' => array('coupon' => NULL, 'code' => NULL),
       'template' => 'uc_coupon-certificate',
-      'path' => drupal_get_path('module', 'uc_coupon') .'/theme',
+      'path' => drupal_get_path('module', 'uc_coupon') . '/theme',
     ),
     'uc_coupon_page' => array(
       'arguments' => array('content' => NULL),
       'template' => 'uc_coupon-page',
-      'path' => drupal_get_path('module', 'uc_coupon') .'/theme',
+      'path' => drupal_get_path('module', 'uc_coupon') . '/theme',
     ),
   );
 }
@@ -248,14 +248,14 @@ function theme_uc_checkout_pane_coupon($form) {
 
 /**
  * Save a coupon object.
- * 
+ *
  * If the 'cid' field is set, then this will update an existing coupon.
  * Otherwise, a new bulk seed will be generated, the coupon will be
  * inserted into the database, and $coupon->cid will be set.
- * 
+ *
  * @param $coupon
  *   The coupon to save.
- * 
+ *
  * @param $edit
  *   An optional array of extra data that other modules may need to save.
  */
@@ -276,7 +276,7 @@ function uc_coupon_save(&$coupon, $edit = array()) {
   }
 
   // Notify other modules that a coupon has been saved.
-  module_invoke_all('uc_coupon_save' ,$coupon);
+  module_invoke_all('uc_coupon_save', $coupon);
 }
 
 /**
@@ -365,7 +365,7 @@ function uc_coupon_format_discount($coupon, $currency = TRUE) {
       return $currency ? uc_currency_format($coupon->value) : $coupon->value;
 
     case 'percentage':
-      return (float)$coupon->value . '%';
+      return (float) $coupon->value . '%';
 
     case 'set_price':
       return '=' . ($currency ? uc_currency_format($coupon->value) : $coupon->value);
@@ -515,7 +515,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
 
 /**
  * Implementation of hook_uc_coupon_validate().
- * 
+ *
  * @param $coupon
  *   The coupon object to validate, with special fields set as follows:
  *   - $coupon->code: The specific code to be applied (even for bulk coupons).
@@ -546,7 +546,7 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
   if ($account && isset($coupon->data['max_uses_per_user']) && $coupon->usage['user'] >= $coupon->data['max_uses_per_user']) {
     return t('This coupon has reached the maximum redemption limit.');
   }
-  
+
   // Check minimum order total.
   if ($order && $coupon->minimum_order > 0) {
     $total = 0;
@@ -643,13 +643,13 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         $include = TRUE;
       }
       else if (isset($coupon->data['products']) && isset($coupon->data['negate_products']) && in_array($item->nid, $coupon->data['products'])) {
-        ;// always exclude if in list of negated products
+ // always exclude if in list of negated products
       }
       else if (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
         $include = TRUE;
       }
       else if (isset($coupon->data['terms']) && isset($coupon->data['negate_terms']) && count(array_intersect($terms, $coupon->data['terms']))) {
-        ;// always exclude if one of the terms is in the list of negated terms
+ // always exclude if one of the terms is in the list of negated terms
       }
       else if (isset($coupon->data['skus']) && _uc_coupon_match_sku($item->model, $coupon->data['skus'])) {
         $include = TRUE;
@@ -672,10 +672,10 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   }
 
   // If no matches were found, there are no discounts to calculate.
-  if ($matched==0) {
+  if ($matched == 0) {
     return array();
   }
-  
+
   if (($coupon->data['minimum_qty_restrict'] ? $matched : $total_qty) < $coupon->data['minimum_qty']) {
     return array();
   }
@@ -884,7 +884,7 @@ function uc_coupon_checkout_pane() {
 function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
   switch ($op) {
     case 'view':
-      drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.js');
+      drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.js');
       drupal_add_js(array(
         'ucURL' => array(
           'applyCoupon' => url('cart/checkout/coupon'),
@@ -915,7 +915,7 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 
           drupal_add_js('$(function() {
             if (window.set_line_item) {
-              set_line_item("coupon", "'. $coupon->title .'", '. -$coupon->amount .', ' . _line_item_data('coupon', 'weight') . ');
+              set_line_item("coupon", "' . $coupon->title . '", ' . -$coupon->amount . ', ' . _line_item_data('coupon', 'weight') . ');
             }
           });', 'inline');
         }
@@ -1097,7 +1097,7 @@ function uc_coupon_token_list($type = 'all') {
  */
 function uc_coupon_token_values($type, $object = NULL) {
   $values = array();
- 
+
   switch ($type) {
     case 'order':
       $values['order-coupon-code'] = isset($object->data['coupon']) ? $object->data['coupon'] : '';
@@ -1196,7 +1196,7 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
   $variables['display_name'] = check_plain($coupon->name);
   $n = stripos($variables['display_name'], 'purchased by');
   if ($n) {
-    $variables['display_name'] = substr($variables['display_name'], 0, $n-1);
+    $variables['display_name'] = substr($variables['display_name'], 0, $n -1);
   }
 
   if ($coupon->valid_until) {
@@ -1220,18 +1220,18 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
       $variables['include'][] = node_get_types('name', $type);
     }
   }
-  
+
   if (isset($coupon->data['products'])) {
     $key = isset($coupon->data['negate_products']) ? 'exclude' : 'include';
     foreach ($coupon->data['products'] as $nid) {
       $node = node_load($nid);
-      $variables[$key][] = $node->title; 
+      $variables[$key][] = $node->title;
     }
   }
-  
+
   if (isset($coupon->data['skus'])) {
-    foreach($coupon->data['skus'] as $sku) {
-      $variables['include'][] = t('SKU') . ' '. $sku;
+    foreach ($coupon->data['skus'] as $sku) {
+      $variables['include'][] = t('SKU') . ' ' . $sku;
     }
   }
 
@@ -1242,7 +1242,7 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
       $variables[$key][] = $term->name;
     }
   }
-  
+
   // Merge in global tokens.
   $tokens = token_get_values();
   foreach ($tokens->tokens as $key => $token) {
@@ -1272,21 +1272,21 @@ function uc_coupon_uc_coupon_actions($coupon) {
 
   if (user_access('view store coupons')) {
     $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid,
-      'icon' => drupal_get_path('module', 'uc_store') .'/images/order_view.gif',
+      'url' => 'admin/store/coupons/' . $coupon->cid,
+      'icon' => drupal_get_path('module', 'uc_store') . '/images/order_view.gif',
       'title' => t('View coupon: @name', array('@name' => $coupon->name)),
     );
 
     $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid . '/print',
-      'icon' => drupal_get_path('module', 'uc_store') .'/images/print.gif',
+      'url' => 'admin/store/coupons/' . $coupon->cid . '/print',
+      'icon' => drupal_get_path('module', 'uc_store') . '/images/print.gif',
       'title' => t('Print coupon: @name', array('@name' => $coupon->name)),
     );
 
     if ($coupon->bulk) {
       $actions[] = array(
-        'url' => 'admin/store/coupons/'. $coupon->cid .'/codes',
-        'icon' => drupal_get_path('module', 'uc_store') .'/images/menu_reports_small.gif',
+        'url' => 'admin/store/coupons/' . $coupon->cid . '/codes',
+        'icon' => drupal_get_path('module', 'uc_store') . '/images/menu_reports_small.gif',
         'title' => t('Download codes as CSV: @name', array('@name' => $coupon->name)),
       );
     }
@@ -1294,14 +1294,14 @@ function uc_coupon_uc_coupon_actions($coupon) {
 
   if (user_access('manage store coupons')) {
     $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/edit',
-      'icon' => drupal_get_path('module', 'uc_store') .'/images/order_edit.gif',
+      'url' => 'admin/store/coupons/' . $coupon->cid . '/edit',
+      'icon' => drupal_get_path('module', 'uc_store') . '/images/order_edit.gif',
       'title' => t('Edit coupon: @name', array('@name' => $coupon->name)),
     );
 
     $actions[] = array(
-      'url' => 'admin/store/coupons/'. $coupon->cid .'/delete',
-      'icon' => drupal_get_path('module', 'uc_store') .'/images/order_delete.gif',
+      'url' => 'admin/store/coupons/' . $coupon->cid . '/delete',
+      'icon' => drupal_get_path('module', 'uc_store') . '/images/order_delete.gif',
       'title' => t('Delete coupon: @name', array('@name' => $coupon->name)),
     );
   }
@@ -1315,6 +1315,6 @@ function uc_coupon_uc_coupon_actions($coupon) {
 function uc_coupon_views_api() {
   return array(
     'api' => '2.0',
-    'path' => drupal_get_path('module', 'uc_coupon') .'/views',
+    'path' => drupal_get_path('module', 'uc_coupon') . '/views',
   );
 }

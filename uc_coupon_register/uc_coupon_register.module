@@ -7,7 +7,7 @@ function uc_coupon_register_form_user_admin_settings_alter(&$form, &$form_state)
   $coupons = array(0 => t('None'));
   $result = db_query("SELECT cid, name, code FROM {uc_coupons} WHERE status = 1 ORDER BY name ASC");
   while ($coupon = db_fetch_object($result)) {
-    $coupons[$coupon->cid] = $coupon->name .' ('. $coupon->code .')';
+    $coupons[$coupon->cid] = $coupon->name . ' (' . $coupon->code . ')';
   }
 
   $form['uc_coupon_register'] = array(
@@ -30,7 +30,7 @@ function uc_coupon_register_form_user_admin_settings_alter(&$form, &$form_state)
   $form['uc_coupon_register']['uc_coupon_register_mail_body'] = array(
     '#type' => 'textarea',
     '#title' => t('Email body'),
-    '#description' => t('Available variables are:') .' !username, !site, !password, !uri, !uri_brief, !mailto, !date, !login_uri, !edit_uri, !login_url, !coupon_code, !coupon_name.',
+    '#description' => t('Available variables are:') . ' !username, !site, !password, !uri, !uri_brief, !mailto, !date, !login_uri, !edit_uri, !login_url, !coupon_code, !coupon_name.',
     '#default_value' => variable_get('uc_coupon_register_mail_body', t("!username,\n\nThank you for registering at !site.\n\nYou may use the following coupon during checkout: !coupon_code\n\nPlease ensure you are logged in to your account, or you will not be able to use the coupon.\n\n\n--  !site team")),
     '#rows' => 10,
   );
@@ -80,7 +80,7 @@ function uc_coupon_register_user($type, &$edit, &$account, $category = NULL) {
       if ($coupon->cid) {
         $coupon->data['users'][$uid] = $uid;
         uc_coupon_save($coupon);
-  
+
         // Send the email.
         $params['account'] = $account;
         $params['coupon'] = $coupon;

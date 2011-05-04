@@ -108,6 +108,6 @@ function uc_coupon_purchase_update_6000() {
   );
 
   db_create_table($ret, 'uc_coupon_purchase_users', $schema['uc_coupon_purchase_users']);
-  
+
   return $ret;
 }

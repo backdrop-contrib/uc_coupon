@@ -13,12 +13,12 @@ function uc_coupon_purchase_views_data() {
     'left_field' => 'uid',
     'field' => 'uid',
   );
-  
+
   $data['uc_coupon_purchase_users']['table']['join']['uc_coupons'] = array(
     'left_field' => 'cid',
     'field' => 'cid',
   );
-  
+
 
   return $data;
 }
@@ -32,7 +32,7 @@ function uc_coupon_purchase_views_data_alter(&$data) {
     'left_field' => 'cid',
     'field' => 'cid',
   );
-  
+
   $data['users']['table']['join']['uc_coupons'] = array(
     'left_table' => 'uc_coupon_purchase_users',
     'left_field' => 'uid',
@@ -68,7 +68,7 @@ function uc_coupon_purchase_views_data_alter(&$data) {
 function uc_coupon_purchase_views_handlers() {
   return array(
     'info' => array(
-      'path' => drupal_get_path('module', 'uc_coupon_purchase') .'/views',
+      'path' => drupal_get_path('module', 'uc_coupon_purchase') . '/views',
     ),
     'handlers' => array(
       'uc_coupon_purchase_handler_field_base_name' => array(

@@ -5,7 +5,7 @@
  */
 function uc_coupon_settings_form() {
   global $base_url;
- 
+
   $form['uc_coupon_show_in_cart'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show coupons as an item in the cart.'),
@@ -51,22 +51,41 @@ function uc_coupon_display($view_type = 'active') {
 
   $header = array(
     array('data' => t('Actions')),
-    array('data' => t('Name'), 'field' => 'name'),
-    array('data' => t('Code'), 'field' => 'code', 'sort' => 'asc'),
-    array('data' => t('Value'), 'field' => 'value'),
-    array('data' => t('Created'), 'field' => 'created'),
-    array('data' => t('Valid from'), 'field' => 'valid_from'),
-    array('data' => t('Valid until'), 'field' => 'valid_until'),
+    array(
+      'data' => t('Name'),
+      'field' => 'name',
+    ),
+    array(
+      'data' => t('Code'),
+      'field' => 'code',
+      'sort' => 'asc',
+    ),
+    array(
+      'data' => t('Value'),
+      'field' => 'value',
+    ),
+    array(
+      'data' => t('Created'),
+      'field' => 'created',
+    ),
+    array(
+      'data' => t('Valid from'),
+      'field' => 'valid_from',
+    ),
+    array(
+      'data' => t('Valid until'),
+      'field' => 'valid_until',
+    ),
   );
 
-  $result = pager_query('SELECT * FROM {uc_coupons} WHERE status = %d'. tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
+  $result = pager_query('SELECT * FROM {uc_coupons} WHERE status = %d' . tablesort_sql($header), 20, 0, NULL, $view_type == 'inactive' ? 0 : 1);
   $rows = array();
   while ($coupon = db_fetch_object($result)) {
     $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
     $rows[] = array(
       theme('uc_coupon_actions', $coupon),
       check_plain($coupon->name),
-      check_plain($coupon->code) . ($coupon->bulk ? '* '. t('(bulk)') : ''),
+      check_plain($coupon->code) . ($coupon->bulk ? '* ' . t('(bulk)') : ''),
       uc_coupon_format_discount($coupon),
       format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
       $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
@@ -81,15 +100,15 @@ function uc_coupon_display($view_type = 'active') {
   else {
     switch ($view_type) {
       case 'active':
-        $output = '<p>'. t('There are currently no active coupons in the system.') .'</p>';
+        $output = '<p>' . t('There are currently no active coupons in the system.') . '</p>';
         break;
       case 'inactive':
-        $output = '<p>'. t('There are currently no inactive coupons in the system.') .'</p>';
+        $output = '<p>' . t('There are currently no inactive coupons in the system.') . '</p>';
         break;
     }
   }
 
-  $output .= '<p>'. l(t('Add a new coupon.'), 'admin/store/coupons/add') .'</p>';
+  $output .= '<p>' . l(t('Add a new coupon.'), 'admin/store/coupons/add') . '</p>';
 
   return $output;
 }
@@ -130,8 +149,8 @@ function uc_coupon_view($coupon) {
   }
   else {
     $codes = '<strong>' . check_plain($coupon->code) . ' &times; ' . check_plain($coupon->data['bulk_number']) . '</strong>';
-    $codes .= ' ('. l(t('Download codes'), 'admin/store/coupons/'. $coupon->cid .'/codes') .')';
-    $codes .= ' ('. l(t('Print all'), 'admin/store/coupons/'. $coupon->cid .'/print') .')';
+    $codes .= ' (' . l(t('Download codes'), 'admin/store/coupons/' . $coupon->cid . '/codes') . ')';
+    $codes .= ' (' . l(t('Print all'), 'admin/store/coupons/' . $coupon->cid . '/print') . ')';
     for ($id = 0; $id < $coupon->data['bulk_number']; $id++) {
       $code = uc_coupon_get_bulk_code($coupon, $id);
       $codes .= '<br />' . check_plain($code) . ' (' . l(t('Print'), 'admin/store/coupons/' . $coupon->cid . '/print/' . $code) . ')';
@@ -161,7 +180,7 @@ function uc_coupon_view($coupon) {
       break;
   }
   $rows[] = array(t('Applied to'), $applies);
-  
+
   if ($coupon->data['apply_to'] != 'subtotal') {
     $restrict = array();
     if (isset($coupon->data['product_types'])) {
@@ -199,9 +218,9 @@ function uc_coupon_view($coupon) {
       $or = FALSE;
       foreach ($restrict as $title => &$restriction) {
         if ($or) {
-          $title = t('or') .' '. $title;
+          $title = t('or') . ' ' . $title;
         }
-        $restriction = $title .': <em>'. implode('</em>, <em>', $restriction) .'</em>';
+        $restriction = $title . ': <em>' . implode('</em>, <em>', $restriction) . '</em>';
         $or = TRUE;
       }
       $rows[] = array(t('Product restrictions'), implode($restrict, '<br />'));
@@ -230,17 +249,20 @@ function uc_coupon_view($coupon) {
   }
   if ($restrict) {
     foreach ($restrict as $title => &$restriction) {
-      $restriction = $title .': <em>'. implode('</em>, <em>', $restriction) .'</em>';
+      $restriction = $title . ': <em>' . implode('</em>, <em>', $restriction) . '</em>';
     }
     $rows[] = array(t('User restrictions'), implode($restrict, '<br />'));
   }
 
   if ($coupon->minimum_order > 0) {
-    $rows[] = array(t('Order restrictions'), t('Minimum subtotal') .': <em>'. uc_currency_format($coupon->minimum_order) .'</em>');
+    $rows[] = array(t('Order restrictions'), t('Minimum subtotal') . ': <em>' . uc_currency_format($coupon->minimum_order) . '</em>');
   }
 
   foreach ($rows as &$row) {
-    $row[0] = array('header' => TRUE, 'data' => $row[0]);
+    $row[0] = array(
+      'header' => TRUE,
+      'data' => $row[0],
+    );
   }
 
   $output = theme('table', array(), $rows);
@@ -289,7 +311,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
   drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
-  drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.admin.js');
+  drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
   if ($coupon) {
     $value = $coupon;
@@ -515,8 +537,8 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#default_value' => isset($value->data['minimum_qty_restrict']) ? TRUE : FALSE,
     '#description' => t('If checked, only applicable products as configured below will count towards the minimum quantity.'),
   );
-  
-  
+
+
   $form['product_types'] = array(
     '#type' => 'fieldset',
     '#title' => t('Applicable product classes'),
@@ -548,7 +570,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     $title = db_result(db_query('SELECT title FROM {node} WHERE nid = %d', $nid));
     $form['products'][] = array(
       '#type' => 'textfield',
-      '#default_value' => $title .' [nid:'. $nid .']',
+      '#default_value' => $title . ' [nid:' . $nid . ']',
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/node',
       '#maxlength' => 255,
     );
@@ -584,7 +606,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     $name = db_result(db_query('SELECT name FROM {term_data} WHERE tid = %d', $tid));
     $form['terms'][] = array(
       '#type' => 'textfield',
-      '#default_value' => $name .' [tid:'. $tid .']',
+      '#default_value' => $name . ' [tid:' . $tid . ']',
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/term',
     );
   }
@@ -598,7 +620,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     $username = $uid ? db_result(db_query('SELECT name FROM {users} WHERE uid = %d', $uid)) : t('anonymous users');
     $form['users'][] = array(
       '#type' => 'textfield',
-      '#default_value' => $username .' [uid:'. $uid .']',
+      '#default_value' => $username . ' [uid:' . $uid . ']',
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/user',
     );
   }
@@ -661,7 +683,7 @@ function uc_coupon_add_form(&$form_state, $coupon = NULL) {
     '#options' => array(
       '1' => t('Both wholesale and retail'),
       '2' => t('Wholesale buyers only'),
-      '3' => t('Retail buyers only')
+      '3' => t('Retail buyers only'),
     ),
     '#required' => TRUE,
   );
@@ -681,7 +703,10 @@ function _uc_coupon_date_range($form_element) {
 }
 
 function uc_coupon_ahah($type) {
-  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  $form_state = array(
+    'storage' => NULL,
+    'submitted' => FALSE,
+  );
   $form_build_id = $_POST['form_build_id'];
   $form = form_get_cache($form_build_id, $form_state);
   $args = $form['#parameters'];
@@ -703,10 +728,10 @@ function uc_coupon_autocomplete_node($string) {
   $matches = array();
   $product_types = module_invoke_all('product_types');
 
-  $result = db_query_range("SELECT nid, title FROM {node} WHERE type IN ('". implode("','", $product_types) ."') AND title LIKE '%%%s%'", $string, 0, 10);
+  $result = db_query_range("SELECT nid, title FROM {node} WHERE type IN ('" . implode("','", $product_types) . "') AND title LIKE '%%%s%'", $string, 0, 10);
   while ($row = db_fetch_object($result)) {
     $title = check_plain($row->title);
-    $matches[$title .' [nid:'. $row->nid .']'] = $title;
+    $matches[$title . ' [nid:' . $row->nid . ']'] = $title;
   }
   print drupal_to_js($matches);
   exit;
@@ -716,7 +741,7 @@ function uc_coupon_autocomplete_term($string) {
   $matches = array();
   $result = db_query_range("SELECT tid, name FROM {term_data} WHERE name LIKE '%%%s%'", $string, 0, 10);
   while ($row = db_fetch_object($result)) {
-    $matches[$row->name .' [tid:'. $row->tid .']'] = $row->name;
+    $matches[$row->name . ' [tid:' . $row->tid . ']'] = $row->name;
   }
   print drupal_to_js($matches);
   exit;
@@ -726,12 +751,12 @@ function uc_coupon_autocomplete_user($string) {
   $matches = array();
   $anonymous = t('anonymous users');
   if (strpos($anonymous, $string) !== FALSE) {
-    $matches[$anonymous .' [uid:0]'] = $anonymous;
+    $matches[$anonymous . ' [uid:0]'] = $anonymous;
   }
 
   $result = db_query_range("SELECT uid, name FROM {users} WHERE name LIKE '%%%s%'", $string, 0, 10);
   while ($row = db_fetch_object($result)) {
-    $matches[$row->name .' [uid:'. $row->uid .']'] = $row->name;
+    $matches[$row->name . ' [uid:' . $row->uid . ']'] = $row->name;
   }
   print drupal_to_js($matches);
   exit;
@@ -752,7 +777,7 @@ function uc_coupon_autocomplete_role($string) {
  */
 function uc_coupon_add_form_validate($form, &$form_state) {
   drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css', 'module');
-  drupal_add_js(drupal_get_path('module', 'uc_coupon') .'/uc_coupon.admin.js');
+  drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
   $name = db_result(db_query("SELECT name FROM {uc_coupons} WHERE code = '%s' AND cid <> %d", strtoupper($form_state['values']['code']), $form['#uc_coupon_cid']));
   if ($name) {
@@ -775,13 +800,13 @@ function uc_coupon_add_form_validate($form, &$form_state) {
 
   foreach ($form_state['values']['products'] as $key => $product) {
     if ($product && !preg_match('/\[nid:(\d+)\]$/', $product)) {
-      form_set_error('products]['. $key, t('Products must include the node ID.'));
+      form_set_error('products][' . $key, t('Products must include the node ID.'));
     }
   }
 
   foreach ($form_state['values']['users'] as $key => $user) {
     if ($user && !preg_match('/\[uid:(\d+)\]$/', $user)) {
-      form_set_error('users]['. $key, t('User names must include the user ID.'));
+      form_set_error('users][' . $key, t('User names must include the user ID.'));
     }
   }
 
@@ -876,7 +901,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   uc_coupon_save($coupon, $form_state['values']);
 
   drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
-  $form_state['redirect'] = 'admin/store/coupons'. ($coupon->status ? '' : '/inactive');
+  $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
 }
 
 function _uc_coupon_map_restriction(&$value, $key, $prefix) {
@@ -911,7 +936,7 @@ function uc_coupon_delete_confirm_submit($form, &$form_state) {
   db_query("DELETE FROM {uc_coupons_orders} WHERE cid = %d", $form['#uc_coupon_cid']);
 
   drupal_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
-  $form_state['redirect'] = 'admin/store/coupons'. ($coupon->status ? '' : '/inactive');
+  $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
 }
 
 /**
@@ -924,10 +949,10 @@ function uc_coupon_codes_csv($coupon) {
   }
 
   header('Content-Type: application/octet-stream');
-  header('Content-Disposition: attachment; filename="'. $coupon->code .'.csv";');
+  header('Content-Disposition: attachment; filename="' . $coupon->code . '.csv";');
 
   for ($id = 0; $id < $coupon->data['bulk_number']; $id++) {
-    echo uc_coupon_get_bulk_code($coupon, $id) ."\n";
+    echo uc_coupon_get_bulk_code($coupon, $id) . "\n";
   }
   exit;
 }

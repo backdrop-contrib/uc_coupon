@@ -7,7 +7,7 @@ function uc_coupon_purchase_view($account) {
   drupal_set_title(t('My coupons'));
 
   $result = db_query('SELECT c.* FROM {uc_coupon_purchase_users} u INNER JOIN {uc_coupons} c ON u.cid = c.cid WHERE u.uid = %d ORDER BY valid_until ASC, code ASC', $account->uid);
-  
+
   $header = array(t('Code'), t('Value'), t('Validity'), t('Max uses'), t('Used'));
   $rows = array();
   while ($coupon = db_fetch_object($result)) {
@@ -37,7 +37,7 @@ function uc_coupon_purchase_view($account) {
     $uses = $coupon->max_uses > 0 ? $coupon->max_uses : t('Unlimited');
     $usage = uc_coupon_count_usage($coupon->cid);
 
-    $icon = theme('image', drupal_get_path('module', 'uc_store') .'/images/print.gif', t('Print'));
+    $icon = theme('image', drupal_get_path('module', 'uc_store') . '/images/print.gif', t('Print'));
     foreach ($codes as $code) {
       if (substr($code, -1) == '*') {
         $link = l($code, 'user/' . $account->uid . '/coupons/' . $coupon->cid);
@@ -61,7 +61,7 @@ function uc_coupon_purchase_view($account) {
   else {
     $output = "<p>" . t('You currently have no coupons available.') . "</p>";
   }
-  
+
   return $output;
 }
 
@@ -78,7 +78,7 @@ function uc_coupon_purchase_print($account, $coupon, $op = 'view', $code = NULL)
 
   // Add the owner account object to the coupon.
   $coupon->owner = $account;
-  
+
   // Does not return if op = 'print'
   $output .= uc_coupon_print($coupon, $code, $op);
 

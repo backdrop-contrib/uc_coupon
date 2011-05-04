@@ -32,7 +32,7 @@ class uc_coupon_handler_field_codes extends views_handler_field_prerender_list {
       '#type' => 'textfield',
       '#default_value' => $this->options['max_num'],
     );
-    
+
     $form['scope'] = array(
       '#type' => 'radios',
       '#title' => t('Codes to display'),
@@ -71,7 +71,7 @@ class uc_coupon_handler_field_codes extends views_handler_field_prerender_list {
         }
 
         if ($this->include_coupon($icoupon)) {
-          $this->items[$cid][]= array('coupon' => $icoupon);
+          $this->items[$cid][] = array('coupon' => $icoupon);
         }
       }
     }
