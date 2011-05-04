@@ -93,9 +93,9 @@ function uc_coupon_display($view_type = 'active') {
       check_plain($coupon->name),
       check_plain($coupon->code) . ($coupon->bulk ? '* ' . t('(bulk)') : ''),
       uc_coupon_format_discount($coupon),
-      format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0),
-      $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
-      $coupon->valid_until ? format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0) : '-',
+      format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
+      $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y')) : '-',
+      $coupon->valid_until ? format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y')) : '-',
     );
   }
 
@@ -137,13 +137,13 @@ function uc_coupon_view($coupon) {
     $status = t('Active');
   }
   else if (REQUEST_TIME < $coupon->valid_from) {
-    $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
+    $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
   }
   else if (REQUEST_TIME > $coupon->valid_until) {
-    $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
+    $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
   }
   else {
-    $status = t('Active until @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0)));
+    $status = t('Active until @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
   }
   $rows[] = array(t('Status'), $status);
 
@@ -483,9 +483,9 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'date',
     '#title' => t('Start date'),
     '#default_value' => array(
-      'year' => format_date($value->valid_from, 'custom', 'Y', 0),
-      'month' => format_date($value->valid_from, 'custom', 'n', 0),
-      'day' => format_date($value->valid_from, 'custom', 'j', 0),
+      'year' => format_date($value->valid_from, 'custom', 'Y'),
+      'month' => format_date($value->valid_from, 'custom', 'n'),
+      'day' => format_date($value->valid_from, 'custom', 'j'),
     ),
     '#after_build' => array('_uc_coupon_date_range'),
   );
@@ -493,9 +493,9 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'date',
     '#title' => t('Expiry date'),
     '#default_value' => array(
-      'year' => format_date($value->valid_until, 'custom', 'Y', 0),
-      'month' => format_date($value->valid_until, 'custom', 'n', 0),
-      'day' => format_date($value->valid_until, 'custom', 'j', 0),
+      'year' => format_date($value->valid_until, 'custom', 'Y'),
+      'month' => format_date($value->valid_until, 'custom', 'n'),
+      'day' => format_date($value->valid_until, 'custom', 'j'),
     ),
     '#after_build' => array('_uc_coupon_date_range'),
   );

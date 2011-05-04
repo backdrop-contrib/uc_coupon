@@ -1251,8 +1251,8 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
 
   if ($coupon->valid_until) {
     $variables['not_yet_valid'] = $coupon->valid_from > REQUEST_TIME;
-    $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
-    $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 0);
+    $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
+    $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
   }
   else {
     $variables['not_yet_valid'] = FALSE;
