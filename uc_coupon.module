@@ -195,19 +195,22 @@ function uc_coupon_permission() {
   $perms = array(
     'view store coupons' => array(
       'title' => t('view store coupons'),
-      'description' => t('TODO Add a description for \'view store coupons\''),
+      'description' => t('Display information about discount coupons.'),
     ),
     'manage store coupons' => array(
       'title' => t('manage store coupons'),
-      'description' => t('TODO Add a description for \'manage store coupons\''),
+      'description' => t('Create, edit and delete discoutn coupons.'),
     ),
     'coupon wholesale pricing' => array(
       'title' => t('coupon wholesale pricing'),
-      'description' => t('TODO Add a description for \'coupon wholesale pricing\''),
+      'description' => t('Deprecated'),
     ),
   );
   if (!module_exists('uc_reports')) {
-    $perms[] = 'view reports';
+    $perms['view reports'] = array(
+      'title' => t('view reports'),
+      'description' => t('Display coupon usage reports.')
+    );
   }
   return $perms;
 }
