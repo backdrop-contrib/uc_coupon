@@ -375,7 +375,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('Coupon name'),
-    '#default_value' => $value->name,
+    '#default_value' => isset($value->name) ? $value->name : '',
     '#required' => TRUE,
     '#weight' => -15,
   );
@@ -384,7 +384,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'textfield',
     '#title' => t('Coupon code'),
     '#description' => t('Coupon codes cannot be changed once they have been used in an order.'),
-    '#default_value' => $value->code,
+    '#default_value' => isset($value->code) ? $value->code : '',
     '#size' => 25,
     '#required' => !$used,
     '#maxlength' => 50,
@@ -397,7 +397,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#title' => t('Bulk coupon codes'),
     '#description' => t('The coupon code entered above will be used to prefix each generated code.'),
     '#collapsible' => TRUE,
-    '#collapsed' => !$value->bulk,
+    '#collapsed' => isset($value->bulk) ? !$value->bulk : TRUE,
     '#weight' => -5,
   );
 
@@ -405,7 +405,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     $form['bulk']['bulk_generate'] = array(
       '#type' => 'checkbox',
       '#title' => t('Enable bulk generation of coupon codes.'),
-      '#default_value' => $value->bulk,
+      '#default_value' => isset($value->bulk) ? $value->bulk : FALSE,
     );
   }
   else {
@@ -418,7 +418,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['bulk']['bulk_number'] = array(
     '#type' => 'textfield',
     '#title' => t('Number of codes to generate'),
-    '#default_value' => $value->data['bulk_number'],
+    '#default_value' => isset($value->data['bulk_number']) ? $value->data['bulk_number'] : NULL,
     '#size' => 10,
     '#maxlength' => 10,
     '#disabled' => $used,
@@ -428,7 +428,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'select',
     '#title' => t('Code length'),
     '#description' => t('The number of characters selected here will be appended to the code entered above when generating bulk coupons.'),
-    '#default_value' => $value->data['bulk_length'],
+    '#default_value' => isset($value->data['bulk_length']) ? $value->data['bulk_length'] : NULL,
     '#options' => drupal_map_assoc(range(8, 30)),
     '#disabled' => $used,
   );
@@ -437,13 +437,13 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'checkbox',
     '#title' => t('Coupon is active.'),
     '#description' => t('Only active coupons can be used at checkout.'),
-    '#default_value' => $value->status,
+    '#default_value' => isset($value->status) ? $value->status : FALSE,
   );
 
   $form['discount'] = array(
     '#type' => 'textfield',
     '#title' => t('Discount'),
-    '#default_value' => uc_coupon_format_discount($value, FALSE),
+    '#default_value' => isset($coupon->value) ? uc_coupon_format_discount($value, FALSE) : '',
     '#size' => 6,
     '#description' => t('Three discount types are possible:') . theme('item_list', array('items' => array(
         t('Fixed price discount; enter "15" for $15.00 off.'),
