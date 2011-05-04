@@ -807,7 +807,8 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
   drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
-  $name = db_query("SELECT name FROM {uc_coupons} WHERE code = :code AND cid <> :cid", array(':code' => strtoupper($form_state['values']['code']), ':cid' => $form['#uc_coupon_cid']))->fetchField();
+  $name = db_query("SELECT name FROM {uc_coupons} WHERE code = :code AND cid <> :cid", 
+    array(':code' => strtoupper($form_state['values']['code']), ':cid' => isset($form['#uc_coupon_cid']) ? $form['#uc_coupon_cid'] : NULL))->fetchField();
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }

@@ -382,7 +382,7 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
  * Format a coupon depending on the type, optionally including currency symbols.
  */
 function uc_coupon_format_discount($coupon, $currency = TRUE) {
-  switch ($type) {
+  switch ($coupon->type) {
     case 'price':
       return $currency ? uc_currency_format($coupon->value) : $coupon->value;
 
