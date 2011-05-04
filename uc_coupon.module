@@ -827,9 +827,9 @@ function uc_coupon_block_view($delta) {
 function uc_coupon_block_OLD($op = 'list', $delta = 0, $edit = array()) { }
 
 /**
- * Implements hook_cart_pane().
+ * Implements hook_uc_cart_pane().
  */
-function uc_coupon_cart_pane($items) {
+function uc_coupon_uc_cart_pane($items) {
   $panes[] = array(
     'id' => 'coupon',
     'body' => drupal_get_form('uc_coupon_block_form', 25),
@@ -848,7 +848,7 @@ function uc_coupon_block_form($form, $form_state, $size = 15) {
   $form['code'] = array(
     '#type' => 'textfield',
     '#title' => t('Coupon code'),
-    '#default_value' => $_SESSION['uc_coupon'],
+    '#default_value' => isset($_SESSION['uc_coupon']) ? $_SESSION['uc_coupon'] : NULL,
     '#size' => $size,
   );
   $form['apply'] = array(
@@ -887,12 +887,12 @@ function uc_coupon_block_form_submit($form, &$form_state) {
 }
 
 /**
- * Implements hook_order().
+ * Implements hook_uc_order().
  *
  * Ensure any cart pane coupon is added to the order if the checkout page is skipped
  * (e.g. Paypal Express Checkout, Google Checkout)
  */
-function uc_coupon_order($op, &$arg1, $arg2) {
+function uc_coupon_uc_order($op, &$arg1, $arg2) {
   if ($op == 'save' && isset($_SESSION['uc_coupon'])) {
     $coupon = uc_coupon_validate($_SESSION['uc_coupon'], $arg1);
     if ($coupon->valid) {
@@ -902,12 +902,12 @@ function uc_coupon_order($op, &$arg1, $arg2) {
 }
 
 /**
- * Implements hook_checkout_pane().
+ * Implements hook_uc_checkout_pane().
  *
  * Show a pane just above the order total that allows shoppers to enter a coupon
  * for a discount.
  */
-function uc_coupon_checkout_pane() {
+function uc_coupon_uc_checkout_pane() {
   $panes[] = array(
     'id' => 'coupon',
     'callback' => 'uc_checkout_pane_coupon',
@@ -1064,9 +1064,9 @@ function _uc_coupon_apply_to_order($order_id, $coupon) {
 }
 
 /**
- * Implements hook_line_item().
+ * Implements hook_uc_line_item().
  */
-function uc_coupon_line_item() {
+function uc_coupon_uc_line_item() {
   $items[] = array(
     'id' => 'coupon',
     'title' => t('Coupon discount'),
@@ -1118,9 +1118,9 @@ function _uc_coupon_paypal_check() {
 }
 
 /**
- * Implements hook_store_status().
+ * Implements hook_uc_store_status().
  */
-function uc_coupon_store_status() {
+function uc_coupon_uc_store_status() {
   if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wps_submit_method', 'single') == 'itemized') {
     $statuses[] = array(
       'status' => 'warning',
@@ -1200,9 +1200,9 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
 }
 
 /**
- * Implements hook_cart_display().
+ * Implements hook_uc_cart_display().
  */
-function uc_coupon_cart_display($item) {
+function uc_coupon_uc_cart_display($item) {
   return array(
     '#module' => 'uc_coupon', // Not used in core, but allows modules/themes to act on this special cart item.
     'nid' => array('#type' => 'value', '#value' => 0),
