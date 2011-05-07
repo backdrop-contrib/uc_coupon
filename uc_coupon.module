@@ -569,13 +569,13 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
   // Check minimum order total.
   if ($order && $coupon->minimum_order > 0) {
     $total = 0;
-    $context = array(
-      'revision' => 'altered',
-      'type' => 'cart_item',
-      'subject' => array(
-        'order' => $order,
-      ),
-    );
+    //$context = array(
+    //  'revision' => 'altered',
+    //  'type' => 'cart_item',
+    //  'subject' => array(
+    //    'order' => $order,
+    //  ),
+    //);
 
     foreach ($order->products as $item) {
       $context['subject']['cart_item'] = $item;
@@ -625,13 +625,13 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
  * Find items that a coupon will apply to and calculate the discounts.
  */
 function uc_coupon_calculate_discounts($coupon, $order) {
-  $context = array(
-    'revision' => 'altered',
-    'type' => 'cart_item',
-    'subject' => array(
-      'order' => $order,
-    ),
-  );
+  //$context = array(
+  //  'revision' => 'altered',
+  //  'type' => 'cart_item',
+  //  'subject' => array(
+  //    'order' => $order,
+  //  ),
+  //);
 
   $restricted = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
 
@@ -1150,6 +1150,7 @@ function uc_coupon_uc_store_status() {
 
 /**
  * Implements hook_token_list().
+ * !TODO Must change to hook_token_info() for D7
  */
 function uc_coupon_token_list($type = 'all') {
   $tokens = array();
@@ -1169,6 +1170,7 @@ function uc_coupon_token_list($type = 'all') {
 
 /**
  * Implements hook_token_values().
+ * !TODO Must change to hook_tokens() for D7
  */
 function uc_coupon_token_values($type, $object = NULL) {
   $values = array();
