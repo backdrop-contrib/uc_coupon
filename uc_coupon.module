@@ -170,13 +170,6 @@ function uc_coupon_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
 
-  $items['cart/checkout/coupon'] = array(
-    'title' => 'Apply coupon',
-    'page callback' => 'uc_coupon_checkout_apply',
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK,
-  );
-
   return $items;
 }
 
@@ -863,28 +856,13 @@ function uc_coupon_block_form($form, $form_state, $size = 15) {
  * @see http://drupal.org/node/1354
  */
 function uc_coupon_block_form_submit($form, &$form_state) {
-  if ($form_state['values']['code']) {
-    $code = $form_state['values']['code'];
-    $coupon = uc_coupon_validate($code);
-    if (!$coupon->valid) {
-      unset($_SESSION['uc_coupon']);
-      drupal_set_message($coupon->message, 'error');
-    }
-    else {
-      $_SESSION['uc_coupon'] = $code;
-      $amount = uc_coupon_price($coupon->amount);
-      if (variable_get('uc_coupon_show_in_cart', TRUE)) {
-        drupal_set_message((isset($coupon->message)) ? $coupon->message : t('A discount of !amount has been applied to your cart.', array('!amount' => $amount)));
-      }
-      else {
-        drupal_set_message((isset($coupon->message)) ? $coupon->message : t('A discount of !amount will be applied in the checkout.', array('!amount' => $amount)));
-      }
-    }
-  }
-  else {
-    unset($_SESSION['uc_coupon']);
+  if (isset($form_state['values']['code'])) {
+    uc_coupon_submit($form_state['values']['code'], TRUE);
   }
 }
+
+
+
 
 /**
  * Implements hook_uc_order().
@@ -919,50 +897,36 @@ function uc_coupon_uc_checkout_pane() {
   return $panes;
 }
 
+
+function uc_coupon_checkout_update($form, $form_state) {
+  if (isset($form['panes']['payment']['line_items'])) {
+    $commands[] = ajax_command_replace('#line-items-div', drupal_render($form['panes']['payment']['line_items']));
+  }  
+  if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($form['panes']['cart']['cart_review_table'])) {
+    $commands[] = ajax_command_html('#cart-pane>div', drupal_render($form['panes']['cart']['cart_review_table']));
+  }
+  $commands[] = ajax_command_html('#coupon-messages', theme('status_messages'));
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
 /**
  * Checkout Pane callback function.
  *
  * Used to display a form in the checkout process so that customers
  * can enter discount coupons.
  */
-function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
+function uc_checkout_pane_coupon($op, &$order, $form=NULL, &$form_state=NULL) {
   switch ($op) {
     case 'view':
-      drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.js');
-      drupal_add_js(array(
-        'ucURL' => array(
-          'applyCoupon' => url('cart/checkout/coupon'),
-        ),
-      ), array('type' => 'setting', 'scope' => JS_DEFAULT));
-
+      drupal_add_css('#coupon-messages { clear: both; }',array('type'=>'inline', 'group'=>CSS_DEFAULT));
       if (isset($_SESSION['uc_coupon'])) {
         $code = $_SESSION['uc_coupon'];
       }
-      else if (isset($arg1->data['coupon'])) {
-        $code = $_SESSION['uc_coupon'] = $arg1->data['coupon'];
+      else if (isset($order->data['coupon'])) {
+        $code = $_SESSION['uc_coupon'] = $order->data['coupon'];
       }
       else {
         $code = '';
-      }
-
-      if ($code) {
-        $coupon = uc_coupon_validate($code, $arg1);
-        if ($coupon->valid) {
-          if (variable_get('uc_coupon_show_in_cart', TRUE)) {
-            // Modify stored subtotal to ignore coupon cart item.
-            drupal_add_js('$(function() {
-              if (window.set_line_item) {
-                li_values["subtotal"] += ' . $coupon->amount . ';
-              }
-            });', array('type' => 'inline', 'scope' => JS_DEFAULT));
-          }
-
-          drupal_add_js('$(function() {
-            if (window.set_line_item) {
-              set_line_item("coupon", "' . $coupon->title . '", ' . -$coupon->amount . ', ' . _line_item_data('coupon', 'weight') . ');
-            }
-          });', array('type' => 'inline', 'scope' => JS_DEFAULT));
-        }
       }
 
       $description = variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.'));
@@ -975,8 +939,12 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       $contents['apply'] = array(
         '#type' => 'button',
         '#value' => t('Apply to order'),
-        '#attributes' => array('onclick' => "getCoupon(); return false;"),
-        '#suffix' => '<span id="coupon-throbber"></span>',
+        '#ajax' => array(
+          'callback' => 'uc_coupon_checkout_update',
+        ),
+      );
+      $contents['message'] = array(
+        '#markup' => '<div id="coupon-messages"></div>',
       );
       return array(
         'description' => $description,
@@ -985,17 +953,12 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
       );
 
     case 'process':
-      if ($arg2['code']) {
-        $arg1->data['coupon'] = $arg2['code'];
-        $coupon = uc_coupon_validate($arg1->data['coupon'], $arg1);
-        if (!$coupon->valid) {
-          drupal_set_message($coupon->message, 'error');
-          unset($_SESSION['uc_coupon']);
-          unset($arg1->data['coupon']);
-          return FALSE;
+      // Only process the form if it is submitted or if "Apply to order" button is clicked.
+      $is_apply = strncmp($form_state['triggering_element']['#id'],'edit-panes-coupon-apply',23)==0;
+      if ($form_state['submitted'] || $is_apply) {
+        if (isset($form_state['values']['panes']['coupon']['code'])) {
+          uc_coupon_submit($form_state['values']['panes']['coupon']['code'], $is_apply, $order);
         }
-        $_SESSION['uc_coupon'] = $arg1->data['coupon'];
-        _uc_coupon_apply_to_order($arg1->order_id, $coupon);
       }
       return TRUE;
 
@@ -1015,24 +978,72 @@ function uc_checkout_pane_coupon($op, &$arg1, $arg2) {
 }
 
 /**
- * Checkout pane AJAX callback.
- **/
-function uc_coupon_checkout_apply() {
-  $coupon = uc_coupon_validate($_POST['code'], unserialize($_POST['order']));
-  if ($coupon->valid) {
-    if (!isset($coupon->message)) {
-      $coupon->message = t('The coupon has been applied to your order.');
+ * Submit a coupon from block form or checkout page, via ajax or not.
+ * 
+ * @param $code 
+ * 		The code to submit.
+ * @param $is_apply
+ * 		TRUE if this submission was due to an "Apply to order" button.  FALSE if it was due to 
+ *    submitting the checkout page.
+ * @param $order
+ * 		The $order object to which the coupon applies.  Will only be present if the code is
+ *    submitted from the checkout page.  If absent, the coupon will be validated against
+ *    the current cart contents.
+ */
+function uc_coupon_submit($code, $is_apply, $order=NULL) {
+  $code = strtoupper(trim($code));
+  // If no code was specified, then clear the current code.
+  if (empty($code)) {
+    if (isset($_SESSION['uc_coupon'])) {
+      drupal_set_message(t('Coupon "%code" has been removed from your order.', array('%code' => $_SESSION['uc_coupon'])));
+      unset($order->data['coupon']);
+      unset($_SESSION['uc_coupon']);
+      if ($order) {
+        _uc_coupon_apply_to_order($order->order_id, NULL);
+      }
+      return TRUE;
     }
-    $_SESSION['uc_coupon'] = $_POST['code'];
+    // Or, if there was no current code and this was the result of an apply button, issue an error message.
+    elseif ($is_apply) {
+      drupal_set_message(t('You must enter a valid coupon code.'), 'error');
+      return FALSE;
+    }
   }
+  // Otherwise, check the coupon code that was entered.
   else {
-    unset($_SESSION['uc_coupon']);
+    $coupon = uc_coupon_validate($code, $order);
+    if (!$coupon->valid) {
+      drupal_set_message($coupon->message, 'error');
+      unset($_SESSION['uc_coupon']);
+      unset($order->data['coupon']);
+      return FALSE;
+    }
+    else {
+      // If this was an "Apply to order" request, issue a success message.
+      if ($is_apply) {
+        if (isset($coupon->message)) {
+          drupal_set_message($coupon->message);
+        }
+        else {  
+          $amount = theme('uc_price', array('price' => $coupon->amount));
+          if (isset($order) || variable_get('uc_coupon_show_in_cart',TRUE)) {
+            drupal_set_message(t('A discount of !amount has been applied to your order.', array('!amount' => $amount)));
+          }
+          else {
+            drupal_set_message(t('A discount of !amount will be applied at checkout.', array('!amount' => $amount)));
+          }
+        }
+      }
+      // Apply the coupon.
+      $_SESSION['uc_coupon'] = $code;
+      if (isset($order)) {
+        _uc_coupon_apply_to_order($order->order_id, $coupon);
+      }
+      return TRUE;
+    }
   }
-
-  drupal_add_http_header('Content-Type', 'text/javascript; charset=utf-8');
-  print drupal_json_encode($coupon);
-  exit();
 }
+
 
 /**
  * Create or update the coupon line item in an order.
@@ -1040,15 +1051,21 @@ function uc_coupon_checkout_apply() {
 function _uc_coupon_apply_to_order($order_id, $coupon) {
   $lid = db_query("SELECT line_item_id FROM {uc_order_line_items} WHERE order_id = :order_id AND type = :type", array(':order_id' => $order_id, ':type' => 'coupon'))->fetchField();
   if ($lid) {
-    db_update('uc_coupons_orders')
-      ->fields(array(
-          'cid' => $coupon->cid,
-          'code' => $coupon->code,
-          'value' => $coupon->amount,
-        ))
-      ->condition('oid', $order_id)
-      ->execute();
-    uc_order_update_line_item($lid, $coupon->title, -$coupon->amount);
+    if ($coupon) {
+      db_update('uc_coupons_orders')
+        ->fields(array(
+            'cid' => $coupon->cid,
+            'code' => $coupon->code,
+            'value' => $coupon->amount,
+          ))
+        ->condition('oid', $order_id)
+        ->execute();
+      uc_order_update_line_item($lid, $coupon->title, -$coupon->amount);
+    }
+    else {
+      db_delete('uc_coupons_orders')->condition('oid', $order_id)->execute();
+      uc_order_delete_line_item($lid);
+    }
   }
   else {
     $id = db_insert('uc_coupons_orders')
@@ -1071,7 +1088,7 @@ function uc_coupon_uc_line_item() {
     'id' => 'coupon',
     'title' => t('Coupon discount'),
     'tax_adjustment' => 'uc_coupon_tax_adjustment',
-    'weight' => 0,
+    'weight' => 1,
     'default' => FALSE,
     'stored' => TRUE,
     'add_list' => TRUE,
