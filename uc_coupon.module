@@ -1039,6 +1039,7 @@ function uc_coupon_submit($code, $is_apply, $order=NULL) {
       if (isset($order)) {
         _uc_coupon_apply_to_order($order->order_id, $coupon);
       }
+      rules_invoke_event('uc_coupon_is_applied', $coupon);
       return TRUE;
     }
   }
