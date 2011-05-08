@@ -1275,13 +1275,13 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
   }
 
   // Merge in global tokens.
-  // !TODO fix this using token_get_info()
-  //  $tokens = token_get_values();
-  //  foreach ($tokens->tokens as $key => $token) {
-  //    $value = $tokens->values[$key];
-  //    $variables[str_replace('-', '_', $token)] = $value;
-  // }
-  
+  $types = token_get_global_token_types();
+  $info = token_get_info();
+  foreach ($types as $type) {
+    foreach (array_keys($info['tokens'][$type]) as $token) {
+      $variables[str_replace('-', '_', $type) . '_' . str_replace('-', '_', $token)] = token_replace("[$type:$token]");  
+    }
+  }   
 
   if (isset($variables['coupon']->data['base_cid'])) {
     $variables['template_files'][] = 'uc_coupon-certificate-base-' . $variables['coupon']->data['base_cid'];
