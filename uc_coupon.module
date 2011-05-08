@@ -498,8 +498,8 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   $coupon->valid = TRUE;
   $coupon->usage = uc_coupon_count_usage($coupon->cid, $account ? $account->uid : NULL);
 
-  $format = variable_get('uc_coupon_line_item_format', t('Coupon: [coupon-code]'));
-  $coupon->title = token_replace($format, array('coupon' => $coupon));
+  $format = variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:coupon-code]')));
+  $coupon->title = token_replace($format, array('uc_coupon' => $coupon));
 
   // Calculate the discount.
   if ($order) {
@@ -1149,53 +1149,6 @@ function uc_coupon_uc_store_status() {
   return $statuses;
 }
 
-/**
- * Implements hook_token_list().
- * !TODO Must change to hook_token_info() for D7
- */
-function uc_coupon_token_list($type = 'all') {
-  $tokens = array();
-
-  if ($type == 'order' || $type == 'ubercart' || $type == 'all') {
-    $tokens['order']['order-coupon-code'] = t('The coupon code used in the order.');
-  }
-
-  if ($type == 'coupon' || $type == 'all') {
-    $tokens['coupon']['coupon-name'] = t('The coupon name.');
-    $tokens['coupon']['coupon-code'] = t('The coupon code.');
-    $tokens['coupon']['coupon-bulk-codes'] = t('The list of bulk coupon codes, if the coupon is a bulk coupon.');
-  }
-
-  return $tokens;
-}
-
-/**
- * Implements hook_token_values().
- * !TODO Must change to hook_tokens() for D7
- */
-function uc_coupon_token_values($type, $object = NULL) {
-  $values = array();
-
-  switch ($type) {
-    case 'order':
-      $values['order-coupon-code'] = isset($object->data['coupon']) ? $object->data['coupon'] : '';
-      break;
-
-    case 'coupon':
-      $values['coupon-name'] = $object->name;
-      $values['coupon-code'] = $object->code;
-      if ($object->bulk) {
-        $codes = array();
-        for ($id = 0; $id < $object->data['bulk_number']; $id++) {
-          $codes[] = uc_coupon_get_bulk_code($object, $id);
-        }
-        $values['coupon-bulk-codes'] .= implode("\n", $codes);
-      }
-      break;
-  }
-
-  return $values;
-}
 
 /**
  * Implements hook_uc_cart_alter().
