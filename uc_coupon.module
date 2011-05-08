@@ -1068,7 +1068,7 @@ function _uc_coupon_apply_to_order($order_id, $coupon) {
       uc_order_delete_line_item($lid);
     }
   }
-  else {
+  elseif ($coupon) {
     $id = db_insert('uc_coupons_orders')
       ->fields(array(
           'cid' => $coupon->cid,
