@@ -6,7 +6,7 @@
 function uc_coupon_purchase_view($account) {
   drupal_set_title(t('My coupons'));
 
-  $result = db_query('SELECT c.* FROM {uc_coupon_purchase_users} u INNER JOIN {uc_coupons} c ON u.cid = c.cid WHERE u.uid = :u.uid ORDER BY valid_until ASC, code ASC', array(':u.uid' => $account->uid));
+  $result = db_query('SELECT c.* FROM {uc_coupon_purchase_users} u INNER JOIN {uc_coupons} c ON u.cid = c.cid WHERE u.uid = :uid ORDER BY valid_until ASC, code ASC', array(':uid' => $account->uid));
 
   $header = array(t('Code'), t('Value'), t('Validity'), t('Max uses'), t('Used'));
   $rows = array();
