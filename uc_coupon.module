@@ -1167,6 +1167,7 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
         'nid' => 0,
         'qty' => 1,
         'price' => uc_coupon_price(-$coupon->amount, 'altered'),
+        'data' => array('shippable' => FALSE),
       );
     }
   }
