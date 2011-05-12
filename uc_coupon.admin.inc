@@ -340,33 +340,33 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     $value->valid_until = REQUEST_TIME;
   }
 
-  // Handle AHAH functionality.
-  $ahah_fields = array(
+  // Handle AJAX functionality.
+  $ajax_fields = array(
     'products' => 'admin/store/coupons/autocomplete/node',
     'skus' => '',
     'terms' => 'admin/store/coupons/autocomplete/term',
     'users' => 'admin/store/coupons/autocomplete/user',
     'roles' => 'admin/store/coupons/autocomplete/role',
   );
-
-  if (empty($form_state['ahah_submission'])) {
+  
+  if (empty($form_state['ajax_submission'])) {
     // Set the initial field count.
-    foreach (array_keys($ahah_fields) as $field) {
+    foreach (array_keys($ajax_fields) as $field) {
       $form_state['storage']['field_count'][$field] = isset($value->data[$field]) ? (count($value->data[$field]) + 3) : 3;
     }
   }
   else {
-    // Use data from the AHAH submission.
+    // Use data from the AJAX submission.
     $value->data = $form_state['coupon_data'];
 
     // Increase the count for the selected field.
-    $form_state['storage']['field_count'][$form_state['ahah_submission']] += 3;
+    $form_state['storage']['field_count'][$form_state['ajax_submission']] += 3;
 
     // Reset form action, otherwise validation errors go wrong.
     $form['#action'] = $form_state['action'];
   }
 
-  foreach (array_keys($ahah_fields) as $field) {
+  foreach (array_keys($ajax_fields) as $field) {
     if (!isset($value->data[$field])) {
       $value->data[$field] = array();
     }
@@ -644,21 +644,24 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     );
   }
 
-  // Add common settings and AHAH functionality to restriction fieldsets.
-  foreach ($ahah_fields as $field => $path) {
+  // Add common settings and ajax functionality to restriction fieldsets.
+  foreach ($ajax_fields as $field => $path) {
     $form[$field] = array_merge($form[$field], array(
       '#tree' => TRUE,
       '#collapsible' => TRUE,
-      '#collapsed' => empty($value->data[$field]) && empty($form_state['ahah_submission']),
-      '#prefix' => '<div id="ahah-' . $field . '">',
+      '#collapsed' => empty($value->data[$field]) && empty($form_state['ajax_submission']),
+      '#prefix' => '<div id="ajax-' . $field . '">',
       '#suffix' => '</div>',
       'more_' . $field => array(
         '#type' => 'submit',
         '#value' => t('Add more items'),
         '#weight' => 1,
-        '#ahah' => array(
-          'path' => 'admin/store/coupons/ahah/' . $field,
-          'wrapper' => 'ahah-' . $field,
+        '#name' =>  'op_' . $field,
+        '#limit_validation_errors' => array(),
+        '#submit' => array('uc_coupon_ajax_submit'),
+        '#ajax' => array( 
+          'callback' => 'uc_coupon_ajax_callback',
+          'wrapper' => 'ajax-' . $field,
           'effect' => 'fade',
         ),
         '#tree' => FALSE,
@@ -709,41 +712,32 @@ function _uc_coupon_date_range($form_element) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Ajax form element selector callback for "Add more items" buttons in restrictions fieldsets.
  */
-function uc_coupon_ahah($type) {
-  $form_state = array(
-    'storage' => NULL,
-    'submitted' => FALSE,
-  );
-  $form_build_id = $_POST['form_build_id'];
-  $form = form_get_cache($form_build_id, $form_state);
-  $args = $form['#parameters'];
-  $form_id = array_shift($args);
-  $form_state['post'] = $form['#post'] = $_POST;
-  $form_state['action'] = $form['#action'];
-  $form_state['ahah_submission'] = $type;
-  $form['#programmed'] = $form_state['#redirect'] = FALSE;
-  drupal_process_form($form_id, $form, $form_state);
-  $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
-
-  unset($form[$type]['#prefix']);
-  unset($form[$type]['#suffix']);
-  // TODO Please change this theme call to use an associative array for the $variables parameter.
-  $output = theme('status_messages') . drupal_render($form[$type]);
-  drupal_json_output(array('status' => TRUE, 'data' => $output));
+function uc_coupon_ajax_callback($form, $form_state) {
+  return $form[$form_state['ajax_submission']];
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Ajax submit handler for "Add more items" button in restrictions fieldsets.
+ */
+function uc_coupon_ajax_submit($form, &$form_state) {
+  $elem = $form_state['triggering_element']['#name'];
+  if (substr($elem,0,3) === 'op_') {
+    $form_statet['rebuild'] = TRUE;
+    $form_state['ajax_submission'] = substr($elem,3);
+    uc_coupon_add_form_submit($form, $form_state);
+  }
+}
+
+/**
+ * Autocomplete callback for product restrictions.
  */
 function uc_coupon_autocomplete_node($string) {
   $matches = array();
-  $product_types = module_invoke_all('product_types');
+  $product_types = uc_product_types();
 
-  $result = db_query("SELECT nid, title FROM {node} WHERE type IN (:types) AND title LIKE ':title'", array( ':types'=>$product_types, ':title'=>"%$string%"));
+  $result = db_query("SELECT nid, title FROM {node} WHERE type IN (:types) AND title LIKE :title", array( ':types' => $product_types, ':title' => "%$string%"));
   foreach ($result as $row) {
     $title = check_plain($row->title);
     $matches[$title . ' [nid:' . $row->nid . ']'] = $title;
@@ -753,8 +747,7 @@ function uc_coupon_autocomplete_node($string) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Autocomplete callback for term restrictions.
  */
 function uc_coupon_autocomplete_term($string) {
   $matches = array();
@@ -767,8 +760,7 @@ function uc_coupon_autocomplete_term($string) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Autocomplete callback for user restrictions.
  */
 function uc_coupon_autocomplete_user($string) {
   $matches = array();
@@ -777,8 +769,7 @@ function uc_coupon_autocomplete_user($string) {
     $matches[$anonymous . ' [uid:0]'] = $anonymous;
   }
 
-  // TODO Please convert this statement to the D7 database API syntax.
-  $result = db_query_range("SELECT uid, name FROM {users} WHERE name LIKE '%%%s%'", $string);
+  $result = db_query("SELECT uid, name FROM {users} WHERE name LIKE :name", array( ':name' => "%$string%"));
   foreach ($result as $row) {
     $matches[$row->name . ' [uid:' . $row->uid . ']'] = $row->name;
   }
@@ -787,12 +778,11 @@ function uc_coupon_autocomplete_user($string) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Autocomplete callback for role restrictions.
  */
 function uc_coupon_autocomplete_role($string) {
   $matches = array();
-  $result = db_query_range("SELECT name FROM {role} WHERE name LIKE ':name'", array(':name'=>"%$string%"));
+  $result = db_query("SELECT name FROM {role} WHERE name LIKE :name", array(':name' => "%$string%"));
   foreach ($result as $row) {
     $matches[$row->name] = $row->name;
   }
@@ -919,12 +909,13 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   // Remove zero values and empty arrays.
   $coupon->data = array_filter($coupon->data);
 
-  // Handle AHAH submissions.
-  if (!empty($form_state['ahah_submission'])) {
+  // Handle AJAX submissions.
+  if (!empty($form_state['ajax_submission'])) {
     $form_state['coupon_data'] = $coupon->data;
+    $form_state['rebuild'] = TRUE;
     return;
   }
-  // Clear AHAH storage, or the redirect will fail.
+  // Clear AJAX storage, or the redirect will fail.
   unset($form_state['storage']['field_count']);
 
   uc_coupon_save($coupon, $form_state['values']);
