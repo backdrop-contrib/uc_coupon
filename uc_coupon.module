@@ -567,18 +567,8 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
   // Check minimum order total.
   if ($order && $coupon->minimum_order > 0) {
     $total = 0;
-    //$context = array(
-    //  'revision' => 'altered',
-    //  'type' => 'cart_item',
-    //  'subject' => array(
-    //    'order' => $order,
-    //  ),
-    //);
 
     foreach ($order->products as $item) {
-      $context['subject']['cart_item'] = $item;
-      $context['subject']['node'] = node_load($item->nid);
-      //$total += uc_price($item->price, $context) * $item->qty;
       $total += $item->price * $item->qty;
     }
 
@@ -623,14 +613,6 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
  * Find items that a coupon will apply to and calculate the discounts.
  */
 function uc_coupon_calculate_discounts($coupon, $order) {
-  //$context = array(
-  //  'revision' => 'altered',
-  //  'type' => 'cart_item',
-  //  'subject' => array(
-  //    'order' => $order,
-  //  ),
-  //);
-
   $restricted = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
 
   // Discover if any items match the restrictions, and which items the discount should be calculated against.
@@ -643,9 +625,6 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     }
 
     $node = node_load($item->nid);
-    $context['subject']['cart_item'] = $item;
-    $context['subject']['node'] = $node;
-    //$item->altered_price = uc_price($item->price, $context);
     $qty = $item->qty;
 
     if (!$restricted) {
@@ -713,7 +692,6 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
   $total = 0;
   foreach ($items as $item) {
-    //$total += $item->altered_price;
     $total += $item->price;
   }
 
@@ -725,9 +703,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
           $item->discount = $total == 0 ? 0 : min($coupon->value * $item->price / $total, $item->price);
         }
         else {
-          // Apply discount to each product's untaxed price.
-          //$item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
-          $item->discount = min($coupon->value, $item->price); // !TODO - work out mixed tax rate compatibility.
+          $item->discount = min($coupon->value, $item->price);
         }
         break;
 
@@ -737,7 +713,6 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
       case 'set_price':
         $item->discount = max($item->price - $coupon->value, 0); 
-        //$item->discount = max($item->price - ($coupon->value * $item->price / $item->altered_price), 0);
         break;
     }
   }
@@ -756,35 +731,13 @@ function _uc_coupon_match_sku($model, $skus) {
 }
 
 function _uc_coupon_sort_products($a, $b) {
-  if ($a->altered_price == $b->altered_price) {
+  if ($a->price == $b->price) {
     return 0;
   }
-  return $a->altered_price > $b->altered_price ? 1 : -1;
+  return $a->price > $b->price ? 1 : -1;
 }
 
-/**
- * Run price alterers on a coupon value.
- */
-function uc_coupon_price($amount, $revision = 'formatted') {
-  return $amount;
-  /*
-  $context = array(
-    'revision' => $revision,
-    'type' => 'line_item',
-    'subject' => array(
-      'order' => (object) array(
-        'products' => uc_cart_get_contents(),
-      ),
-      'line_item' => array(
-        'type' => 'coupon',
-        'amount' => $amount,
-        'weight' => 0,
-      ),
-    ),
-  );
-  return uc_price($amount, $context);
-  */
-}
+
 
 /**
  * Implements hook_block_info().
@@ -1115,7 +1068,7 @@ function uc_coupon_tax_adjustment($price, $order, $tax) {
   foreach ($items as $item) {
     $node = node_load($item->nid);
     if (in_array($node->type, $tax->taxed_product_types) && ($tax->shippable == 0 || $node->shippable == 1)) {
-      $amount += $item->discount * $tax->rate * ($price > 0 ? 1 : -1);
+      $amount += $item->discount * ($price > 0 ? 1 : -1);
     }
   }
 
@@ -1162,7 +1115,7 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
         'title' => $coupon->title,
         'nid' => 0,
         'qty' => 1,
-        'price' => uc_coupon_price(-$coupon->amount, 'altered'),
+        'price' => -$coupon->amount,
         'data' => array('shippable' => FALSE),
       );
     }
