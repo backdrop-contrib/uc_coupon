@@ -1,5 +1,8 @@
 <?php
-
+/**
+ * @file
+ * Default views for uc_coupon.
+ */
 /**
  * Implements hook_views_default_views().
  */

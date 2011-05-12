@@ -1,7 +1,5 @@
 <?php
 
-//require_once DRUPAL_ROOT . '/' . 'uc_coupon.ca.inc';
-module_load_include('inc','uc_coupon','uc_coupon.ca');
 /**
  * @file
  * Provides discount coupons for Ubercart.
@@ -313,7 +311,7 @@ function uc_coupon_load($cid) {
       $coupon->data['apply_to'] = $coupon->data['max_applicable_products_value'];
       $coupon->data['apply_count'] = $coupon->data['max_applicable_products'];
     }
-    else if (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types'])) {
+    elseif (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types'])) {
       // Coupon has product restrictions, so was applied to each matching product.
       $coupon->data['apply_to'] = 'products';
     }
@@ -327,7 +325,7 @@ function uc_coupon_load($cid) {
 
   // Allow other modules to alter the coupon data.
   drupal_alter('uc_coupon', $coupon);
-  
+
   return $coupon;
 }
 
@@ -392,7 +390,7 @@ function uc_coupon_format_discount($coupon, $currency = TRUE) {
 function uc_coupon_get_bulk_code($coupon, $id) {
   // If this coupon has been validated, then $coupon->code is already a bulk code.
   if (isset($coupon->valid)) {
-    $prefix = substr($coupon->code, 0, strlen($coupon->code) - $coupon->data['bulk_length']);
+    $prefix = drupal_substr($coupon->code, 0, strlen($coupon->code) - $coupon->data['bulk_length']);
   }
   else {
     $prefix = $coupon->code;
@@ -522,7 +520,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
       // This module wishes the coupon to be accepted.
       $coupon->valid = TRUE;
     }
-    else if (!is_null($result)) {
+    elseif (!is_null($result)) {
       // This module wishes the coupon to be rejected.
       $coupon->valid = FALSE;
       $coupon->message = $result;
@@ -615,7 +613,7 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
     if ($coupon->data['wholesale'] == 2 && !user_access('coupon wholesale pricing', $account)) {
       return t('You do not have the correct permission to use this coupon.');
     }
-    else if ($coupon->data['wholesale'] == 3 && user_access('coupon wholesale pricing', $account)) {
+    elseif ($coupon->data['wholesale'] == 3 && user_access('coupon wholesale pricing', $account)) {
       return t('You do not have the correct permission to use this coupon.');
     }
   }
@@ -662,19 +660,19 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       if (isset($coupon->data['products']) && (isset($coupon->data['negate_products']) xor in_array($item->nid, $coupon->data['products']))) {
         $include = TRUE;
       }
-      else if (isset($coupon->data['products']) && isset($coupon->data['negate_products']) && in_array($item->nid, $coupon->data['products'])) {
+      elseif (isset($coupon->data['products']) && isset($coupon->data['negate_products']) && in_array($item->nid, $coupon->data['products'])) {
         // always exclude if in list of negated products
       }
-      else if (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
+      elseif (isset($coupon->data['terms']) && (isset($coupon->data['negate_terms']) xor count(array_intersect($terms, $coupon->data['terms'])))) {
         $include = TRUE;
       }
-      else if (isset($coupon->data['terms']) && isset($coupon->data['negate_terms']) && count(array_intersect($terms, $coupon->data['terms']))) {
+      elseif (isset($coupon->data['terms']) && isset($coupon->data['negate_terms']) && count(array_intersect($terms, $coupon->data['terms']))) {
         // always exclude if one of the terms is in the list of negated terms
       }
-      else if (isset($coupon->data['skus']) && _uc_coupon_match_sku($item->model, $coupon->data['skus'])) {
+      elseif (isset($coupon->data['skus']) && _uc_coupon_match_sku($item->model, $coupon->data['skus'])) {
         $include = TRUE;
       }
-      else if (isset($coupon->data['product_types']) && in_array($node->type, $coupon->data['product_types'])) {
+      elseif (isset($coupon->data['product_types']) && in_array($node->type, $coupon->data['product_types'])) {
         $include = TRUE;
       }
     }
@@ -918,11 +916,11 @@ function uc_coupon_checkout_update($form, $form_state) {
 function uc_checkout_pane_coupon($op, &$order, $form=NULL, &$form_state=NULL) {
   switch ($op) {
     case 'view':
-      drupal_add_css('#coupon-messages { clear: both; }',array('type'=>'inline', 'group'=>CSS_DEFAULT));
+      drupal_add_css('#coupon-messages { clear: both; }',array('type' => 'inline', 'group' => CSS_DEFAULT));
       if (isset($_SESSION['uc_coupon'])) {
         $code = $_SESSION['uc_coupon'];
       }
-      else if (isset($order->data['coupon'])) {
+      elseif (isset($order->data['coupon'])) {
         $code = $_SESSION['uc_coupon'] = $order->data['coupon'];
       }
       else {
@@ -954,7 +952,7 @@ function uc_checkout_pane_coupon($op, &$order, $form=NULL, &$form_state=NULL) {
 
     case 'process':
       // Only process the form if it is submitted or if "Apply to order" button is clicked.
-      $is_apply = strncmp($form_state['triggering_element']['#id'],'edit-panes-coupon-apply',23)==0;
+      $is_apply = strncmp($form_state['triggering_element']['#id'], 'edit-panes-coupon-apply', 23)==0;
       if ($form_state['submitted'] || $is_apply) {
         if (isset($form_state['values']['panes']['coupon']['code'])) {
           uc_coupon_submit($form_state['values']['panes']['coupon']['code'], $is_apply, $order);
@@ -1026,7 +1024,7 @@ function uc_coupon_submit($code, $is_apply, $order=NULL) {
         }
         else {  
           $amount = theme('uc_price', array('price' => $coupon->amount));
-          if (isset($order) || variable_get('uc_coupon_show_in_cart',TRUE)) {
+          if (isset($order) || variable_get('uc_coupon_show_in_cart', TRUE)) {
             drupal_set_message(t('A discount of !amount has been applied to your order.', array('!amount' => $amount)));
           }
           else {
@@ -1106,7 +1104,7 @@ function uc_coupon_tax_adjustment($price, $order, $tax) {
   if (isset($order->data['coupon'])) {
     $code = $order->data['coupon'];
   }
-  else if (isset($_SESSION['uc_coupon'])) {
+  elseif (isset($_SESSION['uc_coupon'])) {
     $code = $_SESSION['uc_coupon'];
   }
   else {

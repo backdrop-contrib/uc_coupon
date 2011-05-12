@@ -104,7 +104,7 @@ function uc_coupon_purchase_update_6000() {
   $ret = array();
 
   $schema['uc_coupon_purchase_users'] = array(
-    'description' => t('Ubercart Purchased Coupons Per Purchaser'),
+    'description' => 'Ubercart Purchased Coupons Per Purchaser',
     'fields' => array(
       'cpuid' => array(
         'type' => 'serial',
@@ -112,13 +112,13 @@ function uc_coupon_purchase_update_6000() {
         'not null' => TRUE,
       ),
       'uid' => array(
-        'description' => t('The user id.'),
+        'description' => 'The user id.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
       'cid' => array(
-        'description' => t('The coupon id.'),
+        'description' => 'The coupon id.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,

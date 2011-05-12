@@ -1,4 +1,8 @@
 <?php
+/**
+ * @file
+ * Page callbacks for uc_coupon.
+ */
 
 /**
  * Display a list of purchased coupons.
@@ -26,7 +30,7 @@ function uc_coupon_purchase_view($account) {
     if (!$coupon->status) {
       $valid = t('Inactive');
     }
-    else if (!$coupon->valid_until) {
+    elseif (!$coupon->valid_until) {
       $valid = t('Unlimited');
     }
     else {

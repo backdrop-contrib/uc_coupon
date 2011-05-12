@@ -78,10 +78,10 @@ function uc_coupon_display($view_type = 'active') {
     ),
   );
 
-  $query = db_select('uc_coupons','c')
+  $query = db_select('uc_coupons', 'c')
     ->extend('TableSort')
     ->orderByHeader($header);
-  $query->range(0,20);
+  $query->range(0, 20);
   $query->condition('c.status', $view_type == 'inactive' ? 0 : 1)->fields('c');
   
   $rows = array();
@@ -133,13 +133,13 @@ function uc_coupon_view($coupon) {
   if (!$coupon->status) {
     $status = t('Inactive');
   }
-  else if (!$coupon->valid_until) {
+  elseif (!$coupon->valid_until) {
     $status = t('Active');
   }
-  else if (REQUEST_TIME < $coupon->valid_from) {
+  elseif (REQUEST_TIME < $coupon->valid_from) {
     $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
   }
-  else if (REQUEST_TIME > $coupon->valid_until) {
+  elseif (REQUEST_TIME > $coupon->valid_until) {
     $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
   }
   else {
