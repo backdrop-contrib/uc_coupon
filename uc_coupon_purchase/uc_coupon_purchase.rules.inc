@@ -141,11 +141,9 @@ function uc_coupon_purchase_message_formats() {
 
   $options = array();
   $formats = filter_formats($user);
-  dpm($formats);
   foreach ($formats as $format) {
     $options[$format->format] = $format->name;
   }
-  dpm($options);
   return $options;
 }
 
@@ -186,8 +184,7 @@ function uc_coupon_purchase_email($order, $coupon, $from, $addresses, $subject, 
   }
 }
 
-
+// !TODO Complete coupon purchase assign rules action.
 function uc_coupon_purchase_assign($user, $cid, $limit) {
   $coupon = uc_coupon_load($cid);
-  dpm($coupon);
 }

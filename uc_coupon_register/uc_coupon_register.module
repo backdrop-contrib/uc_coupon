@@ -99,6 +99,7 @@ function uc_coupon_register_user_OLD($type, &$edit, &$account, $category = NULL)
 
 /**
  * Implements hook_mail().
+ * !TODO Verify that tokens are properly handled in uc_coupon_register
  */
 function uc_coupon_register_mail($key, &$message, $params) {
   $language = $message['language'];
