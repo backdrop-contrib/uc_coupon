@@ -550,7 +550,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
  */
 function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
   // Check for applicable products.
-  if ($order && $coupon->amount == 0) {
+  if ($order && $coupon->amount == 0 && $coupon->value != 0) {
     return t('You do not have applicable products in your cart.');
   }
 
