@@ -1149,6 +1149,12 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
       }
     }
     $form['cart_contents']['#value'] = serialize($items);
+    // Make sure the fake uc_coupon cart item doesn't appear in the payment preview pane.
+    // This is necessary because uc_checkout_pane_cart('view') resets the $order->products
+    // field to the cart contents when rebuilding form after an AJAX submission.
+    if (isset($form['panes']['payment']['line_items']['#order']->products)) {
+      $form['panes']['payment']['line_items']['#order']->products = $items;
+    }
   }
 
   if (variable_get('uc_coupon_collapse_pane', FALSE) && isset($form['panes']['coupon'])) {
