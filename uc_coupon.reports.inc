@@ -1,5 +1,8 @@
 <?php
-
+/**
+ * @file
+ * Discount Coupons reports pages.
+ */
 /**
  * Coupon report options form.
  */
@@ -89,7 +92,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
     	LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) 
     	WHERE o.created > :start AND o.created < :end AND o.order_status IN (:statuses) 
     	ORDER BY co.cid, o.created ASC", 
-      array(':start'=>$start, ':end'=>$end, ':statuses'=>$statuses));
+      array(':start' => $start, ':end' => $end, ':statuses' => $statuses));
     $total = 0;
 
     $row_header = array(t('Order #'), t('Purchase date'), t('Total'), t('Coupon value'));

@@ -916,7 +916,7 @@ function uc_coupon_checkout_update($form, $form_state) {
 function uc_checkout_pane_coupon($op, &$order, $form=NULL, &$form_state=NULL) {
   switch ($op) {
     case 'view':
-      drupal_add_css('#coupon-messages { clear: both; }',array('type' => 'inline', 'group' => CSS_DEFAULT));
+      drupal_add_css('#coupon-messages { clear: both; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
       if (isset($_SESSION['uc_coupon'])) {
         $code = $_SESSION['uc_coupon'];
       }

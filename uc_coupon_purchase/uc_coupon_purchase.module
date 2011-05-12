@@ -116,7 +116,7 @@ function uc_coupon_purchase_uc_coupon_actions($coupon) {
  * Check whether a given user has purchased any coupon, or the specific supplied coupon.
  */
 function uc_coupon_purchase_has_coupon($account, $coupon = NULL) {
-  $query = db_select('uc_coupon_purchase_users','u')->condition('u.uid',$account->uid)->addExpression('COUNT(*)');
+  $query = db_select('uc_coupon_purchase_users', 'u')->condition('u.uid', $account->uid)->addExpression('COUNT(*)');
   // Make sure coupon is valid before looking for it.
   if (!empty($coupon) && !empty($coupon->cid)) {
     $query->condition('u.cid', $coupon->cid, 'AND');
@@ -125,7 +125,7 @@ function uc_coupon_purchase_has_coupon($account, $coupon = NULL) {
 }
 
 /**
- * Implements hook_product_feature().
+ * Implements hook_uc_product_feature().
  */
 function uc_coupon_purchase_uc_product_feature() {
   $features[] = array(
@@ -140,7 +140,7 @@ function uc_coupon_purchase_uc_product_feature() {
 }
 
 /**
- * Form builder for hook_product_feature().
+ * Form builder for hook_uc_product_feature().
  */
 function uc_coupon_purchase_feature_form(&$form, $form_state, $node, $feature) {
   $models = array(
@@ -180,7 +180,7 @@ function uc_coupon_purchase_feature_form(&$form, $form_state, $node, $feature) {
 
   $form['title'] = array(
     '#type' => 'markup',
-    '#value' => '<h2>' . t('Coupon creation') . '</h2>',
+    '#markup' => '<h2>' . t('Coupon creation') . '</h2>',
   );
   $form['nid'] = array(
     '#type' => 'value',
@@ -427,8 +427,8 @@ function uc_coupon_purchase_create($coupon, $qty, $uid = NULL) {
   if (!is_null($uid)) {
     $id = db_insert('uc_coupon_purchase_users')
       ->fields(array(
-    		'uid' => $uid,
-    		'cid' => $coupon->cid,
+        'uid' => $uid,
+        'cid' => $coupon->cid,
       ))
       ->execute();
   }

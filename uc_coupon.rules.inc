@@ -48,7 +48,7 @@ function uc_coupon_rules_condition_info() {
         'type' => 'uc_order',
         'label' => t('Order'),
       ),
-  		'codes' => array(
+      'codes' => array(
         'type' => 'list<text>',
         'label' => t('Codes'),
         'description' => t('Enter coupon codes that this condition will apply to, one per line. Wildcards are allowed, e.g. COUPON* will match all codes beginning with COUPON. Leave blank to apply to any order with a coupon.'),

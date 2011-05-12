@@ -1,4 +1,8 @@
 <?php
+/**
+ * @file
+ * Discount Coupons administration pages.
+ */
 
 /**
  * Store-wide coupon settings form.
@@ -250,7 +254,7 @@ function uc_coupon_view($coupon) {
   if ($coupon->data['wholesale'] == 2) {
     $restrict['Has permission'] = array('coupon wholesale pricing');
   }
-  else if ($coupon->data['wholesale'] == 3) {
+  elseif ($coupon->data['wholesale'] == 3) {
     $restrict['Does not have permission'] = array('coupon wholesale pricing');
   }
   if ($restrict) {
@@ -723,9 +727,9 @@ function uc_coupon_ajax_callback($form, $form_state) {
  */
 function uc_coupon_ajax_submit($form, &$form_state) {
   $elem = $form_state['triggering_element']['#name'];
-  if (substr($elem,0,3) === 'op_') {
+  if (substr($elem, 0, 3) === 'op_') {
     $form_statet['rebuild'] = TRUE;
-    $form_state['ajax_submission'] = substr($elem,3);
+    $form_state['ajax_submission'] = substr($elem, 3);
     uc_coupon_add_form_submit($form, $form_state);
   }
 }

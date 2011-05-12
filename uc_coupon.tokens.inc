@@ -17,25 +17,25 @@ function uc_coupon_token_info() {
   );
 
   $tokens = array(
-    'uc_coupon' => array(	
-    	'name' => array(
+    'uc_coupon' => array(  
+      'name' => array(
         'name' => t('Name'),
-      	'description' => t('The name of the coupon.'),
+        'description' => t('The name of the coupon.'),
       ),
-    	'code' => array(
-      	'name' => t('Code'),
-      	'description' => t('The coupon code.'),
+      'code' => array(
+        'name' => t('Code'),
+        'description' => t('The coupon code.'),
       ),
       'bulk-codes' => array(
-      	'name' => t('Bulk Codes'),
-      	'description' => t('The list of bulk coupon codes, if the coupon is a bulk coupon.'),
+        'name' => t('Bulk Codes'),
+        'description' => t('The list of bulk coupon codes, if the coupon is a bulk coupon.'),
       ),
     ),
   
     'uc_order' => array(
-    	'coupon-code' => array(
-      	'name' => t('Coupon Code'),
-      	'description' => t('The coupon code used in the order.'),
+      'coupon-code' => array(
+        'name' => t('Coupon Code'),
+        'description' => t('The coupon code used in the order.'),
       ),
     ),
   );
