@@ -727,7 +727,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         else {
           // Apply discount to each product's untaxed price.
           //$item->discount = min($coupon->value * $item->price / $item->altered_price, $item->price);
-          $item->discount = min($coupon->value, $item->price); // !TODO - work out VAT compatibility
+          $item->discount = min($coupon->value, $item->price); // !TODO - work out mixed tax rate compatibility.
         }
         break;
 
@@ -790,9 +790,8 @@ function uc_coupon_price($amount, $revision = 'formatted') {
  * Implements hook_block_info().
  */
 function uc_coupon_block_info() {
-  // TODO Rename block deltas (e.g. delta-0) to readable strings.
   $blocks = array();
-  $blocks['delta-0'] = array(
+  $blocks['coupon-discount'] = array(
     'info' => t('Coupon discount form'),
   );
   return $blocks;
@@ -802,8 +801,7 @@ function uc_coupon_block_info() {
  * Implements hook_block_view().
  */
 function uc_coupon_block_view($delta) {
-  // TODO Rename block deltas (e.g. delta-0) to readable strings.
-  if ($delta == 'delta-0') {
+  if ($delta == 'coupon-discount') {
     $block = array(
       'subject' => t('Coupon discount'),
       'content' => drupal_get_form('uc_coupon_block_form'),

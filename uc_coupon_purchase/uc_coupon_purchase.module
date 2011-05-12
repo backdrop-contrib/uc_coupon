@@ -7,7 +7,7 @@ function uc_coupon_purchase_permission() {
   return array(
     'view purchased coupons' => array(
       'title' => t('view purchased coupons'),
-      'description' => t('TODO Add a description for \'view purchased coupons\''),
+      'description' => t('View list of the coupons a user has purchased.'),
     ),
   );
 }

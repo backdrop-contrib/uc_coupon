@@ -5,10 +5,8 @@
  *
  */
 
-
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Implements hook_schema()
  */
 function uc_coupon_purchase_schema() {
   $schema = array();
@@ -79,58 +77,9 @@ function uc_coupon_purchase_schema() {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
-function uc_coupon_purchase_install() {
-  // TODO The drupal_(un)install_schema functions are called automatically in D7.
-  // drupal_install_schema('uc_coupon_purchase')
-}
-
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Implements hook_uninstall().
  */
 function uc_coupon_purchase_uninstall() {
-  // TODO The drupal_(un)install_schema functions are called automatically in D7.
-  // drupal_uninstall_schema('uc_coupon_purchase')
   variable_del('uc_coupon_purchase_order_status');
 }
 
-/**
- * Add the coupon tracking table.
- */
-function uc_coupon_purchase_update_6000() {
-  $ret = array();
-
-  $schema['uc_coupon_purchase_users'] = array(
-    'description' => 'Ubercart Purchased Coupons Per Purchaser',
-    'fields' => array(
-      'cpuid' => array(
-        'type' => 'serial',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'uid' => array(
-        'description' => 'The user id.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'cid' => array(
-        'description' => 'The coupon id.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-    ),
-    'primary key' => array('cpuid'),
-  );
-
-  db_create_table('uc_coupon_purchase_users', $schema['uc_coupon_purchase_users']);
-
-  // hook_update_N() no longer returns a $ret array. Instead, return
-  // nothing or a translated string indicating the update ran successfully.
-  // See http://drupal.org/node/224333#update_sql.
-  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
-}
