@@ -1129,7 +1129,7 @@ function uc_coupon_uc_cart_display($item) {
   return array(
     '#module' => 'uc_coupon', // Not used in core, but allows modules/themes to act on this special cart item.
     'nid' => array('#type' => 'value', '#value' => 0),
-    'title' => array('#value' => $item->title),
+    'title' => array('#markup' => $item->title),
     '#total' => $item->price,
   );
 }
