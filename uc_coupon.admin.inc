@@ -833,7 +833,9 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     }
   }
 
-  if (!$form['#uc_coupon_used'] && $form_state['values']['bulk_generate'] && intval($form_state['values']['bulk_number']) <= 0) {
+  if ( (!isset($form['#uc_coupon_used']) || $form['#uc_coupon_used'] == 0)
+      && $form_state['values']['bulk_generate'] 
+      && intval($form_state['values']['bulk_number']) <= 0) {
     form_set_error('bulk_number', t('You must specify the number of codes to generate.'));
   }
 
@@ -851,7 +853,7 @@ function uc_coupon_add_form_validate($form, &$form_state) {
  */
 function uc_coupon_add_form_submit($form, &$form_state) {
   // If the coupon was previously used, reset disabled textfields to their original values.
-  if ($form['#uc_coupon_used']) {
+  if (isset($form['#uc_coupon_used']) && $form['#uc_coupon_used'] != 0) {
     $form_state['values']['code'] = $form['#uc_coupon']->code;
     $form_state['values']['bulk_number'] = $form['#uc_coupon']->data['bulk_number'];
   }

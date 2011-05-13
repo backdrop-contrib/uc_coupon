@@ -34,7 +34,7 @@ function uc_coupon_register_form_user_admin_settings_alter(&$form, &$form_state)
     '#default_value' => variable_get('uc_coupon_register_mail_body', t("!username,\n\nThank you for registering at !site.\n\nYou may use the following coupon during checkout: !coupon_code\n\nPlease ensure you are logged in to your account, or you will not be able to use the coupon.\n\n\n--  !site team")),
     '#rows' => 10,
   );
-  $form['buttons']['#weight']++;
+  //$form['buttons']['#weight']++;
 }
 
 /**

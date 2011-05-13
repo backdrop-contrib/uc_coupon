@@ -290,7 +290,7 @@ function uc_coupon_purchase_uc_message() {
  * Modify the coupon add form to include coupon purchase options.
  */
 function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
-  $value = $form['#uc_coupon'];
+  $value = isset($form['#uc_coupon']) ? $form['#uc_coupon'] : new stdClass();
 
   $form['uc_coupon_purchase'] = array(
     '#type' => 'fieldset',

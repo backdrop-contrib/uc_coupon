@@ -673,8 +673,12 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     return array();
   }
 
-  if (($coupon->data['minimum_qty_restrict'] ? $matched : $total_qty) < $coupon->data['minimum_qty']) {
-    return array();
+  // Make sure the minimum quantity restriction (if any) is met.
+  if (isset($coupon->data['minimum_aty'])) {
+    $check_qty = (isset($coupon->data['minimum_qty_restrict']) && $coupon->data['minimum_qty_restrict'] != FALSE) ? $matched : $total_qty;
+    if ($check_qty < $coupon->data['minimum_aty']) {
+      return array();
+    }      
   }
 
   // Slice off applicable products if a limit was set.
@@ -1110,6 +1114,7 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
     $coupon = uc_coupon_validate($_SESSION['uc_coupon']);
     if ($coupon->valid) {
       $items[] = (object) array(
+        'cart_item_id' => 0,
         'module' => 'uc_coupon',
         'coupon' => $coupon,
         'title' => $coupon->title,
@@ -1127,10 +1132,13 @@ function uc_coupon_uc_cart_alter(&$items, $ignore = NULL) {
  */
 function uc_coupon_uc_cart_display($item) {
   return array(
-    '#module' => 'uc_coupon', // Not used in core, but allows modules/themes to act on this special cart item.
+    'module' => array('#type' => 'value', '#value' => 'uc_coupon'),
     'nid' => array('#type' => 'value', '#value' => 0),
     'title' => array('#markup' => $item->title),
+    'description' => array('#markup' => ''),
+    'qty' => array('#type' => 'hidden', '#value' => 0),
     '#total' => $item->price,
+    'data' => array('#type' => 'hidden', '#value' => serialize($item->data)),
   );
 }
 
