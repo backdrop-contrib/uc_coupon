@@ -302,7 +302,7 @@ function uc_coupon_save(&$coupon, $edit = array()) {
  */
 function uc_coupon_load($cid) {
   $coupon = db_query("SELECT * FROM {uc_coupons} WHERE cid = :cid", array(':cid' => $cid))->fetchObject();
-  $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
+  $coupon->data = isset($coupon->data) ? unserialize($coupon->data) : array();
 
   // Convert old coupons that could not specify "per order" when restricted.
   if (!isset($coupon->data['apply_to'])) {
@@ -1092,6 +1092,7 @@ function _uc_coupon_paypal_check() {
  * Implements hook_uc_store_status().
  */
 function uc_coupon_uc_store_status() {
+  $statuses = array();
   if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wps_submit_method', 'single') == 'itemized') {
     $statuses[] = array(
       'status' => 'warning',

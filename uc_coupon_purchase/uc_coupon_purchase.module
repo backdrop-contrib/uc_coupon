@@ -354,7 +354,7 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
   switch ($op) {
     case 'update':
       if ($status == variable_get('uc_coupon_purchase_order_status', 'completed') &&
-          $order->status != $status &&
+          $order->order_status != $status &&
           $order->uid > 0 &&
           ($order_user = user_load($order->uid)) !== FALSE) {
         foreach ($order->products as $product) {
