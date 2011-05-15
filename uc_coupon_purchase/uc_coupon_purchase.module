@@ -29,6 +29,7 @@ function uc_coupon_purchase_menu() {
     'file' => 'uc_coupon_purchase.pages.inc',
     'weight' => 5,
   );
+
   $items['user/%user/coupons/%uc_coupon'] = array(
     'title' => 'Print preview',
     'page callback' => 'uc_coupon_purchase_print',
@@ -39,6 +40,7 @@ function uc_coupon_purchase_menu() {
     'file' => 'uc_coupon_purchase.pages.inc',
     'weight' => 5,
   );
+
   $items['user/%user/coupons/%uc_coupon/codes'] = array(
     'title' => 'Download codes',
     'page callback' => 'uc_coupon_codes_csv',
@@ -52,6 +54,14 @@ function uc_coupon_purchase_menu() {
   );
 
   return $items;
+}
+
+/**
+ * Properly handle %uc_coupon wildcard.
+ * (Necessary to prevent PHP runtime notice.)
+ */
+function uc_coupon_to_arg($arg) {
+  return $arg;
 }
 
 /**

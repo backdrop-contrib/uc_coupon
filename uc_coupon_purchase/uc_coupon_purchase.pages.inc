@@ -51,7 +51,7 @@ function uc_coupon_purchase_view($account) {
       else {
         $link = l($code, 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/view/' . $code);
         $link .= ' ' . l($icon, 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/print/' . $code, array('html' => TRUE));
-        $used = $usage['codes'][$code];
+        $used = empty($usage['codes'][$code]) ? '' : $usage['codes'][$code];
       }
 
       $rows[] = array($link, $value, $valid, $uses, $used);
