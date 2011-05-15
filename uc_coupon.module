@@ -555,7 +555,7 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
   }
 
   // Check maximum usage per code.
-  if ($coupon->max_uses > 0 && $coupon->usage['codes'][$coupon->code] >= $coupon->max_uses) {
+  if ($coupon->max_uses > 0 && !empty($coupon->usage['codes'][$coupon->code]) && $coupon->usage['codes'][$coupon->code] >= $coupon->max_uses) {
     return t('This coupon has reached the maximum redemption limit.');
   }
 
