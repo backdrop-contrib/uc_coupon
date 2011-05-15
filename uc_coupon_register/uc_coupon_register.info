@@ -1,8 +1,0 @@
-name = Discount Coupon User Registration
-description = Issues a coupon after a new user is registered.
-dependencies[] = uc_coupon
-package = Ubercart - payment
-core = 7.x
-
-files[] = uc_coupon_register.install
-files[] = uc_coupon_register.module
