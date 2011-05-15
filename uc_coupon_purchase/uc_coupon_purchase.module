@@ -282,19 +282,6 @@ function uc_coupon_purchase_feature_settings() {
 }
 
 /**
- * Implements hook_uc_message().
- */
-function uc_coupon_purchase_uc_message() {
-  $messages['uc_coupon_purchase_single_subject'] = t('[store:name]: coupon purchase');
-  $messages['uc_coupon_purchase_single_message'] = t("[uc_order:first-name] [uc_order:last-name], \n\nThanks to your order, [uc_order:link], at [store:name] you now have a new coupon available to use with the code [uc_coupon:code].\n\nThanks again, \n\n[store:name]\n[site:slogan]");
-  $messages['uc_coupon_purchase_bulk_subject'] = t('[store:name]: bulk coupon purchase');
-  $messages['uc_coupon_purchase_bulk_message'] = t("[uc_order:first-name] [uc_order:last-name], \n\nThanks to your order, [uc_order:link], at [store:name] you now have a new set of coupons available to use with the following codes:\n\n[uc_coupon:bulk-codes]\n\nThanks again, \n\n[store:name]\n[site:slogan]");
-
-  return $messages;
-}
-
-
-/**
  * Implements hook_form_FORM_ID_alter() for uc_coupon_add_form().
  *
  * Modify the coupon add form to include coupon purchase options.
