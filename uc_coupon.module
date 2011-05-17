@@ -662,8 +662,24 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     }
     $total_qty += $qty;
 
-    // Coupons that apply to the order subtotal affect all products.
+    // Include this item. Coupons that apply to the order subtotal affect all products.
     if ($include || $coupon->data['apply_to'] == 'subtotal') {
+      // Calculate the taxable discount proportion for this item.
+      // For fixed discounts to products with taxes included, we apply the face value of the coupon
+      // tax-inclusively also; that is, to both the untaxed item price and the tax, proportionately.
+      // (This already happens automatically for percentage based coupons).
+      if ($coupon->type != 'percentage') {
+        $included_rate = 0;
+        foreach (uc_taxes_rate_load() as $tax) {
+          if ($tax->display_include
+              && is_array($tax->taxed_line_items) && in_array('coupon', $tax->taxed_line_items)
+              && in_array($node->type, $tax->taxed_product_types)
+              && ($tax->shippable == 0 || $item->data['shippable'] == 1)) {
+            $included_rate += $tax->rate;
+          }
+        }
+        $item->taxable_discount = 1 / (1 + $included_rate);
+      }
       $items = array_pad($items, count($items) + $qty, $item);
     }
   }
@@ -694,6 +710,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       break;
   }
 
+  // Get the order total.
   $total = 0;
   foreach ($items as $item) {
     $total += $item->price;
@@ -707,8 +724,10 @@ function uc_coupon_calculate_discounts($coupon, $order) {
           $item->discount = $total == 0 ? 0 : min($coupon->value * $item->price / $total, $item->price);
         }
         else {
+          // Apply discount to each product.
           $item->discount = min($coupon->value, $item->price);
         }
+        $item->taxable_discount *= $item->discount;
         break;
 
       case 'percentage':
@@ -716,10 +735,11 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         break;
 
       case 'set_price':
-        $item->discount = max($item->price - $coupon->value, 0); 
+        $item->discount = max($item->price - $coupon->value, 0);
+        $item->taxable_discount *= $item->discount;
         break;
     }
-  }
+   }
 
   return $items;
 }
@@ -819,16 +839,28 @@ function uc_coupon_block_form_submit($form, &$form_state) {
 
 /**
  * Implements hook_uc_order().
- *
- * Ensure any cart pane coupon is added to the order if the checkout page is skipped
- * (e.g. Paypal Express Checkout, Google Checkout)
  */
-function uc_coupon_uc_order($op, &$arg1, $arg2) {
+function uc_coupon_uc_order($op, &$order) {
+  // Ensure any cart pane coupon is added to the order if the checkout page is skipped
+  // (e.g. Paypal Express Checkout, Google Checkout)
   if ($op == 'save' && isset($_SESSION['uc_coupon'])) {
-    $coupon = uc_coupon_validate($_SESSION['uc_coupon'], $arg1);
+    $coupon = uc_coupon_validate($_SESSION['uc_coupon'], $order);
     if ($coupon->valid) {
-      _uc_coupon_apply_to_order($arg1->order_id, $coupon);
+      _uc_coupon_apply_to_order($order->order_id, $coupon);
     }
+  }
+  // Ensure that the order total is calculated properly when tax-inclusive coupon discounts are applied.
+  elseif ($op == 'total' && isset($order->data['coupon'])) {
+    $adjustment = 0;
+    if (module_exists('uc_taxes') && isset($order->data['coupon']) && ($coupon = uc_coupon_find($order->data['coupon']))) {
+      $items = uc_coupon_calculate_discounts($coupon, $order);
+      if ($coupon->type != 'percentage') {
+        foreach ($items as $item) {
+          $adjustment += $item->discount - $item->taxable_discount;
+        }
+      }
+    }
+    return $adjustment;
   }
 }
 
@@ -1052,16 +1084,45 @@ function uc_coupon_uc_line_item() {
 }
 
 /**
+ * Implements hook_uc_line_item_alter().
+ */
+function uc_coupon_uc_line_item_alter(&$item, $order) {
+  switch ($item['type']) {
+    // Adjust the pre-tax subtotal to exclude the portion of a tax-inclusive coupon that applies to the tax.
+    case 'tax_subtotal':
+      $item['amount'] += uc_coupon_uc_order('total', $order);
+      break;
+
+    // Adjust the total tax so that each tax is applied to coupon on a per-product basis.
+    // !TODO - Remove this if patch to uc_taxes from http://drupal.org/node/1155656 is committed.
+    case 'tax':
+      $tax = uc_taxes_rate_load($item['data']['tax_id']);
+      if (is_array($tax->taxed_line_items)
+          && in_array('coupon',$tax->taxed_line_items)
+          && isset($order->data['coupon'])
+          && ($coupon = uc_coupon_find($order->data['coupon']))) {
+        uc_coupon_calculate_discounts($coupon, $order);
+        $item['amount'] += (uc_coupon_tax_adjustment(-1, $order, $tax) + $coupon->value) * $tax->rate;
+      }
+      break;
+  }
+}
+
+/**
  * Handle tax on coupons by calculating tax for individual discounted prices.
- * This is currently only supported by the VAT module (uc_vat).
+ * This is designed to work with a patch to uc_taxes from http://drupal.org/node/1155656.
  */
 function uc_coupon_tax_adjustment($price, $order, $tax) {
   if (isset($order->data['coupon'])) {
     $code = $order->data['coupon'];
   }
-  elseif (isset($_SESSION['uc_coupon'])) {
-    $code = $_SESSION['uc_coupon'];
-  }
+  // This should only be necessary if the tax is displayed elsewhere than on
+  // the checkout or order review pages, and could cause problems when
+  // reviewing an old order without a coupon if a different coupon has
+  // been applied to the current cart.
+  // elseif (isset($_SESSION['uc_coupon'])) {
+  //  $code = $_SESSION['uc_coupon'];
+  //}
   else {
     return;
   }
@@ -1072,7 +1133,7 @@ function uc_coupon_tax_adjustment($price, $order, $tax) {
   foreach ($items as $item) {
     $node = node_load($item->nid);
     if (in_array($node->type, $tax->taxed_product_types) && ($tax->shippable == 0 || $node->shippable == 1)) {
-      $amount += $item->discount * ($price > 0 ? 1 : -1);
+      $amount += (isset($item->taxable_discount) ? $item->taxable_discount : $item->discount) * ($price > 0 ? 1 : -1);
     }
   }
 
@@ -1158,11 +1219,17 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
       }
     }
     $form['cart_contents']['#value'] = serialize($items);
-    // Make sure the fake uc_coupon cart item doesn't appear in the payment preview pane.
-    // This is necessary because uc_checkout_pane_cart('view') resets the $order->products
-    // field to the cart contents when rebuilding form after an AJAX submission.
-    if (isset($form['panes']['payment']['line_items']['#order']->products)) {
-      $form['panes']['payment']['line_items']['#order']->products = $items;
+    // Make sure the fake uc_coupon cart item doesn't add to the total of the payment
+    // preview pane once it has been recorded as a line item.  This is necessary because
+    // uc_checkout_pane_cart('view') resets the $order->products field to the cart contents
+    // when rebuilding form after an AJAX submission.
+    if (isset($form['panes']['payment']['line_items']['#order'])) {
+      $order = $form['panes']['payment']['line_items']['#order'];
+      foreach ($order->line_items as $line) {
+        if ($line['type'] == 'coupon') {
+          $form['panes']['payment']['line_items']['#order']->products = $items;
+        }
+      }
     }
   }
 
