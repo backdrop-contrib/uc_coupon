@@ -614,13 +614,13 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
  */
 function uc_coupon_calculate_discounts($coupon, $order) {
   $restricted = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
-
+  
   // Discover if any items match the restrictions, and which items the discount should be calculated against.
   $matched = 0;
   $total_qty = 0;
   $items = array();
   foreach ($order->products as $item) {
-    if ($item->module == 'uc_coupon') {
+    if (isset($item->module) && $item->module == 'uc_coupon') {
       continue;
     }
 
@@ -1137,7 +1137,7 @@ function uc_coupon_uc_cart_display($item) {
     'nid' => array('#type' => 'value', '#value' => 0),
     'title' => array('#markup' => $item->title),
     'description' => array('#markup' => ''),
-    'qty' => array('#type' => 'hidden', '#value' => 0),
+    'qty' => array('#type' => 'hidden', '#value' => 0, '#default_value' => 1),
     '#total' => $item->price,
     'data' => array('#type' => 'hidden', '#value' => serialize($item->data)),
   );
