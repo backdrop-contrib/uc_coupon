@@ -855,7 +855,9 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   // If the coupon was previously used, reset disabled textfields to their original values.
   if (isset($form['#uc_coupon_used']) && $form['#uc_coupon_used'] != 0) {
     $form_state['values']['code'] = $form['#uc_coupon']->code;
-    $form_state['values']['bulk_number'] = $form['#uc_coupon']->data['bulk_number'];
+    if ($form['#uc_coupon']->bulk) {
+      $form_state['values']['bulk_number'] = $form['#uc_coupon']->data['bulk_number'];
+    }
   }
 
   // Ensure all fields of original coupon object propagate to presave hook.
