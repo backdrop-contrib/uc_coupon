@@ -402,15 +402,35 @@ function uc_coupon_get_bulk_code($coupon, $id) {
 
 /**
  * Load a coupon (single or bulk) from the supplied code.
+ * @param $code
+ * 		The coupon code to search for.
+ * @param $reset
+ *    If TRUE the cache of codes for this request will be purged.  Any function which modifies
+ *    a coupon should purge the cache.
  */
-function uc_coupon_find($code) {
+function uc_coupon_find($code, $reset=FALSE) {
+  // This is expensive and can be called many times during coupon processing, so we 
+  // cache 
+  static $cached = array();
+  if ($reset) {
+    $cached = array();
+  }
+  
+  if (!$code) {
+    return FALSE;
+  }
+  elseif (array_key_exists($code, $cached)) {
+    return $cached[$code];
+  }
+  
   // Look for matching single coupon first.
   $coupon = db_query("SELECT cid FROM {uc_coupons} 
   	WHERE code = :code AND status = 1 AND bulk = 0 AND valid_from < :now AND (valid_until = 0 OR valid_until > :now)", 
     array(':code' => $code, ':now' => REQUEST_TIME))
     ->fetchObject();
   if ($coupon) {
-    return uc_coupon_load($coupon->cid);
+    $cached[$code] = uc_coupon_load($coupon->cid);
+    return $cached[$code];
   }
 
   // Look through bulk coupons.
@@ -440,11 +460,13 @@ function uc_coupon_find($code) {
 
     // Check complete coupon code.
     if ($code == uc_coupon_get_bulk_code($coupon, $id)) {
-      return uc_coupon_load($coupon->cid);
+      $cached[$code] = uc_coupon_load($coupon->cid);
+      return $cached[$code];
     }
   }
 
-  return FALSE;
+  $cached[$code] = FALSE;
+  return $cached[$code];
 }
 
 /**
