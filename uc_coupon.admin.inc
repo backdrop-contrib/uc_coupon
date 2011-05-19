@@ -325,7 +325,8 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
 
   if ($coupon) {
     $value = $coupon;
-    $used = db_query("SELECT COUNT(*) FROM {uc_coupons_orders} WHERE cid = :cid", array(':cid' => $value->cid))->fetchField();
+    $usage = uc_coupon_count_usage($coupon->cid);
+    $used = array_sum($usage['codes']);
     $form['#uc_coupon_cid'] = $value->cid;
     $form['#uc_coupon'] = $value;
     $form['#uc_coupon_used'] = $used;
@@ -405,27 +406,20 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#weight' => -5,
   );
 
-  if (!$used) {
-    $form['bulk']['bulk_generate'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Enable bulk generation of coupon codes.'),
-      '#default_value' => isset($value->bulk) ? $value->bulk : FALSE,
-    );
-  }
-  else {
-    $form['bulk']['bulk_generate'] = array(
-      '#type' => 'value',
-      '#default_value' => $value->bulk,
-    );
-  }
-
+  $form['bulk']['bulk_generate'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable bulk generation of coupon codes.'),
+    '#default_value' => $value->bulk,
+    '#disabled' => $used,
+  );
+  
   $form['bulk']['bulk_number'] = array(
     '#type' => 'textfield',
     '#title' => t('Number of codes to generate'),
     '#default_value' => isset($value->data['bulk_number']) ? $value->data['bulk_number'] : NULL,
     '#size' => 10,
     '#maxlength' => 10,
-    '#disabled' => $used,
+    '#description' => $used ? t('You cannot decrease this number, because this coupon has already been used.') : '',
   );
 
   $form['bulk']['bulk_length'] = array(
@@ -806,6 +800,10 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
+  
+  if ($form['#uc_coupon_used'] && $form_state['values']['bulk_number'] < $form['#uc_coupon']->data['bulk_number']) {
+    form_set_error('bulk_number', t('You cannot decrease the number of bulk codes for a coupon that has been used.'));
+  }
 
   if (!preg_match('/^(=(?!.*%))?\d+(\.\d+)?%?$/', $form_state['values']['discount'])) {
     form_set_error('discount', t('Invalid discount.'));
@@ -855,9 +853,6 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   // If the coupon was previously used, reset disabled textfields to their original values.
   if (isset($form['#uc_coupon_used']) && $form['#uc_coupon_used'] != 0) {
     $form_state['values']['code'] = $form['#uc_coupon']->code;
-    if ($form['#uc_coupon']->bulk) {
-      $form_state['values']['bulk_number'] = $form['#uc_coupon']->data['bulk_number'];
-    }
   }
 
   // Ensure all fields of original coupon object propagate to presave hook.
