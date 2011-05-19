@@ -83,3 +83,10 @@ function uc_coupon_purchase_uninstall() {
   variable_del('uc_coupon_purchase_order_status');
 }
 
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function uc_coupon_purchase_update_last_removed() {
+  return 6000;
+}

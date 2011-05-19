@@ -23,5 +23,11 @@ Drupal 6 Port
 Jordan of Cubicle Collective
 jordan@gocubeco DAWT com
 
-
 Coupon Reports Sponsored by: Oasis Day Spa - http://www.oasisdayspanyc.com
+
+Drupal 7 Port
+
+Chris Oden
+wodenx@gmail.com
+Sponsored by Fishhound - http://www.fishhound.com
+
