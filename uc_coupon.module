@@ -172,8 +172,7 @@ function uc_coupon_menu() {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Title call back for coupon print preview.
  */
 function uc_coupon_title($coupon) {
   return $coupon->name;
@@ -879,8 +878,7 @@ function uc_coupon_block_form($form, $form_state, $size = 15) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Submit hanler for uc_coupon_block_form.
  */
 function uc_coupon_block_form_submit($form, &$form_state) {
   if (isset($form_state['values']['code'])) {
@@ -1147,10 +1145,10 @@ function uc_coupon_uc_line_item_alter(&$item, $order) {
     case 'tax':
       $tax = uc_taxes_rate_load($item['data']['tax_id']);
       if (is_array($tax->taxed_line_items)
-          && in_array('coupon',$tax->taxed_line_items)
+          && in_array('coupon', $tax->taxed_line_items)
           && isset($order->data['coupon'])) {
         $old_value = 0;
-        foreach($order->data['coupon_items'] as $coupon_item) {
+        foreach ($order->data['coupon_items'] as $coupon_item) {
           $old_value += $coupon_item->discount;
         }
         $item['amount'] += (uc_coupon_tax_adjustment(-1, $order, $tax) + $old_value) * $tax->rate;

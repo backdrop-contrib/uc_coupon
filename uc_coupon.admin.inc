@@ -956,8 +956,7 @@ function uc_coupon_delete_confirm($form, &$form_state, $coupon) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Delete coupon confirm form submit handler.
  */
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
   $coupon = uc_coupon_load($form['#uc_coupon_cid']);

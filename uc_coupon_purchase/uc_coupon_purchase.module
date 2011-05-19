@@ -84,12 +84,8 @@ function uc_coupon_purchase_can_view($account, $coupon = NULL) {
   return FALSE;
 }
 
-/*
- * Implementation of hook_uc_coupon_actions for purchased coupons
- */
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Implementation of hook_uc_coupon_actions for purchased coupons
  */
 function uc_coupon_purchase_uc_coupon_actions($coupon) {
   $actions = array();
@@ -215,8 +211,7 @@ function uc_coupon_purchase_feature_form(&$form, $form_state, $node, $feature) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Submit handler for uc_coupon_purchase_feature form.
  */
 function uc_coupon_purchase_feature_form_submit($form, &$form_state) {
   $coupon = uc_coupon_load($form_state['values']['base_cid']);
@@ -317,8 +312,7 @@ function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Extra validation for uc_coupon_add_form.
  */
 function uc_coupon_purchase_uc_coupon_add_form_validate($form, &$form_state) {
   if ($form_state['values']['purchase_relative'] && !$form_state['values']['use_validity']) {

@@ -61,8 +61,7 @@ function uc_coupon_reports_form($form, &$form_state, $start = NULL, $end = NULL,
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Submit handler for uc_coupon_reports form.
  */
 function uc_coupon_reports_form_submit($form, &$form_state) {
   $start = gmmktime(0, 0, 0, $form_state['values']['start']['month'], $form_state['values']['start']['day'], $form_state['values']['start']['year']);

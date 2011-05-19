@@ -17,8 +17,8 @@ function uc_coupon_workflow_default_rules_configuration() {
   $rule->event('user_insert')
     ->condition(rules_condition('uc_coupon_workflow_suspended')->negate())
     ->action('uc_coupon_workflow_assign', array(
-      	'account:select' => 'account',
-      	'cid' => 1
+      'account:select' => 'account',
+      'cid' => 1
       ))
     ->action('uc_coupon_workflow_email', array(
       'coupon:select' => 'coupon',
