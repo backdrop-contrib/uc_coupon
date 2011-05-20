@@ -409,7 +409,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['bulk']['bulk_generate'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable bulk generation of coupon codes.'),
-    '#default_value' => $value->bulk,
+    '#default_value' => isset($value->bulk) ? $value->bulk : FALSE,
     '#disabled' => $used,
   );
   
@@ -441,7 +441,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['discount'] = array(
     '#type' => 'textfield',
     '#title' => t('Discount'),
-    '#default_value' => isset($coupon->value) ? uc_coupon_format_discount($value, FALSE) : '',
+    '#default_value' => isset($coupon->value) ? _uc_coupon_format_discount($value,FALSE) : '',
     '#size' => 6,
     '#description' => t('Three discount types are possible:') . theme('item_list', array('items' => array(
         t('Fixed price discount; enter "15" for $15.00 off.'),
@@ -801,7 +801,9 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
   
-  if ($form['#uc_coupon_used'] && $form_state['values']['bulk_number'] < $form['#uc_coupon']->data['bulk_number']) {
+  if ($form['#uc_coupon_used'] 
+      && isset($form_state['values']['bulk_number']) && isset($form['#uc_coupon']->data['bulk_number'])
+      && $form_state['values']['bulk_number'] < $form['#uc_coupon']->data['bulk_number']) {
     form_set_error('bulk_number', t('You cannot decrease the number of bulk codes for a coupon that has been used.'));
   }
 
