@@ -541,8 +541,9 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   $coupon->valid = TRUE;
   $coupon->usage = uc_coupon_count_usage($coupon->cid, $account ? $account->uid : NULL);
 
-  $format = variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:coupon-code]')));
-  $coupon->title = token_replace($format, array('uc_coupon' => $coupon));
+  $format = !empty($coupon->data['line_item_format']) ? $coupon->data['line_item_format'] : 
+      variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]')));
+  $coupon->title = token_replace(check_plain($format), array('uc_coupon' => $coupon));
 
   // Calculate the discount.
   if ($order) {
@@ -1070,6 +1071,9 @@ function uc_coupon_submit($code, $is_apply, $order=NULL) {
       if ($is_apply) {
         if (isset($coupon->message)) {
           drupal_set_message($coupon->message);
+        }
+        elseif (isset($coupon->data['apply_message'])) {
+          drupal_set_message(token_replace(check_plain($coupon->data['apply_message']), array('uc_coupon' => $coupon)));
         }
         else {  
           $amount = theme('uc_price', array('price' => $coupon->amount));

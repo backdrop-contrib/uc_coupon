@@ -18,10 +18,15 @@ function uc_coupon_settings_form($form, &$form_state) {
 
   $form['uc_coupon_line_item_format'] = array(
     '#type' => 'textfield',
-    '#title' => t('Line item title format'),
-    '#description' => t('You may use [uc_coupon:name] and [uc_coupon:code] tokens.'),
+    '#title' => t('Default line item title format'),
+    '#description' => t('This may be overridden by individual coupons.'),
     '#default_value' => variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]'))),
   );
+  
+  if (module_exists('token')) {
+    $form['uc_coupon_line_item_format']['#description'] .= ' ' . t('You may use any of the following replacement patterns.');
+    $form['uc_coupon_line_item_format']['#suffix'] = theme('token_tree', array('token_types' => array('uc_coupon')));
+  }
 
   $form['uc_coupon_default_usage'] = array(
     '#type' => 'radios',
@@ -674,6 +679,39 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       );
     }
   }
+  
+  $form['display'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Display options'),
+    '#description' => t('Options governing the way this coupon appears to users.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($value->data['line_item_format']) || empty($value->data['apply_message']),
+  );
+  
+  $form['display']['line_item_format'] = array(
+    '#type' => 'textfield',
+    '#size' => 60,
+    '#title' => t('Line item title format.'),
+    '#description' => t('The title for this coupon when displayed in the cart and as a line-item. 
+    		Leave blank to use the default format as specified on the main coupon settings page.'),
+    '#default_value' => empty($value->data['line_item_format']) ? '' : $value->data['line_item_format'],
+  );
+  
+  $form['display']['apply_message'] = array(
+    '#type' => 'textarea',
+    '#rows' => 3,
+    '#title' => t('Message'),
+    '#description' => t('The message to be displayed when this coupon is applied. Leave blank for a default message.'),
+    '#default_value' => empty($value->data['apply_message']) ? '' : $value->data['apply_message'],
+  );
+  
+  if (module_exists('token')) {
+    $form['display']['replacement_patterns'] = array(
+      '#type' => 'item',
+      '#title' => t('Replacement Patterns'),
+      '#markup' => theme('token_tree', array('token_types' => array('uc_coupon'))),
+    );
+  }
 
   $form['deprecated'] = array(
     '#type' => 'fieldset',
@@ -910,6 +948,10 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data['users'] = drupal_map_assoc(array_filter($form_state['values']['users'], 'is_numeric'));
   $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
   $coupon->data['wholesale'] = $form_state['values']['wholesale'];
+  
+  // Set coupon display info
+  $coupon->data['apply_message'] = trim($form_state['values']['apply_message']);
+  $coupon->data['line_item_format'] = trim($form_state['values']['line_item_format']);
 
   // Remove zero values and empty arrays.
   $coupon->data = array_filter($coupon->data);
