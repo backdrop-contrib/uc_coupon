@@ -96,7 +96,7 @@ function uc_coupon_display($view_type = 'active') {
       theme('uc_coupon_actions', array('coupon' => $coupon)),
       check_plain($coupon->name),
       check_plain($coupon->code) . ($coupon->bulk ? '* ' . t('(bulk)') : ''),
-      uc_coupon_format_discount($coupon),
+      theme('uc_coupon_discount', array('coupon' => $coupon)),
       format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
       $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y')) : '-',
       $coupon->valid_until ? format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y')) : '-',
@@ -173,7 +173,7 @@ function uc_coupon_view($coupon) {
     }
   }
 
-  $rows[] = array(t('Discount value'), uc_coupon_format_discount($coupon));
+  $rows[] = array(t('Discount value'), theme('uc_coupon_discount', array('coupon' => $coupon)));
 
   switch ($coupon->data['apply_to']) {
     case 'subtotal':

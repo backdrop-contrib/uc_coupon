@@ -236,6 +236,9 @@ function uc_coupon_theme() {
       'variables' => array('coupon' => NULL),
       'file' => 'uc_coupon.admin.inc',
     ),
+    'uc_coupon_discount' => array(
+      'variables' => array('coupon' => NULL, 'currency' => TRUE),
+    ),
     'uc_coupon_certificate' => array(
       'variables' => array('coupon' => NULL, 'code' => NULL),
       'template' => 'uc_coupon-certificate',
@@ -368,9 +371,21 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
 }
 
 /**
+ * Theme for a coupon discount.
+ * @param $variables
+ * 	'coupon' => The coupon whose discount is to be themed.
+ * 	'currency' => TRUE to include currency symbols.
+ */
+function theme_uc_coupon_discount($variables) {
+  $coupon = $variables['coupon'];
+  $currency = isset($variables['currency']) ? $variables['currency'] : TRUE;
+  return _uc_coupon_format_discount($coupon, $currency);
+}
+
+/**
  * Format a coupon depending on the type, optionally including currency symbols.
  */
-function uc_coupon_format_discount($coupon, $currency = TRUE) {
+function _uc_coupon_format_discount($coupon, $currency=TRUE) {
   switch ($coupon->type) {
     case 'price':
       return $currency ? uc_currency_format($coupon->value) : $coupon->value;
@@ -1302,7 +1317,7 @@ function uc_coupon_uc_checkout_complete($order, $account) {
 function template_preprocess_uc_coupon_certificate(&$variables) {
   $coupon = $variables['coupon'];
 
-  $variables['value'] = uc_coupon_format_discount($coupon);
+  $variables['value'] = theme('uc_coupon_discount', array('coupon' => $coupon));
 
   $variables['display_name'] = check_plain($coupon->name);
   $n = stripos($variables['display_name'], 'purchased by');

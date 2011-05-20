@@ -13,6 +13,6 @@ class uc_coupon_handler_field_value extends views_handler_field_numeric {
     $coupon = new stdClass;
     $coupon->value = $values->{$this->field_alias};
     $coupon->type = $values->{$this->aliases['type']};
-    return uc_coupon_format_discount($coupon);
+    return theme('uc_coupon_discount', array('coupon' => $coupon));
   }
 }
