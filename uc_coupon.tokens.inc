@@ -22,9 +22,19 @@ function uc_coupon_token_info() {
         'name' => t('Name'),
         'description' => t('The name of the coupon.'),
       ),
+      'code' => array(
+        'name' => t('Code'),
+        'description' => t('The coupon code. For bulk coupons this will be the actual code applied, or the code 
+        	prefix if the coupon has not yet been applied.'),
+      ),
       'codes' => array(
-        'name' => t('Codes'),
-        'description' => t('The coupon codes.  If the coupon is a bulk coupon, this will be a comma separated list of codes.'),
+        'name' => t('All Codes'),
+        'description' => t('The coupon codes.  For bulk coupons, this will be a comma separated list of codes.'),
+      ),
+      'value' => array(
+        'name' => t('Value'),
+        'description' => t('The value of the coupon.  If the coupon has already been applied to an order, this will be
+        	the actual currency value of the coupon.  Otherwise, it will be the nominal discount.'),
       ),
     ),
   
@@ -59,6 +69,9 @@ function uc_coupon_tokens($type, $tokens, $data = array(), $options = array()) {
         if (array_key_exists('name', $tokens)) {
           $values[$tokens['name']] = $sanitize ? check_plain($coupon->name) : $coupon->name;
         }
+        if (array_key_exists('code', $tokens)) {
+          $values[$tokens['code']] = $sanitize ? check_plain($coupon->code) : $coupon->code;
+        }
         if (array_key_exists('codes', $tokens)) {
           $codes = array();
           if ($coupon->bulk) {
@@ -70,6 +83,10 @@ function uc_coupon_tokens($type, $tokens, $data = array(), $options = array()) {
             $codes[] =  $coupon->code;
           }
           $values[$tokens['codes']] = implode("\n", $sanitize ? array_walk($codes, 'check_plain') : $codes);
+        }
+        if (array_key_exists('value', $tokens)) {
+          $values[$tokens['value']] = isset($coupon->amount) ?
+            theme('uc_price', array('price' => $coupon->amount)) : theme('uc_coupon_discount', array('coupon' => $coupon));
         }
       }
       break;
