@@ -191,10 +191,6 @@ function uc_coupon_permission() {
       'title' => t('manage store coupons'),
       'description' => t('Create, edit and delete discoutn coupons.'),
     ),
-    'coupon wholesale pricing' => array(
-      'title' => t('coupon wholesale pricing'),
-      'description' => t('Deprecated'),
-    ),
   );
   if (!module_exists('uc_reports')) {
     $perms['view reports'] = array(
@@ -631,7 +627,7 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
 
   // Check user ID.
   if ($account && isset($coupon->data['users'])) {
-    if (!in_array("$account->uid", $coupon->data['users'], TRUE)) {
+    if (in_array("$account->uid", $coupon->data['users'], TRUE) xor !isset($coupon->data['negate_users'])) {
       return t('Your user ID is not allowed to use this coupon.');
     }
   }
@@ -645,17 +641,7 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
         break;
       }
     }
-    if (!$role_found) {
-      return t('You do not have the correct permission to use this coupon.');
-    }
-  }
-
-  // Check wholesale permissions.
-  if ($account) {
-    if ($coupon->data['wholesale'] == 2 && !user_access('coupon wholesale pricing', $account)) {
-      return t('You do not have the correct permission to use this coupon.');
-    }
-    elseif ($coupon->data['wholesale'] == 3 && user_access('coupon wholesale pricing', $account)) {
+    if ($role_found xor !isset($coupon->data['negate_roles'])) {
       return t('You do not have the correct permission to use this coupon.');
     }
   }

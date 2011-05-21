@@ -248,19 +248,23 @@ function uc_coupon_view($coupon) {
     foreach ($coupon->data['users'] as $uid) {
       $users[] = check_plain(db_query("SELECT name FROM {users} WHERE uid = :uid", array(':uid' => $uid))->fetchField());
     }
-    $restrict['Users'] = $users;
+    if (isset($coupon->data['negate_users'])) {
+      $restrict[t('All users except')] = $users;
+    }
+    else {
+      $restrict[format_plural(count($users), 'User', 'Users')] = $users;
+    }
   }
   if (isset($coupon->data['max_uses_per_user'])) {
     $restrict['Maximum uses per user'] = array($coupon->data['max_uses_per_user']);
   }
   if (isset($coupon->data['roles'])) {
-    $restrict['Roles'] = $coupon->data['roles'];
-  }
-  if ($coupon->data['wholesale'] == 2) {
-    $restrict['Has permission'] = array('coupon wholesale pricing');
-  }
-  elseif ($coupon->data['wholesale'] == 3) {
-    $restrict['Does not have permission'] = array('coupon wholesale pricing');
+    if (isset($coupon->data['negate_roles'])) {
+      $restrict[t('All roles except')] = $coupon->data['roles'];
+    }
+    else {
+      $restrict[format_plural(count($users), 'Role', 'Roles')] = $coupon->data['roles'];
+    }
   }
   if ($restrict) {
     foreach ($restrict as $title => &$restriction) {
@@ -623,8 +627,18 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['users'] = array(
     '#type' => 'fieldset',
     '#title' => t('User restrictions'),
-    '#description' => t('Enter one or more user names and/or "anonymous users" below to make this coupon valid only for those users.'),
+    '#description' => t('Enter one or more user names and/or "anonymous users" below to restrict this coupon by user.'),
   );
+  $form['users']['negate_users'] = array(
+    '#type' => 'radios',
+    '#default_value' => isset($value->data['negate_users']) ? 1 : 0,
+    '#options' => array(
+      0 => t('Allow this coupon only for users listed below.'),
+      1 => t('Allow this coupon for all users except those listed below.'),
+    ),
+    '#tree' => FALSE,
+  );
+  
   foreach ($value->data['users'] as $uid) {
     $username = $uid ? db_query('SELECT name FROM {users} WHERE uid = :uid', array(':uid' => $uid))->fetchField() : t('anonymous users');
     $form['users'][] = array(
@@ -637,8 +651,18 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['roles'] = array(
     '#type' => 'fieldset',
     '#title' => t('Role restrictions'),
-    '#description' => t('Enter one or more role names below to make this coupon valid only for users with those roles.'),
+    '#description' => t('Enter one or more role names below to restrict this coupon based on a user\'s roles.'),
   );
+  $form['roles']['negate_roles'] = array(
+    '#type' => 'radios',
+    '#default_value' => isset($value->data['negate_roles']) ? 1 : 0,
+    '#options' => array(
+      0 => t('Allow this coupon only for users with the roles listed below.'),
+      1 => t('Allow this coupon for users with all roles except those listed below.'),
+    ),
+    '#tree' => FALSE,
+  );
+  
   foreach ($value->data['roles'] as $role) {
     $form['roles'][] = array(
       '#type' => 'textfield',
@@ -712,26 +736,6 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       '#markup' => theme('token_tree', array('token_types' => array('uc_coupon'))),
     );
   }
-
-  $form['deprecated'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Deprecated options'),
-    '#description' => t('These options will be removed in a future version.'),
-    '#collapsible' => TRUE,
-    '#collapsed' => !isset($value->data['wholesale']) || $value->data['wholesale'] == 1,
-  );
-  $form['deprecated']['wholesale'] = array(
-    '#type' => 'radios',
-    '#title' => t('Wholesale permissions'),
-    '#description' => t('Select the groups who are able to use this coupon. It is recommended that you leave this option as "Both wholesale and retail" use the role selection above instead.'),
-    '#default_value' => isset($value->data['wholesale']) ? $value->data['wholesale'] : 1,
-    '#options' => array(
-      '1' => t('Both wholesale and retail'),
-      '2' => t('Wholesale buyers only'),
-      '3' => t('Retail buyers only'),
-    ),
-    '#required' => TRUE,
-  );
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -944,9 +948,10 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data['skus'] = drupal_map_assoc(array_filter($form_state['values']['skus']));
   $coupon->data['negate_terms'] = $form_state['values']['negate_terms'];
   $coupon->data['terms'] = drupal_map_assoc(array_filter($form_state['values']['terms']));
+  $coupon->data['negate_users'] = $form_state['values']['negate_users'];
   $coupon->data['users'] = drupal_map_assoc(array_filter($form_state['values']['users'], 'is_numeric'));
+  $coupon->data['negate_roles'] = $form_state['values']['negate_roles'];
   $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
-  $coupon->data['wholesale'] = $form_state['values']['wholesale'];
   
   // Set coupon display info
   $coupon->data['apply_message'] = trim($form_state['values']['apply_message']);
