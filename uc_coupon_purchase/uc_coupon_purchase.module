@@ -335,9 +335,9 @@ function uc_coupon_purchase_uc_coupon_presave(&$coupon, $edit) {
 /**
  * Implements hook_uc_coupon_delete().
  */
-function uc_coupon_purchase_uc_coupon_delete($cid) {
+function uc_coupon_purchase_uc_coupon_delete($coupon) {
   db_delete('uc_coupon_purchase_users')
-    ->condition('cid', $cid)
+    ->condition('cid', $coupon->cid)
     ->execute();
 }
 
