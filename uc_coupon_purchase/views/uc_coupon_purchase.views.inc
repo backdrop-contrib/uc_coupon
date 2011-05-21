@@ -36,7 +36,7 @@ function uc_coupon_purchase_views_data_alter(&$data) {
   $data['users']['table']['join']['uc_coupons'] = array(
     'left_table' => 'uc_coupon_purchase_users',
     'left_field' => 'uid',
-    'field' => uid,
+    'field' => 'uid',
   );
 
   $data['uc_coupons']['base_name'] = array(
