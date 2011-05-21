@@ -833,13 +833,12 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
   drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
-  $name = db_query("SELECT name FROM {uc_coupons} WHERE code = :code AND cid <> :cid", 
-    array(':code' => strtoupper($form_state['values']['code']), ':cid' => isset($form['#uc_coupon_cid']) ? $form['#uc_coupon_cid'] : NULL))->fetchField();
+  $name = db_query("SELECT name FROM {uc_coupons} WHERE code = :code AND cid <> :cid", array(':code' => strtoupper($form_state['values']['code']), ':cid' => isset($form['#uc_coupon_cid']) ? $form['#uc_coupon_cid'] : 0))->fetchField();
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
   
-  if ($form['#uc_coupon_used'] 
+  if (isset($form['#uc_coupon_used']) && $form['#uc_coupon_used']
       && isset($form_state['values']['bulk_number']) && isset($form['#uc_coupon']->data['bulk_number'])
       && $form_state['values']['bulk_number'] < $form['#uc_coupon']->data['bulk_number']) {
     form_set_error('bulk_number', t('You cannot decrease the number of bulk codes for a coupon that has been used.'));
