@@ -505,7 +505,6 @@ function uc_coupon_find($code, $reset=FALSE) {
  *   of the following elements to the data array:
  *   - 'coupon' => The validated coupon code.
  *   - 'coupon_items' => An array containing the actual discount applied to each item, of the form:
- *   		- 'nid' => The node id of the item.
  *   		- 'discount' => The full value of the discount on that item.
  *   		- 'pretax_discount' => The actual pre-tax discount. For fixed discounts to products with
  *   			 taxes included, we apply the face value of the coupon tax-inclusively also; that is, 
@@ -544,17 +543,10 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   // Calculate the discount.
   if ($order) {
     $order->data['coupon'] = $code;
-    $items = uc_coupon_calculate_discounts($coupon, $order, TRUE);
-    $order->data['coupon_items'] = array(); 
+    $order->data['coupon_items'] =  uc_coupon_calculate_discounts($coupon, $order);
     $coupon->amount = 0;
-    foreach ($items as $item) {
+    foreach ($order->data['coupon_items'] as $item) {
       $coupon->amount += $item->discount;
-      // Save the per-item breakdown with the order so we can recalculate the tax/totals adjustments properly.
-      $order->data['coupon_items'][$item->nid] = (object) array(
-        'nid' => $item->nid,
-        'discount' => $item->discount,
-        'pretax_discount' => $item->pretax_discount,
-      );
     }
     $coupon->amount = round($coupon->amount, variable_get('uc_currency_prec', 2));
   }
@@ -652,16 +644,9 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
  * @param $coupon
  * 		A coupon object to apply, or a coupon code as a string.
  * @param $order
- * 		The order object to l
- * @param $force
- *    TRUE to force recalculation.
+ * 		The order object to which the coupon should be applied.
  */
-function uc_coupon_calculate_discounts($coupon, $order, $force=FALSE) {
-  // If the discounts have already been calculated, use th
-  if (isset($order->data['coupon_items']) && !$force) {
-    return $order->data['coupon_items'];
-  }
-
+function uc_coupon_calculate_discounts($coupon, $order) {
   // First argument can be either a code or a full coupon object.
   if (!is_object($coupon)) {
     // If it's a code, load the corresopnding coupon.
@@ -732,7 +717,7 @@ function uc_coupon_calculate_discounts($coupon, $order, $force=FALSE) {
             $included_rate += $tax->rate;
           }
         }
-        $item->pretax_discount = 1 / (1 + $included_rate);
+        $item->pretax_ratio = 1 / (1 + $included_rate);
       }
       $items = array_pad($items, count($items) + $qty, $item);
     }
@@ -770,33 +755,43 @@ function uc_coupon_calculate_discounts($coupon, $order, $force=FALSE) {
     $total += $item->price;
   }
 
-  foreach ($items as &$item) {
+  $discounts = array();
+  foreach ($items as $item) {
     switch ($coupon->type) {
       case 'price':
         if ($coupon->data['apply_to'] == 'subtotal') {
           // Apply single discount to the entire cart proportionally across the items.
-          $item->discount = $total == 0 ? 0 : min($coupon->value * $item->price / $total, $item->price);
+          $discount = $total == 0 ? 0 : min($coupon->value * $item->price / $total, $item->price);
         }
         else {
           // Apply discount to each product.
-          $item->discount = min($coupon->value, $item->price);
+          $discount = min($coupon->value, $item->price);
         }
-        $item->pretax_discount *= $item->discount;
+        $pretax_discount = $item->pretax_ratio * $discount;
         break;
 
       case 'percentage':
-        $item->discount = $item->price * $coupon->value / 100;
-        $item->pretax_discount = $item->discount;
+        $discount = $pretax_discount = $item->price * $coupon->value / 100;
         break;
 
       case 'set_price':
-        $item->discount = max($item->price - $coupon->value, 0);
-        $item->pretax_discount *= $item->discount;
+        $discount = max($item->price - $coupon->value, 0);
+        $pretax_discount = $item->pretax_ratio * $discount;
         break;
     }
+    if (isset($discounts[$item->nid])) {
+      $discounts[$item->nid]->discount += $discount;
+      $discounts[$item->nid]->pretax_discount += $pretax_discount;
+    }
+    else {
+      $discounts[$item->nid] = (object) array(
+        'discount' => $discount,
+        'pretax_discount' => $pretax_discount,
+      );
+    }
   }
-
-  return $items;
+  
+  return $discounts;
 }
 
 function _uc_coupon_match_sku($model, $skus) {
@@ -901,13 +896,10 @@ function uc_coupon_uc_order($op, &$order) {
     }
   }
   // Ensure that the order total is calculated properly when tax-inclusive coupon discounts are applied.
-  elseif ($op == 'total' && isset($order->data['coupon'])) {
+  elseif ($op == 'total' && isset($order->data['coupon']) && module_exists('uc_taxes')) {
     $adjustment = 0;
-    if (module_exists('uc_taxes') && isset($order->data['coupon'])) {
-      $items = uc_coupon_calculate_discounts($order->data['coupon'], $order);
-      foreach ($items as $item) {
-        $adjustment += $item->discount - $item->pretax_discount;
-      }
+    foreach ($order->data['coupon_items'] as $item) {
+      $adjustment += $item->discount - $item->pretax_discount;
     }
     return $adjustment;
   }
@@ -1181,10 +1173,9 @@ function uc_coupon_tax_adjustment($price, $order, $tax) {
     return;
   }
 
-  $items = uc_coupon_calculate_discounts($code, $order);
   $amount = 0;
-  foreach ($items as $item) {
-    $node = node_load($item->nid);
+  foreach ($order->data['coupon_items'] as $nid => $item) {
+    $node = node_load($nid);
     if (in_array($node->type, $tax->taxed_product_types) && ($tax->shippable == 0 || $node->shippable == 1)) {
       $amount += (isset($item->pretax_discount) ? $item->pretax_discount : $item->discount) * ($price > 0 ? 1 : -1);
     }
