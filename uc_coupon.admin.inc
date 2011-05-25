@@ -670,7 +670,29 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/role',
     );
   }
-
+  
+  $form['combinations'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Combinations'),
+    '#description' => t('Restrict the way this coupon may be combined with other copuons.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($value->data['combinations']),
+  );
+  $form['combinations']['negate_combinations'] = array(
+    '#type' => 'radios',
+    '#default_value' => isset($value->data['negate_combinations']) ? 1 : 0,
+    '#options' => array(
+      0 => t('Allow this coupon to be combined only with those selected below. If you do not select any coupons, this coupon may not be combined.'),
+      1 => t('Allow this coupon to be combined with any coupons not selected below.'),
+    ),
+    '#tree' => FALSE,
+  );
+  $form['combinations']['combinations'] = array(
+    '#type' => 'select',
+    '#multiple' => 'true',
+    '#options' => db_query('SELECT cid, name FROM {uc_coupons}')->fetchAllKeyed(),
+  );
+  
   // Add common settings and ajax functionality to restriction fieldsets.
   foreach ($ajax_fields as $field => $path) {
     $form[$field] = array_merge($form[$field], array(
@@ -952,6 +974,9 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data['users'] = drupal_map_assoc(array_filter($form_state['values']['users'], 'is_numeric'));
   $coupon->data['negate_roles'] = $form_state['values']['negate_roles'];
   $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
+  $coupon->data['negate_combinations'] = $form_state['values']['negate_combinations'];
+  $coupon->data['combinations'] = drupal_map_assoc(array_filter($form_state['values']['combinations']));
+  dpm($coupon->data);
   
   // Set coupon display info
   $coupon->data['apply_message'] = trim($form_state['values']['apply_message']);
