@@ -276,6 +276,21 @@ function uc_coupon_view($coupon) {
   if ($coupon->minimum_order > 0) {
     $rows[] = array(t('Order restrictions'), t('Minimum subtotal') . ': <em>' . uc_currency_format($coupon->minimum_order) . '</em>');
   }
+  
+  $combo_list = array();
+  if (!empty($coupon->data['combinations'])) {
+    $combos = db_query('SELECT cid, name FROM {uc_coupons} where cid IN (:cids)', array(':cids' => $coupon->data['combinations']));
+    foreach($combos as $combo) {
+      $combo_list[] = check_plain("$combo->name [cid:$combo->cid]");
+    }
+  }
+  if (isset($coupon->data['negate_combinations'])) {
+    $ctext = empty($combo_list) ? t('Any.') : t('Any but: ') . implode(', ', $combo_list);
+  }
+  else {
+    $ctext = empty($combo_list) ? t('None.') : t('Only: ') . implode(', ', $combo_list);
+  }
+  $rows[] = array(t('Allowed Combinations'), $ctext);
 
   foreach ($rows as &$row) {
     $row[0] = array(
@@ -691,6 +706,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'select',
     '#multiple' => 'true',
     '#options' => db_query('SELECT cid, name FROM {uc_coupons}')->fetchAllKeyed(),
+    '#default_value' => isset($value->data['combinations']) ? $value->data['combinations'] : NULL,
   );
   
   // Add common settings and ajax functionality to restriction fieldsets.
