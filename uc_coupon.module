@@ -1303,7 +1303,7 @@ function _uc_coupon_apply_to_order(&$order, $coupons) {
       'type' => 'coupon',
       'title' => $coupon->title,
       'amount' => -$coupon->amount,
-      'weight' => variable_get('uc_coupon_line_item_weight', 100),
+      'weight' => variable_get('uc_coupon_line_item_weight', 1),
       'data' => array('code' => $code),
     );  
     uc_order_line_item_add($order_id, $line['type'], $line['title'], $line['amount'], $line['weight'], $line['data']);
