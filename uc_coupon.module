@@ -1109,7 +1109,7 @@ function _uc_coupon_apply_to_order($order_id, $coupon) {
           'value' => $coupon->amount,
         ))
       ->execute();
-    uc_order_line_item_add($order_id, 'coupon', $coupon->title, -$coupon->amount);
+    uc_order_line_item_add($order_id, 'coupon', $coupon->title, -$coupon->amount, variable_get('uc_coupon_line_item_weight', 1));
   }
 }
 

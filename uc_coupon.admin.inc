@@ -10,16 +10,10 @@
 function uc_coupon_settings_form($form, &$form_state) {
   global $base_url;
 
-  $form['uc_coupon_show_in_cart'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Show coupons as an item in the cart.'),
-    '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
-  );
-
   $form['uc_coupon_line_item_format'] = array(
     '#type' => 'textfield',
     '#title' => t('Default line item title format'),
-    '#description' => t('This may be overridden by individual coupons.'),
+    '#description' => t('Controls the way coupons appear in the cart and order summary. This setting may be overridden for individual coupons.'),
     '#default_value' => variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]'))),
   );
   
@@ -27,7 +21,25 @@ function uc_coupon_settings_form($form, &$form_state) {
     $form['uc_coupon_line_item_format']['#description'] .= ' ' . t('You may use any of the following replacement patterns.');
     $form['uc_coupon_line_item_format']['#suffix'] = theme('token_tree', array('token_types' => array('uc_coupon')));
   }
+  else {
+    $form['uc_coupon_line_item_format']['#description'] .= ' ' . 
+      t('You may use valid replacement patterns.  Enable the %token module to see a complete list.',
+        array('%token' => 'Token'));
+  }
 
+  $form['uc_coupon_show_in_cart'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show coupons as an item in the cart.'),
+    '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
+  );
+  
+  $form['uc_coupon_line_item_weight'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default line item weight'),
+    '#description' => t('Controls the order in which coupon line items are listed.  Heavier items will appear later in the list.'),
+    '#default_value' => variable_get('uc_coupon_line_item_weight', 1),
+  );
+  
   $form['uc_coupon_default_usage'] = array(
     '#type' => 'radios',
     '#title' => t('Default redemption setting for new coupons'),
