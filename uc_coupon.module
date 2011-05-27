@@ -481,58 +481,106 @@ function uc_coupon_find($code, $reset=FALSE) {
 
 
 /**
+ * Validate the codes in the $_SESSION['uc_coupons'] array.
+ * 
+ * @param $order 
+ * 		The order against which the codes should be validated.
+ * @param $auto 
+ * 		TRUE to validate only automatic coupons. FALSE for only non-automatic coupons.
+ * 		We do this in two passes so that automatic coupons can use presence or 
+ * 		absence of non-automatic coupons as conditions.
+ */
+function _uc_coupon_validate_session($order, $auto) {
+  $valids = array();
+  // If a list of products is specified, then redo the validation.
+  if (isset($_SESSION['uc_coupons'])) {
+    global $user;
+    foreach ($_SESSION['uc_coupons'] as $code => $submit_type) {
+      if (!($auto xor $submit_type == 'auto')) {
+        $coupon = uc_coupon_validate($code, $order, $user);
+        if ($submit_type == 'remove') {
+          if ($coupon->valid) {
+            drupal_set_message( t('@title has been removed from your order.', array('@title' => $coupon->title)));
+          }
+          unset($_SESSION['uc_coupons'][$code]);
+        }
+        else {
+          //dpm($coupon);
+          if ($coupon->valid) {
+            // Add this valid coupon to the fake order object so combined discounts will validate properly.
+            $valids[$code] = $coupon;
+            $order->data['coupons'][$code] = $coupon->discounts;
+            if ($submit_type == 'manual') {
+              // If this was a manual submission, then make sure we display a message.
+              drupal_set_message($coupon->message);
+              $_SESSION['uc_coupons'][$code] = 'validated';
+            }
+            elseif ($submit_type == 'auto') {
+              $coupon->automatic = TRUE;
+            }
+          }
+          elseif ($submit_type == 'manual') {
+            drupal_set_message($coupon->message, 'error');
+            unset($_SESSION['uc_coupons'][$code]);
+          }
+          if ($submit_type == 'auto') {
+            unset($_SESSION['uc_coupons'][$code]);
+          }
+        }
+      }
+    }
+  }
+  return $valids;
+}
+
+
+
+/**
  * Get a list of all validated coupons in the current session.  If a set of products is 
  * specified, all session coupons will be re-validated against that list. 
  * 
- * @param $products
- * 		A list of products.  If specified, the current session copuons will be revalidated.
+ * NOTE: The cache of validated coupons is rebuilt the first time this is called for each
+ * request, and whenever the cart contents are rebuilt.  This it is important to clear the
+ * list before manually editing orders, or the current coupons will be applied to the order
+ * when it is saved.
+ * 
+ * @param $arg
+ * 		One of the following:
+ * 		- An array of products; a list of session coupons validated against the list will 
+ * 			be geneated and cached.
+ * 		- FALSE; the cached list of coupons will be cleared
+ * 		- NULL (the default); Returns the cached list of valid coupons. If the
+ * 			cache has not yet been generated, then it will be built using the 
+ * 			current cart contents.
+ * 		
  * @return
  * 		An array of fully validated coupon objects.
  */
-function _uc_coupon_get_validated($products = NULL) {
+function _uc_coupon_get_validated($arg = NULL) {
   static $valids = NULL;
-  
-  // If no coupons have been applied in the session, there's nothing to validate.
-  if (!isset($_SESSION['uc_coupons'])) {
-    $valids = array();
-  }
-  
+
   // If a list of products is specified, then redo the validation.
-  elseif (isset($products)) {
-    //dpm($trace, "Re-Validating $oid ("  . implode(',',array_keys($_SESSION['uc_coupons'])) . ')' );
-    global $user;
-    $valids = array();
-    $order = (object) array(
-      'products' => $products,
-      'data' => array('coupons' => array())
-    );
-    foreach ($_SESSION['uc_coupons'] as $code => $submit_type) {
-      $coupon = uc_coupon_validate($code, $order, $user);
-      if ($submit_type == 'remove') {
-        if ($coupon->valid) {
-          drupal_set_message( t('@title has been removed from your order.', array('@title' => $coupon->title)));
-        }
-        unset($_SESSION['uc_coupons'][$code]);
-      }
-      else {
-        //dpm($coupon);
-        if ($coupon->valid) {
-          // Add this valid coupon to the fake order object so combined discounts will validate properly.
-          $valids[$code] = $coupon;
-          $order->data['coupons'][$code] = $coupon->discounts;
-          if ($submit_type == 'manual') {
-            // If this was a manual submission, then make sure we display a message.
-            drupal_set_message($coupon->message);
-            $_SESSION['uc_coupons'][$code] = 'validated';
-          }
-        }
-        elseif ($submit_type == 'manual') {
-          drupal_set_message($coupon->message, 'error');
-          unset($_SESSION['uc_coupons'][$code]);
-        }
-      }
-      }
+  if (isset($arg)) {
     
+    if ($arg === FALSE) {
+      $valids = array();
+    }
+    else {
+      global $user;
+      $order = new UcOrder();
+      $order->products =  $arg;
+      $order->data = array('coupons' => array());
+      
+      // First validate all non-automatic coupons.
+      $valids = _uc_coupon_validate_session($order, FALSE);
+      
+      // Now check for automatic coupons.
+      //dpm(debug_backtrace(), "invoking event");
+      rules_invoke_event('uc_coupon_auto_apply', $order);
+      
+      // And validate them.
+      $valids = array_merge($valids, _uc_coupon_validate_session($order, TRUE));
+    }
   }
   // If no products specified and validation has not yet been performed, then rebuild the cart to force validation.
   elseif (!isset($valids)) {
@@ -918,8 +966,6 @@ function _uc_coupon_sort_products($a, $b) {
   return $a->price > $b->price ? 1 : -1;
 }
 
-
-
 /**
  * Implements hook_block_info().
  */
@@ -992,12 +1038,12 @@ function uc_coupon_table($coupons, $ajax=FALSE) {
         //'#tree' => TRUE,
         'title' => array('#markup' => $coupon->title),
         'submit' => array(
-      		'#type' => 'submit', 
+      		'#type' => isset($coupon->automatic) ? 'hidden' : 'submit', // Automatic coupons can't be removed.
       		'#value' => t('Remove'),
         	'#name' => 'uc-coupon-remove-' . $coupon->code,
         ),
       );
-      if ($ajax) {
+      if ($ajax && !isset($coupon->automatic)) {
         // Add ajax functionality to this table.
         $table[$i]['submit'] += array(
         	//'#limit_validation_errors' => array('uc_coupons'),
@@ -1094,15 +1140,14 @@ function uc_coupon_uc_order($op, &$order) {
 }
 
 /**
- * Implementation of hook_form_FORM_ID_alter().
+ * Implementation of hook_form_FORM_ID_alter() for the order edit form.
  * 
- * Clear the session coupon when the order edit form is built.
- * This avoid inadvertently saving a coupon to an old order.
+ * Clear the validated coupon cache when the order edit form is built.
+ * This avoids inadvertently saving a coupon to an old order.
  */
 function uc_coupon_form_uc_order_edit_form_alter(&$form, $form_state) {
-  unset($_SESSION['uc_coupons']);
+  _uc_coupon_get_validated(FALSE);
 }
-
 
 /**
  * Implements hook_uc_checkout_pane().
