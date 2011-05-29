@@ -34,6 +34,22 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#description' => t('Controls the order in which coupon line items are listed.  Heavier items will appear later in the list.'),
     '#default_value' => variable_get('uc_coupon_line_item_weight', 1),
   );
+
+  $form['uc_coupon_form_components'] = array(
+    '#title' => t('Coupon submission form components'),
+    '#description' => t('Select what to display on the coupon submission form (this appears in the coupon block, cart and checkout panes). 
+    Note that you must enable the coupon code entry field in order for customers to submit coupons.  Also, if coupons are not displayed
+    in the cart (see above),  you must enable either the active coupons table or the active coupons list in order for custmers to be able
+    to remove coupons.'),
+    '#type' => 'checkboxes',
+    '#options' => array(
+      'entry' => t('Coupon code entry field'),
+      'table' => t('Active coupons (table)'),
+      'list' => t('Active coupons (list)'),
+      'other' => t('Special discounts (list of active automatic coupons)'),
+    ),
+    '#default_value' => variable_get('uc_coupon_form_components', drupal_map_assoc(array('entry','list', 'other'))),
+  );
   
   $form['uc_coupon_default_usage'] = array(
     '#type' => 'radios',
@@ -696,16 +712,16 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['combinations'] = array(
     '#type' => 'fieldset',
     '#title' => t('Combinations'),
-    '#description' => t('Restrict the way this coupon may be combined with other copuons.'),
+    '#description' => t('Restrict the way this coupon may be combined with other coupons.'),
     '#collapsible' => TRUE,
-    '#collapsed' => empty($value->data['combinations']),
+    '#collapsed' => empty($value->data['combinations']) && !isset($value->data['negate_combinations']),
   );
   $form['combinations']['negate_combinations'] = array(
     '#type' => 'radios',
     '#default_value' => isset($value->data['negate_combinations']) ? 1 : 0,
     '#options' => array(
       0 => t('Allow this coupon to be combined only with those selected below. If you do not select any coupons, this coupon may not be combined.'),
-      1 => t('Allow this coupon to be combined with any coupons not selected below.'),
+      1 => t('Allow this coupon to be combined with all coupons except those selected below.'),
     ),
     '#tree' => FALSE,
   );
@@ -999,7 +1015,6 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
   $coupon->data['negate_combinations'] = $form_state['values']['negate_combinations'];
   $coupon->data['combinations'] = drupal_map_assoc(array_filter($form_state['values']['combinations']));
-  dpm($coupon->data);
   
   // Set coupon display info
   $coupon->data['apply_message'] = trim($form_state['values']['apply_message']);
