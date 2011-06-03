@@ -20,6 +20,38 @@ function uc_coupon_workflow_permission() {
 }
 
 /**
+ * Implements hook_uc_coupon_revalidate().
+ * @param $products
+ * 		The list of products to valiate against (usually the current cart contents).
+ */
+function uc_coupon_workflow_uc_coupon_revalidate($products) {
+  if (isset($_SESSION['cart_order'])) {
+    // If checkkout is in progress, use the cart_order to provide additional information.
+    $order = uc_order_load($_SESSION['cart_order']);
+  }
+  else {
+    // Otherwise create an empty order
+    $order = new UcOrder();
+  }
+  $order->products = $products;
+  rules_invoke_event('uc_coupon_workflow_automatic', $order);
+}
+
+/**
+ * Implements hook_uc_coupon_apply().
+ */
+function uc_coupon_workflow_uc_coupon_apply($coupon) {
+  rules_invoke_event('uc_coupon_workflow_applied', $coupon);
+}
+
+/**
+ * Implements hook_uc_coupon_remove().
+ */
+function uc_coupon_workflow_uc_coupon_remove($coupon) {
+  rules_invoke_event('uc_coupon_workflow_removed', $coupon);
+}
+
+/**
  * Implements hook_form_user_register_form_alter().
  * 
  * Gives administrators the option of preventing any coupon workflow rules from being executed
@@ -41,6 +73,8 @@ function uc_coupon_workflow_form_user_register_form_alter(&$form, &$form_state) 
 
 /**
  * Implements hook_user_insert().
+ * 
+ * If the creator of this user has suspended coupon workflow, then set the static variable accordingly.
  */
 function uc_coupon_workflow_user_insert(&$edit, $account, $category) {
   if (user_access('suspend coupon workflow') && isset($edit['uc_coupon_workflow_suspended']) && $edit['uc_coupon_workflow_suspended'] == TRUE) {
@@ -51,8 +85,6 @@ function uc_coupon_workflow_user_insert(&$edit, $account, $category) {
     drupal_static_reset('uc_coupon_workflow_suspended');
   }
 }
-
-
 
 /**
  * Builds a form element allowing an administrator to suspend coupon workflow.

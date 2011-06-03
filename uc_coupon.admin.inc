@@ -13,7 +13,7 @@ function uc_coupon_settings_form($form, &$form_state) {
   $form['uc_coupon_line_item_format'] = array(
     '#type' => 'textfield',
     '#title' => t('Default line item title format'),
-    '#description' => t('Controls the way coupons appear in the cart and order summary. This setting may be overridden for individual coupons.'),
+    '#description' => t('Controls the way coupons appear in the cart and order summary. This setting be overridden by individual coupons.'),
     '#default_value' => variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]'))),
   );
   
@@ -21,23 +21,33 @@ function uc_coupon_settings_form($form, &$form_state) {
     $form['uc_coupon_line_item_format']['#description'] .= ' ' . t('You may use any of the following replacement patterns.');
     $form['uc_coupon_line_item_format']['#suffix'] = theme('token_tree', array('token_types' => array('uc_coupon')));
   }
-  else {
-    $form['uc_coupon_line_item_format']['#description'] .= ' ' . 
-      t('You may use valid replacement patterns.  Enable the %token module to see a complete list.',
-        array('%token' => 'Token'));
-  }
 
   $form['uc_coupon_show_in_cart'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show coupons as an item in the cart.'),
     '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
   );
-  
+
   $form['uc_coupon_line_item_weight'] = array(
     '#type' => 'textfield',
     '#title' => t('Default line item weight'),
     '#description' => t('Controls the order in which coupon line items are listed.  Heavier items will appear later in the list.'),
     '#default_value' => variable_get('uc_coupon_line_item_weight', 1),
+  );
+
+  $form['uc_coupon_form_components'] = array(
+    '#title' => t('Coupon submission form components'),
+    '#description' => t('Select what to display on the coupon submission form (this appears in the coupon block, cart and checkout panes). 
+    Note that you must enable the coupon code entry field in order for customers to submit coupons.  Also, if coupons are not displayed
+    in the cart (see above),  you must enable either the active coupons table or the active coupons list in order for custmers to be able
+    to remove coupons.'),
+    '#type' => 'checkboxes',
+    '#options' => array(
+      'entry' => t('Coupon code entry field'),
+      'table' => t('Active coupons (table)'),
+      'list' => t('Active coupons (list)'),
+    ),
+    '#default_value' => variable_get('uc_coupon_form_components', drupal_map_assoc(array('entry', 'list'))),
   );
   
   $form['uc_coupon_default_usage'] = array(
@@ -57,7 +67,7 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => variable_get('uc_coupon_querystring', ''),
     '#size' => 15,
   );
-
+  
   return system_settings_form($form);
 }
 
@@ -288,6 +298,21 @@ function uc_coupon_view($coupon) {
   if ($coupon->minimum_order > 0) {
     $rows[] = array(t('Order restrictions'), t('Minimum subtotal') . ': <em>' . uc_currency_format($coupon->minimum_order) . '</em>');
   }
+  
+  $combo_list = array();
+  if (!empty($coupon->data['combinations'])) {
+    $combos = db_query('SELECT cid, name FROM {uc_coupons} where cid IN (:cids)', array(':cids' => $coupon->data['combinations']));
+    foreach ($combos as $combo) {
+      $combo_list[] = check_plain("$combo->name [cid:$combo->cid]");
+    }
+  }
+  if (isset($coupon->data['negate_combinations'])) {
+    $ctext = empty($combo_list) ? t('Any.') : t('Any but:') . ' ' . implode(', ', $combo_list);
+  }
+  else {
+    $ctext = empty($combo_list) ? t('None.') : t('Only:') . ' ' . implode(', ', $combo_list);
+  }
+  $rows[] = array(t('Allowed Combinations'), $ctext);
 
   foreach ($rows as &$row) {
     $row[0] = array(
@@ -462,7 +487,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['discount'] = array(
     '#type' => 'textfield',
     '#title' => t('Discount'),
-    '#default_value' => isset($coupon->value) ? _uc_coupon_format_discount($value,FALSE) : '',
+    '#default_value' => isset($coupon->value) ? _uc_coupon_format_discount($value, FALSE) : '',
     '#size' => 6,
     '#description' => t('Three discount types are possible:') . theme('item_list', array('items' => array(
         t('Fixed price discount; enter "15" for $15.00 off.'),
@@ -682,7 +707,30 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/role',
     );
   }
-
+  
+  $form['combinations'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Combinations'),
+    '#description' => t('Restrict the way this coupon may be combined with other coupons.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($value->data['combinations']) && !isset($value->data['negate_combinations']),
+  );
+  $form['combinations']['negate_combinations'] = array(
+    '#type' => 'radios',
+    '#default_value' => isset($value->data['negate_combinations']) ? 1 : 0,
+    '#options' => array(
+      0 => t('Allow this coupon to be combined only with those selected below. If you do not select any coupons, this coupon may not be combined.'),
+      1 => t('Allow this coupon to be combined with all coupons except those selected below.'),
+    ),
+    '#tree' => FALSE,
+  );
+  $form['combinations']['combinations'] = array(
+    '#type' => 'select',
+    '#multiple' => 'true',
+    '#options' => db_query('SELECT cid, name FROM {uc_coupons}')->fetchAllKeyed(),
+    '#default_value' => isset($value->data['combinations']) ? $value->data['combinations'] : NULL,
+  );
+  
   // Add common settings and ajax functionality to restriction fieldsets.
   foreach ($ajax_fields as $field => $path) {
     $form[$field] = array_merge($form[$field], array(
@@ -964,6 +1012,8 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data['users'] = drupal_map_assoc(array_filter($form_state['values']['users'], 'is_numeric'));
   $coupon->data['negate_roles'] = $form_state['values']['negate_roles'];
   $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
+  $coupon->data['negate_combinations'] = $form_state['values']['negate_combinations'];
+  $coupon->data['combinations'] = drupal_map_assoc(array_filter($form_state['values']['combinations']));
   
   // Set coupon display info
   $coupon->data['apply_message'] = trim($form_state['values']['apply_message']);
