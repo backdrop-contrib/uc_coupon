@@ -46,9 +46,8 @@ function uc_coupon_settings_form($form, &$form_state) {
       'entry' => t('Coupon code entry field'),
       'table' => t('Active coupons (table)'),
       'list' => t('Active coupons (list)'),
-      'other' => t('Special discounts (list of active automatic coupons)'),
     ),
-    '#default_value' => variable_get('uc_coupon_form_components', drupal_map_assoc(array('entry','list', 'other'))),
+    '#default_value' => variable_get('uc_coupon_form_components', drupal_map_assoc(array('entry', 'list'))),
   );
   
   $form['uc_coupon_default_usage'] = array(
@@ -68,7 +67,7 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => variable_get('uc_coupon_querystring', ''),
     '#size' => 15,
   );
-
+  
   return system_settings_form($form);
 }
 
@@ -303,15 +302,15 @@ function uc_coupon_view($coupon) {
   $combo_list = array();
   if (!empty($coupon->data['combinations'])) {
     $combos = db_query('SELECT cid, name FROM {uc_coupons} where cid IN (:cids)', array(':cids' => $coupon->data['combinations']));
-    foreach($combos as $combo) {
+    foreach ($combos as $combo) {
       $combo_list[] = check_plain("$combo->name [cid:$combo->cid]");
     }
   }
   if (isset($coupon->data['negate_combinations'])) {
-    $ctext = empty($combo_list) ? t('Any.') : t('Any but: ') . implode(', ', $combo_list);
+    $ctext = empty($combo_list) ? t('Any.') : t('Any but:') . ' ' . implode(', ', $combo_list);
   }
   else {
-    $ctext = empty($combo_list) ? t('None.') : t('Only: ') . implode(', ', $combo_list);
+    $ctext = empty($combo_list) ? t('None.') : t('Only:') . ' ' . implode(', ', $combo_list);
   }
   $rows[] = array(t('Allowed Combinations'), $ctext);
 
@@ -488,7 +487,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   $form['discount'] = array(
     '#type' => 'textfield',
     '#title' => t('Discount'),
-    '#default_value' => isset($coupon->value) ? _uc_coupon_format_discount($value,FALSE) : '',
+    '#default_value' => isset($coupon->value) ? _uc_coupon_format_discount($value, FALSE) : '',
     '#size' => 6,
     '#description' => t('Three discount types are possible:') . theme('item_list', array('items' => array(
         t('Fixed price discount; enter "15" for $15.00 off.'),
