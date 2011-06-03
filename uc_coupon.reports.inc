@@ -84,7 +84,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
     $statuses = explode(',', $statuses);
   }
 
-  $output = drupal_get_form('uc_coupon_reports_form', $start, $end, $statuses);
+  $output = drupal_render(drupal_get_form('uc_coupon_reports_form', $start, $end, $statuses));
 
   if (isset($start) && isset($end)) {
     $result = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co 
@@ -95,13 +95,15 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
     $total = 0;
 
     $row_header = array(t('Order #'), t('Purchase date'), t('Total'), t('Coupon value'));
-    $last_cid = 0;
-
+    $last_cid = $orders_total = $coupons_total = 0;
+    $data = '';
     foreach ($result as $row) {
       // Display the table of coupons if this is the next set of coupons
-      if ($row->cid != $last_cid AND $last_cid != 0) {
-        $td[] = array('', '<b>' . t('Uses: @total', array('@total' => $num_uses)) . '</b>', '<b>' . uc_currency_format($coupon_sale_amount) . '</b>', '<b>' . uc_currency_format($coupon_amount) . '</b>');
-        $data .= theme('table', array('header' => $row_header, 'rows' => $td, 'attributes' => array('width' => '100%')));
+      if ($row->cid != $last_cid) {
+        if ($last_cid != 0) {
+          $td[] = array('', '<b>' . t('Uses: @total', array('@total' => $num_uses)) . '</b>', '<b>' . uc_currency_format($coupon_sale_amount) . '</b>', '<b>' . uc_currency_format($coupon_amount) . '</b>');
+          $data .= theme('table', array('header' => $row_header, 'rows' => $td, 'attributes' => array('width' => '100%')));
+        }
         $td = array();
         $num_uses = 0;
         $coupon_amount = 0;
