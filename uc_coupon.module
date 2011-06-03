@@ -607,7 +607,7 @@ function uc_coupon_session_validate($products = NULL) {
             case 'retain':
               // For coupons which were not valid (new submissions) we notify user and modules.
               drupal_set_message($coupon->message);
-              module_invoke_all('uc_coupon_applied', $coupon);
+              module_invoke_all('uc_coupon_apply', $coupon);
               // And we mark them for revalidation.
               uc_coupon_session_add($code, 'revalidate');
               break;
@@ -628,7 +628,7 @@ function uc_coupon_session_validate($products = NULL) {
               
             case 'revalidate': 
               drupal_set_message(t('%title is no longer applicable to your order', array('%title' => $coupon->title)));
-              module_invoke_all('uc_coupon_removed', $coupon);
+              module_invoke_all('uc_coupon_remove', $coupon);
               // But we keep them in the session in case they become valid again.
               uc_coupon_session_add($code, 'retain'); 
               break;
@@ -1043,6 +1043,7 @@ function uc_coupon_block_info() {
  * Implements hook_block_view().
  */
 function uc_coupon_block_view($delta) {
+  dpm('here');
   if ($delta == 'coupon-discount') {
     $block = array(
       'subject' => t('Coupon discount'),

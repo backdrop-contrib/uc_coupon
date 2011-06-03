@@ -38,16 +38,16 @@ function uc_coupon_workflow_uc_coupon_revalidate($products) {
 }
 
 /**
- * Implements hook_uc_coupon_applied().
+ * Implements hook_uc_coupon_apply().
  */
-function uc_coupon_workflow_uc_coupon_applied($coupon) {
+function uc_coupon_workflow_uc_coupon_apply($coupon) {
   rules_invoke_event('uc_coupon_workflow_applied', $coupon);
 }
 
 /**
- * Implements hook_uc_coupon_removed().
+ * Implements hook_uc_coupon_remove().
  */
-function uc_coupon_workflow_uc_coupon_removed($coupon) {
+function uc_coupon_workflow_uc_coupon_remove($coupon) {
   rules_invoke_event('uc_coupon_workflow_removed', $coupon);
 }
 
