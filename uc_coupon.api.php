@@ -25,7 +25,7 @@ function hook_uc_coupon_presave(&$coupon, $edit) {
 /**
  * hook_uc_coupon_save().
  * 
- * Called after a coupon is saved to the database.
+ * Invoked after a coupon is saved to the database.
  * 
  * @param $coupon
  * 		The coupon that was just saved.
@@ -35,6 +35,22 @@ function hook_uc_coupon_save($coupon) {
   if (!$coupon->status) {
     drupal_set_message(t('The coupon you just saved must be activated before it can be used.'));
   }
+}
+
+/**
+ * hook_uc_coupon_delete().
+ * 
+ * Invoked just before a coupon is going to be deleted.  Allows modules to clean up any
+ * additinal coupon data in their tables.
+ * 
+ * @param $coupon
+ * 		The coupon object which is about to be deleted.
+ */
+function hook_uc_coupon_delete($coupon) {
+  // Delete extra usage information 
+  db_delete('extra_coupon_usage')
+    ->condition('cid', $coupon->cid)
+    ->execute();
 }
 
 /**
@@ -80,6 +96,32 @@ function hook_uc_coupon_usage_alter(&$usage, $cid, $uid) {
   }
 }
 
+/**
+ * hook_uc_coupon_actions().
+ * 
+ * Allows modules to add to the list of actions available when coupons are listed in a table.
+ * 
+ * @param $coupon
+ * 		The coupon being displayed.
+ * @return 
+ * 		An associative array describing the actions available. Must contain the followoing keys:
+ * 		- 'url': The url where the action is processed.
+ * 		- 'icon': The icon to display for this action.
+ * 		- 'title': The text to display as a title for the action (usually as hover text over the icon).
+ */
+function hook_uc_coupon_actions($coupon) {
+  $actions = array();
+  // Provide a "mark coupon as used" action.
+
+  if (user_access('mark coupon as used')) {
+    $actions[] = array(
+      'url' => 'admin/store/coupons/mark-as-used/' . $coupon->cid,
+      'icon' => drupal_get_path('module', 'mymodule') . 'mark_as_used.gif',
+      'title' => t('Mark coupon: @name as used', array('@name' => $coupon->name)),
+    );
+  };
+  return $actions;
+}
 
 /**
  * hook_uc_coupon_revalidate().
