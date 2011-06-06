@@ -587,6 +587,7 @@ function uc_coupon_session_validate($products = NULL) {
   // If a list of products is specified, then rebuild the list.
   if (isset($products)) {
     $valids = array();
+    
     // Allow modules an opportunity to add or remove coupons from the session.
     module_invoke_all('uc_coupon_revalidate', $products);
     // Fetch all codes in the session.
@@ -627,9 +628,11 @@ function uc_coupon_session_validate($products = NULL) {
               break;
               
             case 'revalidate': 
-              drupal_set_message(t('%title is no longer applicable to your order', array('%title' => $coupon->title)));
+              if (!empty($products)) { // Only issue a message if the cart is not empty.
+                drupal_set_message(t('%title is no longer applicable to your order', array('%title' => $coupon->title)));
+              }
               module_invoke_all('uc_coupon_remove', $coupon);
-              // But we keep them in the session in case they become valid again.
+              // Keep code in the session in case it becomes valid again.
               uc_coupon_session_add($code, 'retain'); 
               break;
               
