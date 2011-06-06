@@ -345,7 +345,7 @@ function uc_coupon_count_usage($cid, $uid = NULL) {
   global $user;
 
   $usage = array('codes' => array());
-  $result = db_query("SELECT uco.code, COUNT(*) uses FROM {uc_coupons_orders} AS uco
+  $result = db_query("SELECT uco.code, COUNT(*) AS uses FROM {uc_coupons_orders} AS uco
     LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id
     LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id
     WHERE uos.weight > 0 AND uco.cid = :cid GROUP BY uco.code", array( ':cid' => $cid));
