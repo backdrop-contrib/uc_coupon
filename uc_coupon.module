@@ -1046,7 +1046,6 @@ function uc_coupon_block_info() {
  * Implements hook_block_view().
  */
 function uc_coupon_block_view($delta) {
-  dpm('here');
   if ($delta == 'coupon-discount') {
     $block = array(
       'subject' => t('Coupon discount'),
