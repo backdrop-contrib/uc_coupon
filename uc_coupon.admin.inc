@@ -50,6 +50,12 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => variable_get('uc_coupon_form_components', drupal_map_assoc(array('entry', 'list'))),
   );
   
+  $form['uc_coupon_allow_multiple'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow multiple coupons to apply to a single order.'),
+    '#default_value' => variable_get('uc_coupon_allow_multiple', TRUE),
+  );
+  
   $form['uc_coupon_default_usage'] = array(
     '#type' => 'radios',
     '#title' => t('Default redemption setting for new coupons'),

@@ -501,7 +501,12 @@ function uc_coupon_find($code, $reset=FALSE) {
  *       additional conditions).
  */
 function uc_coupon_session_add($code, $op = 'submit') {
-  $_SESSION['uc_coupons'][$code] = $op;
+  if (!variable_get('uc_coupon_allow_multiple', TRUE)) {
+    $_SESSION['uc_coupons'] = array($code => $op);
+  }
+  else {
+    $_SESSION['uc_coupons'][$code] = $op;
+  }
 }
 
 /**
@@ -1235,6 +1240,9 @@ function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
       '#value' => t('Apply to order'),
       '#name' => 'uc-coupon-apply',
     );
+    if (!variable_get('uc_coupon_allow_multiple', TRUE) && count(uc_coupon_session_get()) > 0) {
+      $form['code']['#description'] .= ' ' . t('Apply a blank code to remove the currently applied coupon.');
+    }
     if ($ajax) {
       // Ensure that the ajax throbber doesn't spoil the layout.
       drupal_add_css('#uc-coupon-active-coupons, #uc-coupon-other-discounts { clear: left; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
@@ -1496,6 +1504,16 @@ function uc_coupon_form_submit($form, $form_state) {
   // Otherwise try to apply.
   else {
     $code = strtoupper(trim($values['code']));
+    $removed = FALSE;
+    // If multiple codes are not enabled, then remove any codes currently applied.
+    if (!variable_get('uc_coupon_allow_multiple', TRUE) && count($session = uc_coupon_session_get()) > 0) {
+      foreach (array_keys($session) as $remove_code) {
+        uc_coupon_session_clear($remove_code);
+        drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $remove_code)));
+        module_invoke_all('uc_coupon_remove', uc_coupon_find($remove_code));
+      }
+      $removed = TRUE;
+    }
     if (!empty($code)) {
       if (uc_coupon_session_get($code)) {
         drupal_set_message(t("The coupon has already been applied to your order."));
@@ -1504,7 +1522,7 @@ function uc_coupon_form_submit($form, $form_state) {
         uc_coupon_session_add($code, 'submit');
       }
     }
-    else {
+    elseif (!$removed) {
       drupal_set_message(t("You must enter a valid coupon code."), 'error');
     }
   }
