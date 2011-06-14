@@ -528,6 +528,12 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#default_value' => isset($value->data['apply_count']) ? $value->data['apply_count'] : '',
     '#size' => 5,
   );
+  $form['require_match_all'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Require all products to match'),
+    '#default_value' => isset($value->data['require_match_all']) ? TRUE : FALSE,
+    '#description' => t('If checked, the coupon will be rejected if an order contains any non-applicable products as configured below.'),
+  );
 
   $form['use_validity'] = array(
     '#type' => 'checkbox',
@@ -1000,6 +1006,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->minimum_order = $form_state['values']['minimum_order'] ? $form_state['values']['minimum_order'] : 0;
   $coupon->data['minimum_qty'] = $form_state['values']['minimum_qty'];
   $coupon->data['minimum_qty_restrict'] = $form_state['values']['minimum_qty_restrict'];
+  $coupon->data['require_match_all'] = $form_state['values']['require_match_all'];
   $coupon->max_uses = $form_state['values']['max_uses'] ? $form_state['values']['max_uses'] : 0;
   $coupon->data['max_uses_per_user'] = $form_state['values']['max_uses_per_user'];
   $coupon->data['apply_to'] = $form_state['values']['apply_to'];

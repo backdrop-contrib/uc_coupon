@@ -928,6 +928,11 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     }      
   }
 
+  // Ensure that all products match, if specified.
+  if (isset($coupon->data['require_match_all']) && $matched < $total_qty) {
+     return array();
+  }
+
   // Slice off applicable products if a limit was set.
   switch ($coupon->data['apply_to']) {
     case 'cheapest':
