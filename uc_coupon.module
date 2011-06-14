@@ -997,8 +997,8 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   foreach ($discounts as $discount) {
     switch ($coupon->type) {
       case 'price':
-        if ($coupon->data['apply_to'] == 'subtotal') {
-          // Apply single discount to the entire cart proportionally across the items.
+        if ($coupon->data['apply_to'] == 'subtotal' || $coupon->data['apply_to'] == 'products_total') {
+          // Apply single discount proportionally across all matching items.
           $discount->discount = $total == 0 ? 0 : min($coupon->value * $discount->price / $total, $discount->price);
         }
         else {

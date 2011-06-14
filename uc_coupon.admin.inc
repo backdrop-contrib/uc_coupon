@@ -217,6 +217,9 @@ function uc_coupon_view($coupon) {
     case 'subtotal':
       $applies = t('Order subtotal');
       break;
+    case 'products_total':
+      $applies = t('Total of matching products');
+      break;
     case 'products':
       $applies = t('Matching products');
       break;
@@ -515,6 +518,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#title' => t('Apply discount to'),
     '#options' => array(
       'subtotal' => t('Order subtotal'),
+      'products_total' => t('Total of matching product(s)'),
       'products' => t('All matching product(s)'),
       'cheapest' => t('The cheapest matching product(s)'),
       'expensive' => t('The most expensive matching product(s)'),
@@ -929,8 +933,9 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     form_set_error('discount', t('Invalid discount.'));
   }
 
-  if (substr($form_state['values']['discount'], 0, 1) == '=' && $form_state['values']['apply_to'] == 'subtotal') {
-    form_set_error('apply_to', t('Set prices cannot be applied to the order subtotal.'));
+  if (substr($form_state['values']['discount'], 0, 1) == '=' && 
+    ($form_state['values']['apply_to'] == 'subtotal' || $form_state['values']['apply_to'] == 'products_total')) {
+    form_set_error('apply_to', t('Set prices cannot be applied to the order subtotal or matching products total.'));
   }
 
   if ($form_state['values']['apply_to'] == 'cheapest' || $form_state['values']['apply_to'] == 'expensive') {
