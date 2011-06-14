@@ -717,12 +717,19 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
 
   // Calculate the discount.
   if ($order) {
-    $coupon->discounts = uc_coupon_calculate_discounts($coupon, $order, TRUE);
     $coupon->amount = 0;
-    foreach ($coupon->discounts as $item) {
-      $coupon->amount += $item->discount;
+    $discounts = uc_coupon_calculate_discounts($coupon, $order, TRUE);
+    if (!is_array($discounts)) {
+      $coupon->discounts = array();
+      $coupon->valid = FALSE;
+      $coupon->message = $discounts;
     }
-    $coupon->amount = round($coupon->amount, variable_get('uc_currency_prec', 2));
+    else {
+      foreach ($coupon->discounts as $item) {
+        $coupon->amount += $item->discount;
+      }
+      $coupon->amount = round($coupon->amount, variable_get('uc_currency_prec', 2));
+    }
   }
 
   // Invoke validation hook.
@@ -797,11 +804,6 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
     }
   }
   
-  // Check for applicable products.
-  if ($order && $coupon->amount == 0 && $coupon->value != 0) {
-    return t('You do not have applicable products in your cart.');
-  }
-
   // Check maximum usage per code.
   if ($coupon->max_uses > 0 && !empty($coupon->usage['codes'][$coupon->code]) && $coupon->usage['codes'][$coupon->code] >= $coupon->max_uses) {
     return t('This coupon has reached the maximum redemption limit.');
@@ -810,19 +812,6 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
   // Check maximum usage per user.
   if ($account && isset($coupon->data['max_uses_per_user']) && $coupon->usage['user'] >= $coupon->data['max_uses_per_user']) {
     return t('This coupon has reached the maximum redemption limit.');
-  }
-
-  // Check minimum order total.
-  if ($order && $coupon->minimum_order > 0) {
-    $total = 0;
-
-    foreach ($order->products as $item) {
-      $total += $item->price * $item->qty;
-    }
-
-    if ($coupon->minimum_order > $total) {
-      return t('You have not reached the minimum order total for this coupon.');
-    }
   }
 
   // Check user ID.
@@ -863,7 +852,9 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   // Discover if any items match the restrictions, and which items the discount should be calculated against.
   $restricted = isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types']);
   $matched = 0;
+  $matched_price = 0;
   $total_qty = 0;
+  $total_price = 0;
   $items = array();
   foreach ($order->products as $item) {
     if (isset($item->module) && $item->module == 'uc_coupon') {
@@ -905,8 +896,10 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     // A matching product was found.
     if ($include) {
       $matched += $qty;
+      $matched_price += $item->price * $qty;
     }
     $total_qty += $qty;
+    $total_price += $item->price * $qty;
 
     // Include this item. Coupons that apply to the order subtotal affect all products.
     if ($include || $coupon->data['apply_to'] == 'subtotal') {
@@ -917,20 +910,30 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
   // If no matches were found, there are no discounts to calculate.
   if ($matched == 0) {
-    return array();
+    return t('You do not have any applicable products in your cart.');
   }
 
+  $use_matched = (isset($coupon->data['minimum_qty_restrict']) && $coupon->data['minimum_qty_restrict'] != FALSE);
+  
   // Make sure the minimum quantity restriction (if any) is met.
   if (isset($coupon->data['minimum_aty'])) {
-    $check_qty = (isset($coupon->data['minimum_qty_restrict']) && $coupon->data['minimum_qty_restrict'] != FALSE) ? $matched : $total_qty;
-    if ($check_qty < $coupon->data['minimum_aty']) {
-      return array();
+    if (($use_matched ? $matched : $total_qty) < $coupon->data['minimum_aty']) {
+       return t('You do not have enough applicable products in your cart.');
+    }      
+  }
+
+  // Make sure hte minimum order total restriction (if any) is met.
+  if ($coupon->minimum_order > 0) {
+    if (($use_matched ? $matched_price : $total_price) < $coupon->minimum_order) {
+      return $use_matched ?
+        t('You have not reached the minimum total of applicable products for this coupon.') :
+        t('You have not reached the minimum order total for this coupon.');
     }      
   }
 
   // Ensure that all products match, if specified.
   if (isset($coupon->data['require_match_all']) && $matched < $total_qty) {
-     return array();
+    return t('You have non-applicable products in your cart');
   }
 
   // Slice off applicable products if a limit was set.

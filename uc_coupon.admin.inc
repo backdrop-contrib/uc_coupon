@@ -606,7 +606,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'checkbox',
     '#title' => t('Only count applicable products'),
     '#default_value' => isset($value->data['minimum_qty_restrict']) ? TRUE : FALSE,
-    '#description' => t('If checked, only applicable products as configured below will count towards the minimum quantity.'),
+    '#description' => t('If checked, only applicable products as configured below will count towards the minimum quantity or total.'),
   );
 
 
