@@ -1607,7 +1607,7 @@ function _uc_coupon_apply_to_order(&$order, $coupons) {
       'type' => 'coupon',
       'title' => $coupon->title,
       'amount' => -$coupon->amount,
-      'weight' => variable_get('uc_coupon_line_item_weight', 1),
+      'weight' => _uc_line_item_data($type, 'weight'),
       'data' => array('code' => $code),
     );  
     uc_order_line_item_add($order_id, $line['type'], $line['title'], $line['amount'], $line['weight'], $line['data']);
@@ -1625,7 +1625,7 @@ function uc_coupon_uc_line_item() {
     'title' => t('Coupon discount'),
     // !TODO Restore the following if uc_taxes ever supports it.
     //'tax_adjustment' => 'uc_coupon_tax_adjustment',
-    'weight' => 100,
+    'weight' => 0,
     'default' => FALSE,
     'stored' => TRUE,
     'add_list' => TRUE,

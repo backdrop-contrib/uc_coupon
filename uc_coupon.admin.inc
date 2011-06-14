@@ -28,13 +28,18 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
   );
 
-  $form['uc_coupon_line_item_weight'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Default line item weight'),
-    '#description' => t('Controls the order in which coupon line items are listed.  Heavier items will appear later in the list.'),
-    '#default_value' => variable_get('uc_coupon_line_item_weight', 1),
-  );
-
+  $options = array();
+  for ($i = -10; $i <= 10; $i++) {
+    $options[$i] = $i;
+  }
+  $form['uc_li_coupon_weight'] = array(
+    '#type' => 'select',
+    '#title' => t('Line item weight'),
+    '#description' => t('Controls the placement of the coupon line item in the order summary. Heavier items appear lower in the list.'),
+    '#options' => $options,
+    '#default_value' => variable_get('uc_li_coupon_weight', 0),
+  ); 
+  
   $form['uc_coupon_form_components'] = array(
     '#title' => t('Coupon submission form components'),
     '#description' => t('Select what to display on the coupon submission form (this appears in the coupon block, cart and checkout panes). 
