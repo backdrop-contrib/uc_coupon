@@ -923,7 +923,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     }      
   }
 
-  // Make sure hte minimum order total restriction (if any) is met.
+  // Make sure the minimum order total restriction (if any) is met.
   if ($coupon->minimum_order > 0) {
     if (($use_matched ? $matched_price : $total_price) < $coupon->minimum_order) {
       return $use_matched ?
@@ -953,13 +953,14 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   // Build the discounts array and get the order total.
   $total = 0;
   $discounts = array();
+  $included_rates = array();
   foreach ($items as $item) {
     if (!isset($discounts[$item->nid])) { // First entry for this product.
       // Calculate the pre-tax discount proportion for this item.
       // For fixed discounts to products with taxes included, we apply the face value of the coupon
       // tax-inclusively also; that is, the actual discount is reduced so that the face value is
       // realized after taxes. (This already happens automatically for percentage based coupons).
-      $included_rate = 0;
+      $included_rate = 1;
       if ($coupon->type != 'percentage' && module_exists('uc_taxes')) {
         foreach (uc_taxes_rate_load() as $tax) {
           if ($tax->display_include
@@ -980,13 +981,13 @@ function uc_coupon_calculate_discounts($coupon, $order) {
           }
         }
       }
-      $total -= $prior_discount;
+      $total -= $prior_discount * $included_rate;
       
       $discounts[$item->nid] = (object) array(
         'qty' => 1,
         'price' => $item->price - $prior_discount,
-        'pretax_discount' => 1 / (1 + $included_rate),
       );
+      $included_rates[$item->nid] = $included_rate;
       unset($item->type);
     }
     else { // An entry for this product already exists.
@@ -994,22 +995,26 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       $discounts[$item->nid]->price += $item->price;
       $discounts[$item->nid]->qty++;
     }
-    $total += $item->price;
+    $total += $item->price * $included_rate;
   }
 
+  //dpm($total);
+  //dpm($included_rates);
   // Calculate the discounts per product.
-  foreach ($discounts as $discount) {
+  foreach ($discounts as $nid => $discount) {
     switch ($coupon->type) {
       case 'price':
+        $inclusive_price = $discount->price * $included_rates[$nid];
+        //dpm($discount, "$nid: $inclusive_price");
         if ($coupon->data['apply_to'] == 'subtotal' || $coupon->data['apply_to'] == 'products_total') {
           // Apply single discount proportionally across all matching items.
-          $discount->discount = $total == 0 ? 0 : min($coupon->value * $discount->price / $total, $discount->price);
+          $discount->discount = $total == 0 ? 0 : min($coupon->value * ($inclusive_price / $total), $inclusive_price);
         }
         else {
           // Apply discount to each product.
-          $discount->discount = min($coupon->value * $discount->qty, $discount->price);
+          $discount->discount = min($coupon->value * $discount->qty, $inclusive_price);
         }
-        $discount->pretax_discount *= $discount->discount;
+        $discount->pretax_discount = $discount->discount / $included_rates[$nid];
         break;
 
       case 'percentage':
@@ -1017,8 +1022,8 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         break;
 
       case 'set_price':
-        $discount->discount = max($discount->price - ($coupon->value * $discount->qty), 0);
-        $discount->pretax_discount *= $discount->discount;
+        $discount->discount = max($discount->price/$discount->pretax_discount - ($coupon->value * $discount->qty), 0);
+        $discount->pretax_discount = $discount->discount / $included_rates[$nid];
         break;
     }
     unset($discount->price);
