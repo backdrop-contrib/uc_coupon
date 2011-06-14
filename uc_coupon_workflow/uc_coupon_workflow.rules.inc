@@ -132,7 +132,7 @@ function uc_coupon_workflow_rules_action_info() {
       'format' => array(
         'type' => 'text',
         'label' => t('Message format'),
-        'options list' => 'uc_coupon_purchase_message_formats',
+        'options list' => 'uc_coupon_workflow_message_formats',
       ),
     ),
   );
