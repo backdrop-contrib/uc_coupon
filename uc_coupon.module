@@ -725,6 +725,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
       $coupon->message = $discounts;
     }
     else {
+      $coupon->discounts = $discounts;
       foreach ($coupon->discounts as $item) {
         $coupon->amount += $item->discount;
       }
