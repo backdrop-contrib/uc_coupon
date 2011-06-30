@@ -3,6 +3,7 @@
  * @file
  * 
  * Ubercart Discount Coupon module api/hooks.
+ * Version 7.x-2.x
  */
 
 /**
