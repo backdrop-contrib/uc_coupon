@@ -148,7 +148,7 @@ function uc_coupon_purchase_uc_product_feature() {
 /**
  * Form builder for hook_uc_product_feature().
  */
-function uc_coupon_purchase_feature_form(&$form, $form_state, $node, $feature) {
+function uc_coupon_purchase_feature_form($form, $form_state, $node, $feature) {
   $models = array(
     NULL => t('Any'),
     $node->model => $node->model,
@@ -168,6 +168,9 @@ function uc_coupon_purchase_feature_form(&$form, $form_state, $node, $feature) {
       '#type' => 'value',
       '#value' => $feature['pfid'],
     );
+    if (!$data) {
+      $data = new stdClass();
+    }
   }
   else {
     $data = new stdClass();
@@ -195,14 +198,14 @@ function uc_coupon_purchase_feature_form(&$form, $form_state, $node, $feature) {
   $form['model'] = array(
     '#type' => 'select',
     '#title' => t('Model/SKU'),
-    '#default_value' => $data->model,
+    '#default_value' => isset($data->model) ? $data->model : NULL,
     '#description' => t('Select the model/SKU of the product that cause a coupon to be created.'),
     '#options' => $models,
   );
   $form['base_cid'] = array(
     '#type' => 'select',
     '#title' => t('Base coupon'),
-    '#default_value' => $data->base_cid,
+    '#default_value' => isset($data->base_cid) ? $data->base_cid : reset(array_keys($coupons)),
     '#description' => t('Select the coupon that will be cloned when a user purchases this product. Only inactive coupons are listed; the purchased coupon will automatically be activated.'),
     '#options' => $coupons,
   );
@@ -214,13 +217,14 @@ function uc_coupon_purchase_feature_form(&$form, $form_state, $node, $feature) {
  * Submit handler for uc_coupon_purchase_feature form.
  */
 function uc_coupon_purchase_feature_form_submit($form, &$form_state) {
+  dpm($form_state['values']);
   $coupon = uc_coupon_load($form_state['values']['base_cid']);
 
   $description = (empty($form_state['values']['model'])) ? t('<strong>SKU:</strong> Any<br/>') : t('<strong>SKU:</strong> !sku<br/>', array('!sku' => $form_state['values']['model']));
   $description .=  t('<strong>Base coupon:</strong> !coupon<br/>', array('!coupon' => $coupon->name . ' (' . $coupon->code . ')'));
 
   $data = array(
-    'pfid' => $form_state['values']['pfid'],
+    'pfid' => !empty($form_state['values']['pfid']) ? $form_state['values']['pfid'] : 0,
     'nid' => $form_state['values']['nid'],
     'fid' => 'coupon',
     'description' => $description,
@@ -228,19 +232,15 @@ function uc_coupon_purchase_feature_form_submit($form, &$form_state) {
 
   $form_state['redirect'] = uc_product_feature_save($data);
 
-  if ($form_state['values']['pfid'] == 0) {
-    $pfid = $data->pfid;
-  }
-  else {
-    $pfid = $form_state['values']['pfid'];
+  if (!empty($form_state['values']['pfid'])) {
     db_delete('uc_coupon_purchase')
-      ->condition('pfid', $pfid)
+      ->condition('pfid', $form_state['values']['pfid'])
       ->execute();
   }
 
   $id = db_insert('uc_coupon_purchase')
     ->fields(array(
-      'pfid' => $pfid,
+      'pfid' => $data['pfid'],
       'nid' => $form_state['values']['nid'],
       'model' => $form_state['values']['model'],
       'base_cid' => $form_state['values']['base_cid'],
