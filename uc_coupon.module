@@ -1452,7 +1452,7 @@ function uc_checkout_pane_coupon($op, &$order, $form=NULL, &$form_state=NULL) {
         'callback' => 'uc_coupon_checkout_update',
       );
       $description = variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.'));
-      $contents = uc_coupon_form($form, $form_state, 'checkout', $ajax);
+      $contents = uc_coupon_form(array(), $form_state, 'checkout', $ajax);
       $contents['message'] = array(
         '#markup' => '<div id="coupon-messages"></div>',
         '#weight' => 2,
