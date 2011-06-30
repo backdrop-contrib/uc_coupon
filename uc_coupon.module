@@ -1229,6 +1229,12 @@ function _uc_coupon_options_list($coupons, $in_session = TRUE) {
   return $options;
 }
 
+function uc_coupon_checkout_submit($form, &$form_state) {
+  unset($form_state['checkout_valid']);
+  $form_state['redirect'] = 'cart/checkout';
+  $form_state['rebuild'] = TRUE;  
+}
+
 /**
  * Form builder for the uc_coupon form.
  *
@@ -1261,10 +1267,14 @@ function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
       // Ensure that the ajax throbber doesn't spoil the layout.
       drupal_add_css('#uc-coupon-active-coupons, #uc-coupon-other-discounts { clear: left; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
       $form['apply'] += array(
-        //'#limit_validation_errors' => array('uc_coupons'),
         '#ajax' => $ajax,
       );
     }
+    if ($context == 'checkout') {
+      $form['apply']['#limit_validation_errors'] = array();
+      $form['apply']['#submit'] = array('uc_coupon_checkout_submit');
+    }
+    
   }
   
   // Add active coupons components (table and/or list).
@@ -1292,6 +1302,11 @@ function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
       
       if ($ajax) {
         $form['remove']['#ajax'] = $ajax;
+      }
+      
+      if ($context == 'checkout') {
+        $form['remove']['#limit_validation_errors'] = array();
+        $form['remove']['#submit'] = array('uc_coupon_checkout_submit');
       }
     }
   }
