@@ -52,13 +52,14 @@ function uc_coupon_settings_form($form, &$form_state) {
       'table' => t('Active coupons (table)'),
       'list' => t('Active coupons (list)'),
     ),
-    '#default_value' => variable_get('uc_coupon_form_components', drupal_map_assoc(array('entry', 'list'))),
+    '#default_value' => variable_get('uc_coupon_form_components',
+      drupal_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list'))),
   );
   
   $form['uc_coupon_allow_multiple'] = array(
     '#type' => 'checkbox',
     '#title' => t('Allow multiple coupons to apply to a single order.'),
-    '#default_value' => variable_get('uc_coupon_allow_multiple', TRUE),
+    '#default_value' => variable_get('uc_coupon_allow_multiple', FALSE),
   );
   
   $form['uc_coupon_default_usage'] = array(

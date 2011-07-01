@@ -501,7 +501,7 @@ function uc_coupon_find($code, $reset=FALSE) {
  *       additional conditions).
  */
 function uc_coupon_session_add($code, $op = 'submit') {
-  if (!variable_get('uc_coupon_allow_multiple', TRUE)) {
+  if (!variable_get('uc_coupon_allow_multiple', FALSE)) {
     $_SESSION['uc_coupons'] = array($code => $op);
   }
   else {
@@ -1245,7 +1245,8 @@ function uc_coupon_checkout_submit($form, &$form_state) {
  */
 function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
   $coupons = uc_coupon_session_validate();
-  $components = variable_get('uc_coupon_form_components', array('entry' => 'entry', 'table' => 'table', 'list' => 0));
+  $components = variable_get('uc_coupon_form_components',
+    drupal_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list')));
 
   // Show the coupon code entry component
   if ($components['entry']) {
@@ -1260,7 +1261,7 @@ function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
       '#value' => t('Apply to order'),
       '#name' => 'uc-coupon-apply',
     );
-    if (!variable_get('uc_coupon_allow_multiple', TRUE) && count(uc_coupon_session_get()) > 0) {
+    if (!variable_get('uc_coupon_allow_multiple', FALSE) && count(uc_coupon_session_get()) > 0) {
       $form['code']['#description'] .= ' ' . t('Apply a blank code to remove the currently applied coupon.');
     }
     if ($ajax) {
@@ -1535,7 +1536,7 @@ function uc_coupon_form_submit($form, $form_state) {
     $code = strtoupper(trim($values['code']));
     $removed = FALSE;
     // If multiple codes are not enabled, then remove any codes currently applied.
-    if (!variable_get('uc_coupon_allow_multiple', TRUE) && count($session = uc_coupon_session_get()) > 0) {
+    if (!variable_get('uc_coupon_allow_multiple', FALSE) && count($session = uc_coupon_session_get()) > 0) {
       foreach (array_keys($session) as $remove_code) {
         uc_coupon_session_clear($remove_code);
         drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $remove_code)));
