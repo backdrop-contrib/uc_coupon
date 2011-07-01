@@ -871,8 +871,9 @@ function uc_coupon_autocomplete_node($string) {
  * Autocomplete callback for term restrictions.
  */
 function uc_coupon_autocomplete_term($string) {
+  
   $matches = array();
-  $result = db_query("SELECT tid, name FROM {taxonomy_term_data} WHERE name LIKE ':name'", array(':name' => "%$string%"));
+  $result = db_query("SELECT tid, name FROM {taxonomy_term_data} WHERE name LIKE :name", array(':name' => "%$string%"));
   foreach ($result as $row) {
     $matches[$row->name . ' [tid:' . $row->tid . ']'] = $row->name;
   }
