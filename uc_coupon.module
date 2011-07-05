@@ -1022,7 +1022,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         break;
 
       case 'set_price':
-        $discount->discount = max($discount->price/$discount->pretax_discount - ($coupon->value * $discount->qty), 0);
+        $discount->discount = max($discount->price - ($coupon->value * $discount->qty), 0);
         $discount->pretax_discount = $discount->discount / $included_rates[$nid];
         break;
     }
