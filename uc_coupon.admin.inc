@@ -60,6 +60,8 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Allow multiple coupons to apply to a single order.'),
     '#default_value' => variable_get('uc_coupon_allow_multiple', FALSE),
+    '#description' => t('Note, you must enable this feature if you have configured multiple automatic coupons, 
+    		even if the restrictions for those coupons would prevent them ever applying to the same order.'),
   );
   
   $form['uc_coupon_default_usage'] = array(
