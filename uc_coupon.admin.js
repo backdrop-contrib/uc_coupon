@@ -20,9 +20,9 @@
       }).filter(':checked').click();
     
       if ($('input[name=use_validity]', context).change(function() {
-        $('#edit-valid-from-wrapper, #edit-valid-until-wrapper').toggle();
+        $('.form-item-valid-from, .form-item-valid-until').toggle();
       }).is(':not(:checked)')) {
-        $('#edit-valid-from-wrapper, #edit-valid-until-wrapper').hide();
+        $('.form-item-valid-from, .form-item-valid-until').hide();
       }
     }
   };
