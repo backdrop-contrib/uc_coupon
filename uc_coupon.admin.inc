@@ -136,9 +136,9 @@ function uc_coupon_display($view_type = 'active') {
       check_plain($coupon->name),
       check_plain($coupon->code) . ($coupon->bulk ? '* ' . t('(bulk)') : ''),
       theme('uc_coupon_discount', array('coupon' => $coupon)),
-      format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y')),
-      $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y')) : '-',
-      $coupon->valid_until ? format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y')) : '-',
+      format_date($coupon->created, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 'gmt'),
+      $coupon->valid_from ? format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 'gmt') : '-',
+      $coupon->valid_until ? format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 'gmt') : '-',
     );
   }
 
@@ -180,13 +180,13 @@ function uc_coupon_view($coupon) {
     $status = t('Active');
   }
   elseif (REQUEST_TIME < $coupon->valid_from) {
-    $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
+    $status = t('Not valid until @date', array('@date' => format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 'gmt')));
   }
   elseif (REQUEST_TIME > $coupon->valid_until) {
-    $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
+    $status = t('Expired on @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 'gmt')));
   }
   else {
-    $status = t('Active until @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'))));
+    $status = t('Active until @date', array('@date' => format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'), 'gmt')));
   }
   $rows[] = array(t('Status'), $status);
 
@@ -540,28 +540,32 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#description' => t('If checked, the coupon will be rejected if an order contains any non-applicable products as configured below.'),
   );
 
-  $form['use_validity'] = array(
+  $form['date_restrictions'] = array(
+    '#type' => 'item',
+    '#title' => t('Date restrictions'),
+  );
+  $form['date_restrictions']['use_validity'] = array(
     '#type' => 'checkbox',
     '#title' => t('Restrict coupon by date.'),
-    '#default_value' => $use_validity,
+    '#default_value' => $use_validity != 0,
   );
-  $form['valid_from'] = array(
+  $form['date_restrictions']['valid_from'] = array(
     '#type' => 'date',
     '#title' => t('Start date'),
     '#default_value' => array(
-      'year' => format_date($value->valid_from, 'custom', 'Y'),
-      'month' => format_date($value->valid_from, 'custom', 'n'),
-      'day' => format_date($value->valid_from, 'custom', 'j'),
+      'year' => format_date($value->valid_from, 'custom', 'Y', 'gmt'),
+      'month' => format_date($value->valid_from, 'custom', 'n', 'gmt'),
+      'day' => format_date($value->valid_from, 'custom', 'j', 'gmt'),
     ),
     '#after_build' => array('_uc_coupon_date_range'),
   );
-  $form['valid_until'] = array(
+  $form['date_restrictions']['valid_until'] = array(
     '#type' => 'date',
     '#title' => t('Expiry date'),
     '#default_value' => array(
-      'year' => format_date($value->valid_until, 'custom', 'Y'),
-      'month' => format_date($value->valid_until, 'custom', 'n'),
-      'day' => format_date($value->valid_until, 'custom', 'j'),
+      'year' => format_date($value->valid_until, 'custom', 'Y', 'gmt'),
+      'month' => format_date($value->valid_until, 'custom', 'n', 'gmt'),
+      'day' => format_date($value->valid_until, 'custom', 'j', 'gmt'),
     ),
     '#after_build' => array('_uc_coupon_date_range'),
   );
