@@ -357,8 +357,8 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
               $coupon = uc_coupon_load($row->base_cid);
 
               // Append purchaser data to the coupon name.
-              $purchaser = trim($order->billing_company ? $order->billing_company : ($order->billing_first_name . ' ' . $order->billing_last_name));
-              if ($purchaser) {
+              $purchaser = trim(!empty($order->billing_company) ? $order->billing_company : ($order->billing_first_name . ' ' . $order->billing_last_name));
+              if (empty($purchaser)) {
                 $purchaser = "Anonymous";
               }
               $coupon->name .= ' ' . t('purchased by !name', array('!name' => $purchaser));
