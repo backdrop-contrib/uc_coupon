@@ -71,7 +71,7 @@ function uc_coupon_condition_order_has_coupon($order, $codes=array(), $check_cur
   $check_codes = array();
   // We start with current valid codes, if specified
   if ($check_current) {
-    $coupons = _uc_coupon_get_validated();
+    $coupons = uc_coupon_session_validate();
     foreach ($coupons as $coupon) {
       $check_codes[$coupon->code] = $coupon->code;
     }
