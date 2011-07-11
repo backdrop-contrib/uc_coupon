@@ -34,7 +34,7 @@ function uc_coupon_purchase_default_rules_configuration() {
       'order:select' => 'order',
       'coupon:select' => 'coupon',
       'from' => uc_store_email_from(),
-      'addresses' => '[uc_order:email]',
+      'addresses' => '[order:email]',
       'subject' => t('[store:name]: bulk coupon purchase'),
       'message' => t("[order:first-name] [order:last-name], \n\nThanks to your order, [order:link], at [store:name] you now have a new set of coupons available to use with the following codes:\n\n[coupon:codes]\n\nThanks again, \n\n[store:name]\n[site:slogan]"),
       'format' => filter_default_format(),
