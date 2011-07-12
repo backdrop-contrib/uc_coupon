@@ -1919,8 +1919,11 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
   $info = token_info();
   foreach ($info['types'] as $type => $type_info) {
     if (empty($type_info['needs-data'])) {
-      foreach (array_keys($info['tokens'][$type]) as $token) {
-        $variables[str_replace('-', '_', $type) . '_' . str_replace('-', '_', $token)] = token_replace("[$type:$token]");  
+      $type_key = !empty($type_info['type']) ? $type_info['type'] : $type;
+      if (!empty($info['tokens'][$type_key])) {
+        foreach (array_keys($info['tokens'][$type_key]) as $token) {
+          $variables[str_replace('-', '_', $type_key) . '_' . str_replace('-', '_', $token)] = token_replace("[$type_key:$token]");  
+        }
       }
     }
   }
