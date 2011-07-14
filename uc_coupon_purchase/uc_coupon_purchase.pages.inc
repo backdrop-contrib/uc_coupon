@@ -17,7 +17,7 @@ function uc_coupon_purchase_view($account) {
   foreach ($result as $coupon) {
     if ($coupon->bulk) {
       $coupon->data = unserialize($coupon->data);
-      $codes = array($coupon->code . '*');
+      $codes = array(); 
       for ($id = 0; $id < $coupon->data['bulk_number']; $id++) {
         $codes[] = uc_coupon_get_bulk_code($coupon, $id);
       }
