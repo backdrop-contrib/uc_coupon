@@ -122,7 +122,8 @@ function uc_coupon_purchase_uc_coupon_actions($coupon) {
  * Check whether a given user has purchased any coupon, or the specific supplied coupon.
  */
 function uc_coupon_purchase_has_coupon($account, $coupon = NULL) {
-  $query = db_select('uc_coupon_purchase_users', 'u')->condition('u.uid', $account->uid)->addExpression('COUNT(*)');
+  $query = db_select('uc_coupon_purchase_users', 'u')->condition('u.uid', $account->uid);
+  $query->addExpression('COUNT(*)');
   // Make sure coupon is valid before looking for it.
   if (!empty($coupon) && !empty($coupon->cid)) {
     $query->condition('u.cid', $coupon->cid, 'AND');
