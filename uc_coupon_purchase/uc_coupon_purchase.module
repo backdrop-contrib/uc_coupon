@@ -57,14 +57,6 @@ function uc_coupon_purchase_menu() {
 }
 
 /**
- * Properly handle %uc_coupon wildcard.
- * (Necessary to prevent PHP runtime notice.)
- */
-function uc_coupon_to_arg($arg) {
-  return $arg;
-}
-
-/**
  * Access callback for user/%/coupons.
  *
  * User must have "view purchased coupons" permission, current user must have a

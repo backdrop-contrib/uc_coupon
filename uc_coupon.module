@@ -167,6 +167,14 @@ function uc_coupon_menu() {
 }
 
 /**
+ * Properly handle %uc_coupon wildcard.
+ * (Necessary to prevent PHP runtime notice.)
+ */
+function uc_coupon_to_arg($arg) {
+  return $arg;
+}
+
+/**
  * Title callback for coupon print preview.
  */
 function uc_coupon_title($coupon) {
