@@ -1592,6 +1592,9 @@ function _uc_coupon_apply_to_order(&$order, $coupons) {
   $lines = db_query("SELECT * FROM {uc_order_line_items} WHERE order_id = :order_id AND type = :type", 
       array(':order_id' => $order_id, ':type' => 'coupon'))->fetchAllAssoc('line_item_id', PDO::FETCH_ASSOC);
   foreach ($lines as $lid => $line) {
+    if (isset($line['data'])) {
+      $line['data'] = unserialize($line['data']);
+    }
     // For orders created before multi-coupons were enabled, the code was not saved with the line item.
     // In this case, we retreive it from the uc_coupons_orders table.
     if (!isset($line['data']['code'])) {
