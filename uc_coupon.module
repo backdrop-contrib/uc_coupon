@@ -1769,6 +1769,7 @@ function uc_coupon_uc_cart_alter(&$items) {
         'qty' => 1,
         'price' => -$coupon->amount,
         'data' => array('shippable' => FALSE, 'code' => $coupon->code, 'remove' => uc_coupon_session_get($code)),
+        'model' => 0,
       );
     }
   }
