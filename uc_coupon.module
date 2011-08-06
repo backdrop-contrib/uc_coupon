@@ -1289,10 +1289,10 @@ function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
   // Add active coupons components (table and/or list).
   $options = _uc_coupon_options_list($coupons);
   if (!empty($options)) {
-    if ($components['table']) {
+    if (isset($components['table']) && $components['table']) {
       $form['coupons_table'] = tapir_get_table('uc_coupon_table', $options, $ajax);
     }
-    if ($components['list']) {
+    if (isset($components['title']) && $components['list']) {
       $form['coupons'] = array(
         '#prefix' => '<div id="uc-coupon-active-coupons">',
         '#suffix' => '</div>',
