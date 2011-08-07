@@ -650,7 +650,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       '#type' => 'textfield',
       '#default_value' => $title . ' [nid:' . $nid . ']',
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/node',
-      '#maxlength' => 255,
+      '#maxlength' => 300,
     );
   }
 
@@ -670,6 +670,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'fieldset',
     '#title' => t('Applicable taxonomy terms'),
     '#description' => t('Enter one or more taxonomy terms (categories) below to restrict this coupon to a set of products. Discounts will apply to all matching products with these terms.'),
+    '#maxlength' => 300,
   );
   $form['terms']['negate_terms'] = array(
     '#type' => 'radios',
@@ -788,6 +789,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       $form[$field][] = array(
         '#type' => 'textfield',
         '#autocomplete_path' => $path ? $path : NULL,
+        '#maxlength' => ($field == 'products' || $field == 'terms') ? 300 : 128,
       );
     }
   }
