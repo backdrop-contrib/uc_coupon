@@ -882,7 +882,6 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       $include = FALSE;
       $terms = isset($node->taxonomy) ? array_keys($node->taxonomy) : array();
       if (isset($coupon->data['products']) && isset($item->data['kit_id'])) {
-        dpm($item->data['kit_id']);
         // Items that are part of product kits must be included or excluded all together, so we pre-empt other restrictions.
         $include = (isset($coupon->data['negate_products']) xor in_array($item->data['kit_id'], $coupon->data['products']));
       }
