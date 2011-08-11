@@ -139,7 +139,7 @@ function uc_coupon_workflow_rules_action_info() {
   
   // Apply an automatic coupon.
   $actions['uc_coupon_workflow_apply'] = array(
-    'label' =>  t('Apply an coupon to the current order.'),
+    'label' =>  t('Apply a coupon to the current order.'),
     'group' => t('Coupon'),
     'provides' => array(
       'coupon' => array(
