@@ -880,7 +880,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     else {
       // Other coupons only apply to matching products.
       $include = FALSE;
-      $terms = isset($node->taxonomy) ? array_keys($node->taxonomy) : array();
+      $terms = _uc_coupon_list_terms($node);
       if (isset($coupon->data['products']) && isset($item->data['kit_id'])) {
         // Items that are part of product kits must be included or excluded all together, so we pre-empt other restrictions.
         $include = (isset($coupon->data['negate_products']) xor in_array($item->data['kit_id'], $coupon->data['products']));
@@ -1059,6 +1059,27 @@ function _uc_coupon_sort_products($a, $b) {
     return 0;
   }
   return $a->price > $b->price ? 1 : -1;
+}
+
+/**
+ * Lists all taxonomy terms contained in 'taxonomy_term_reference' fields for a given node.
+ * @param $node
+ *   The node whose terms should be listed;
+ * @return
+ *   An array of any taxonomy term id's.
+ */
+function _uc_coupon_list_terms($node) {
+  $terms = array();
+  foreach(array_keys(field_info_instances('node', $node->type)) as $field_name) {
+    $field_info = field_info_field($field_name);
+    if ($field_info['type'] == 'taxonomy_term_reference') {
+      $field_values = field_get_items('node', $node, $field_name);
+      foreach ($field_values as $field_value) {
+        $terms[] = $field_value['tid'];
+      }
+    }
+  }
+  return $terms;
 }
 
 /**
