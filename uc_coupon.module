@@ -928,8 +928,8 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   $use_matched = (isset($coupon->data['minimum_qty_restrict']) && $coupon->data['minimum_qty_restrict'] != FALSE);
   
   // Make sure the minimum quantity restriction (if any) is met.
-  if (isset($coupon->data['minimum_aty'])) {
-    if (($use_matched ? $matched : $total_qty) < $coupon->data['minimum_aty']) {
+  if (isset($coupon->data['minimum_qty'])) {
+    if (($use_matched ? $matched : $total_qty) < (int)$coupon->data['minimum_qty']) {
        return t('You do not have enough applicable products in your cart.');
     }      
   }
