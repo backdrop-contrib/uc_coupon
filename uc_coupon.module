@@ -1073,9 +1073,10 @@ function _uc_coupon_list_terms($node) {
   foreach(array_keys(field_info_instances('node', $node->type)) as $field_name) {
     $field_info = field_info_field($field_name);
     if ($field_info['type'] == 'taxonomy_term_reference') {
-      $field_values = field_get_items('node', $node, $field_name);
-      foreach ($field_values as $field_value) {
-        $terms[] = $field_value['tid'];
+      if ($field_values = field_get_items('node', $node, $field_name)) {
+        foreach ($field_values as $field_value) {
+          $terms[] = $field_value['tid'];
+        }
       }
     }
   }
