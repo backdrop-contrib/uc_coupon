@@ -390,7 +390,7 @@ function theme_uc_coupon_discount($variables) {
 /**
  * Format a coupon's value depending on the type, optionally including currency symbols.
  */
-function _uc_coupon_format_discount($coupon, $currency=TRUE) {
+function _uc_coupon_format_discount($coupon, $currency = TRUE) {
   switch ($coupon->type) {
     case 'price':
       return $currency ? uc_currency_format($coupon->value) : $coupon->value;
@@ -427,7 +427,7 @@ function uc_coupon_get_bulk_code($coupon, $id) {
  *    If TRUE the cache of codes for this request will be purged.  Any function which modifies
  *    a coupon should purge the cache.
  */
-function uc_coupon_find($code, $reset=FALSE) {
+function uc_coupon_find($code, $reset = FALSE) {
   // This is expensive and can be called many times during coupon processing, so we 
   // use a simple static cache. 
   static $cached = array();
@@ -527,7 +527,7 @@ function uc_coupon_session_add($code, $op = 'submit') {
  *		was previously validated. FALSE otherwise (e.g. for removal of automatic discounts).  Ignored if
  *		a specific code is not specified.		
  */
-function uc_coupon_session_clear($code=NULL) {
+function uc_coupon_session_clear($code = NULL) {
   if (isset($code)) {
     unset($_SESSION['uc_coupons'][$code]);
   }
@@ -547,7 +547,7 @@ function uc_coupon_session_clear($code=NULL) {
  *     If a code is specified, returns TRUE if that code exists in the session, FALSE otherwise.  If no
  *     code is specified, returns an array of the form $code=>$op for all codes in the session.
  */
-function uc_coupon_session_get($code=NULL) {
+function uc_coupon_session_get($code = NULL) {
   if (isset($code)) {
     return isset($_SESSION['uc_coupons'][$code]);
   }
@@ -569,7 +569,7 @@ function uc_coupon_session_get($code=NULL) {
  * @return
  *     TRUE if suspended, FALSE otherwise.
  */
-function uc_coupon_session_suspend($setting=NULL) {
+function uc_coupon_session_suspend($setting = NULL) {
   static $suspend = FALSE;
   if (isset($setting)) {
     $suspend = $setting;
@@ -1202,7 +1202,7 @@ function theme_uc_coupon_automatic_discounts($variables) {
  *     The #ajax array to apply to each remove button, or FALSE if the form
  *    is not ajax enabled.
  */
-function uc_coupon_table($coupons, $ajax=FALSE) {
+function uc_coupon_table($coupons, $ajax = FALSE) {
   $table = array(
     '#type' => 'tapir_table',
   );
@@ -1276,13 +1276,13 @@ function uc_coupon_checkout_submit($form, &$form_state) {
  * @param $ajax
  *     The #ajax array to be applied to all buttons, or FALSE for a non-ajax-enabled form.
  */
-function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
+function uc_coupon_form($form, $form_state, $context = 'block', $ajax = FALSE) {
   $coupons = uc_coupon_session_validate();
   $components = variable_get('uc_coupon_form_components',
     drupal_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list')));
 
   // Show the coupon code entry component
-  if ($components['entry']) {
+  if (!empty($components['entry'])) {
     $form['code'] = array(
       '#type' => 'textfield',
       '#size' => 25,
@@ -1314,10 +1314,10 @@ function uc_coupon_form($form, $form_state, $context='block', $ajax = FALSE) {
   // Add active coupons components (table and/or list).
   $options = _uc_coupon_options_list($coupons);
   if (!empty($options)) {
-    if (isset($components['table']) && $components['table']) {
+    if (!empty($components['table'])) {
       $form['coupons_table'] = tapir_get_table('uc_coupon_table', $options, $ajax);
     }
-    if (isset($components['title']) && $components['list']) {
+    if (!empty($components['list'])) {
       $form['coupons'] = array(
         '#prefix' => '<div id="uc-coupon-active-coupons">',
         '#suffix' => '</div>',
@@ -1448,7 +1448,7 @@ function uc_coupon_checkout_update($form, $form_state) {
 /**
  * A checkout pane listing any automatic discounts.
  */
-function uc_checkout_pane_coupon_automatic($op, &$order, $form=NULL, &$form_state=NULL) {
+function uc_checkout_pane_coupon_automatic($op, &$order, $form = NULL, &$form_state = NULL) {
   if ($op == 'view') {
     $discounts = _uc_coupon_options_list(uc_coupon_session_validate(), FALSE);
     if (empty($discounts)) {
@@ -1478,7 +1478,7 @@ function uc_checkout_pane_coupon_automatic($op, &$order, $form=NULL, &$form_stat
  * Used to display a form in the checkout process so that customers
  * can enter discount coupons.
  */
-function uc_checkout_pane_coupon($op, &$order, $form=NULL, &$form_state=NULL) {
+function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL) {
   switch ($op) {
     case 'view':
       drupal_add_css('#coupon-messages { clear: both; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
