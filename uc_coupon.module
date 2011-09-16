@@ -592,7 +592,7 @@ function uc_coupon_session_suspend($setting = NULL) {
  *     coupons list and the shopping cart are in sync.
  *    
  * @return
- *     An array of fully validated coupon objects.
+ *     An array of fully validated coupon objects, indexed by code.
  */
 function uc_coupon_session_validate($products = NULL) {
   static $valids = NULL; 
@@ -1372,13 +1372,22 @@ function uc_coupon_uc_order($op, &$order) {
     }
   }
   // Ensure that the order total is calculated properly when tax-inclusive coupon discounts are applied.
-  elseif ($op == 'total' && isset($order->data['coupons']) && module_exists('uc_taxes')) {
+  elseif ($op == 'total' && isset($order->data['coupons'])) {
     $adjustment = 0;
-    foreach ($order->data['coupons'] as $items) {
-      foreach ($items as $item) {
-        $adjustment += $item->discount - $item->pretax_discount;
+    foreach ($order->products as $product) {
+      if (isset($product->module) && $product->module == 'uc_coupon') {
+        $adjustment -= $product->price * $product->qty;
       }
     }
+    
+    if (module_exists('uc_taxes')) {
+      foreach ($order->data['coupons'] as $items) {
+        foreach ($items as $item) {
+          $adjustment += $item->discount - $item->pretax_discount;
+        }
+      }
+    }
+    
     return $adjustment;
   }
 }
@@ -1503,6 +1512,7 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
         $form_state['rebuild'] = TRUE;
         uc_coupon_form_submit($form, $form_state); 
         uc_cart_get_contents(NULL, TRUE); // Rebuild the cart contents to force revalidation.
+        _uc_coupon_apply_to_order($order, uc_coupon_session_validate());
         return FALSE; // Prevent redirection.
       }
       else {
@@ -1704,6 +1714,15 @@ function uc_coupon_uc_line_item() {
  * Implements hook_uc_line_item_alter().
  */
 function uc_coupon_uc_line_item_alter(&$item, $order) {
+  if ($item['type'] == 'subtotal') {
+    $adjustment = 0;
+    foreach ($order->products as $product) {
+      if (isset($product->module) && $product->module == 'uc_coupon') {
+        $adjustment -= $product->price * $product->qty;
+      }
+      $item['amount'] += $adjustment;
+    }
+  }
   if (module_exists('uc_taxes')) {
     switch ($item['type']) {
       // Adjust the pre-tax subtotal to exclude the portion of a tax-inclusive coupon that applies to the tax.
