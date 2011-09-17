@@ -802,7 +802,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
         '#weight' => 1,
         '#name' =>  'op_' . $field,
         '#limit_validation_errors' => array(),
-        '#submit' => array('uc_coupon_ajax_submit'),
+        '#submit' => array('uc_coupon_add_form_submit'),
         '#ajax' => array( 
           'callback' => 'uc_coupon_ajax_callback',
           'wrapper' => 'ajax-' . $field,
@@ -878,18 +878,6 @@ function _uc_coupon_date_range($form_element) {
  */
 function uc_coupon_ajax_callback($form, $form_state) {
   return $form[$form_state['ajax_submission']];
-}
-
-/**
- * Ajax submit handler for "Add more items" button in restrictions fieldsets.
- */
-function uc_coupon_ajax_submit($form, &$form_state) {
-  $elem = $form_state['triggering_element']['#name'];
-  if (substr($elem, 0, 3) === 'op_') {
-    $form_statet['rebuild'] = TRUE;
-    $form_state['ajax_submission'] = substr($elem, 3);
-    uc_coupon_add_form_submit($form, $form_state);
-  }
 }
 
 /**
@@ -1088,17 +1076,16 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data = array_filter($coupon->data);
 
   // Handle AJAX submissions.
-  if (!empty($form_state['ajax_submission'])) {
+  if (substr($elem = $form_state['triggering_element']['#name'], 0, 3) === 'op_') {
+    $form_state['ajax_submission'] = substr($elem, 3);
     $form_state['coupon_data'] = $coupon->data;
     $form_state['rebuild'] = TRUE;
-    return;
   }
-  // Clear AJAX storage, or the redirect will fail.
-  unset($form_state['storage']['field_count']);
-
-  uc_coupon_save($coupon, $form_state['values']);
-  drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
-  $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
+  else {
+    uc_coupon_save($coupon, $form_state['values']);
+    drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
+    $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
+  }
 }
 
 function _uc_coupon_map_restriction(&$value, $key, $prefix) {
