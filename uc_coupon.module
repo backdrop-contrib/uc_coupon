@@ -1366,7 +1366,7 @@ function uc_coupon_uc_order($op, &$order) {
     // Make sure any fake cart items don't get saved with the order if the checkout page is skipped
     // (e.g. Paypal Express Checkout, Google Checkout)
     foreach ($order->products as $key => $product) {
-      if ($product->module == 'uc_coupon') {
+      if (isset($product->module) && $product->module == 'uc_coupon') {
         unset($order->products[$key]);
       }
     }
