@@ -201,8 +201,16 @@ function uc_coupon_display($view_type = 'active') {
  *   Coupon to view.
  */
 function uc_coupon_view($coupon) {
-  $rows = array();
+  $content = array(
+    '#view_mode' => 'full',
+  );
 
+  // Build fields content.
+  field_attach_prepare_view('uc_coupon', array($coupon->cid => $coupon), 'full');
+  entity_prepare_view('uc_coupon', array($coupon->cid => $coupon));
+  $content += field_attach_view('uc_coupon', $coupon, 'full');
+
+  $rows = array();
   $rows[] = array(t('Name'), check_plain($coupon->name));
 
   if (!$coupon->status) {
@@ -368,8 +376,12 @@ function uc_coupon_view($coupon) {
     );
   }
 
-  $output = theme('table', array('header' => array(), 'rows' => $rows));
-  return $output;
+  $content['admin_summary'] = array(
+    '#title' => t('Administrative Summary'),
+    '#theme' => 'table',
+    '#rows' => $rows
+  );
+  return $content;
 }
 
 /**
@@ -864,6 +876,8 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       '#markup' => theme('token_tree', array('token_types' => array('uc_coupon'))),
     );
   }
+  
+  field_attach_form('uc_coupon', $coupon, $form, $form_state);
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -1092,6 +1106,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     $form_state['rebuild'] = TRUE;
   }
   else {
+    field_attach_submit('uc_coupon', $coupon, $form, $form_state);
     uc_coupon_save($coupon, $form_state['values']);
     drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
     $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');

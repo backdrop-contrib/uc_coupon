@@ -1,42 +1,78 @@
 <?php
-/**
- * Load a coupon object.
- *
- * @param $cid
- *   Unique coupon ID.
- *
- * @return $coupon
- *   A coupon object.
- */
-function uc_coupon_load($cid) {
-  $coupon = db_query("SELECT * FROM {uc_coupons} WHERE cid = :cid", array(':cid' => $cid))->fetchObject();
-  $coupon->data = isset($coupon->data) ? unserialize($coupon->data) : array();
 
-  // Convert old coupons that could not specify "per order" when restricted.
-  if (!isset($coupon->data['apply_to'])) {
-    if (isset($coupon->data['max_applicable_products_value']) && isset($coupon->data['max_applicable_products']) && $coupon->data['max_applicable_products']) {
-      // Coupon was restricted to X cheapest or most expensive products.
-      $coupon->data['apply_to'] = $coupon->data['max_applicable_products_value'];
-      $coupon->data['apply_count'] = $coupon->data['max_applicable_products'];
-    }
-    elseif (isset($coupon->data['products']) || isset($coupon->data['skus']) || isset($coupon->data['terms']) || isset($coupon->data['product_types'])) {
-      // Coupon has product restrictions, so was applied to each matching product.
-      $coupon->data['apply_to'] = 'products';
-    }
-    else {
-      // Coupon had no product restrictions, so was applied once to the subtotal.
-      $coupon->data['apply_to'] = 'subtotal';
-    }
-  }
-  unset($coupon->data['max_applicable_products']);
-  unset($coupon->data['max_applicable_products_value']);
-
-  // Allow other modules to alter the coupon data.
-  drupal_alter('uc_coupon', $coupon);
-
-  return $coupon;
+function uc_coupon_entity_info() {
+  return array(
+    'uc_coupon' => array(
+      'label' => t('Coupon'),
+      'controller class' => 'UcCouponController',
+      'base table' => 'uc_coupons',
+      'fieldable' => TRUE,
+      'entity keys' => array(
+        'id' => 'cid',
+      ),
+      'bundles' => array(
+        'uc_coupon' => array(
+          'label' => t('Coupon'),
+          'admin' => array(
+            'path' => 'admin/store/settings/coupon',
+            'access arguments' => array('manage store coupons'),
+          ),
+        ),
+      ),
+      'view modes' => array(
+        'full' => array(
+          'label' => t('Administrative view'),
+        ),
+      ),
+    ),
+  );
 }
 
+/**
+ * Loads one coupon entity from the database.
+ */
+function uc_coupon_load($cid, $reset = FALSE) {
+  if (is_null($cid) || $cid < 1) {
+    return FALSE;
+  }
+
+  $coupons = uc_coupon_load_multiple(array($cid), array(), $reset);
+
+  return $coupons ? reset($coupons) : FALSE;
+}
+
+/**
+ * Loads one or more coupon entities from the database.
+ *
+ * @param $ids
+ *   An array of coupon IDs.
+ * @param $conditions
+ *   An array of conditions on the {uc_coupons} table in the form
+ *  'field' => $value.
+ *
+ * @return
+ *   An array of order objects indexed by order_id.
+ */
+function uc_coupon_load_multiple($ids, $conditions = array(), $reset = FALSE) {
+  return entity_load('uc_coupon', $ids, $conditions, $reset);
+}
+
+
+/**
+ * Controller class for uc_order entity.
+ */
+class UcCouponController extends DrupalDefaultEntityController {
+
+  function attachLoad(&$coupons, $revision_id = FALSE) {
+    foreach ($coupons as &$coupon) {
+      $coupon->data = isset($coupon->data) ? unserialize($coupon->data) : array();
+      // Allow other modules to alter the coupon data.
+      drupal_alter('uc_coupon', $coupon);
+    }
+    parent::attachLoad($coupons, $revision_id);
+  }
+
+}
 
 /**
  * Save a coupon object.
@@ -52,23 +88,34 @@ function uc_coupon_load($cid) {
  *   An optional array of extra data that other modules may need to save.
  */
 function uc_coupon_save(&$coupon, $edit = array()) {
-  // Allow other modules to alter the coupon before saving.
-  foreach (module_implements('uc_coupon_presave') as $module) {
-    $callback = $module . '_uc_coupon_presave';
-    $callback($coupon, $edit);
-  }
+  $transaction = db_transaction();
+  try {
+    field_attach_presave('uc_coupon', $coupon);
 
-  if (isset($coupon->cid)) {
-    drupal_write_record('uc_coupons', $coupon, 'cid');
-  }
-  else {
-    $coupon->created = REQUEST_TIME;
-    $coupon->bulk_seed = md5(uniqid());
-    drupal_write_record('uc_coupons', $coupon);
-  }
+    // Allow other modules to alter the coupon before saving.
+    foreach (module_implements('uc_coupon_presave') as $module) {
+      $callback = $module . '_uc_coupon_presave';
+      $callback($coupon, $edit);
+    }
+    if (!empty($coupon->cid)) {
+      drupal_write_record('uc_coupons', $coupon, 'cid');
+      field_attach_update('uc_coupon', $coupon);
+    }
+    else {
+      $coupon->created = REQUEST_TIME;
+      $coupon->bulk_seed = md5(uniqid());
+      drupal_write_record('uc_coupons', $coupon);
+      field_attach_insert('uc_coupon', $coupon);
+    }
 
-  // Notify other modules that a coupon has been saved.
-  module_invoke_all('uc_coupon_save', $coupon);
+    // Notify other modules that a coupon has been saved.
+    module_invoke_all('uc_coupon_save', $coupon);
+  }
+  catch (Exception $e) {
+    $transaction->rollback('uc_order');
+    watchdog_exception('uc_order', $e);
+    throw $e;
+  }
 }
 
 function uc_coupon_delete($cid) {
@@ -84,4 +131,20 @@ function uc_coupon_delete($cid) {
     ->execute();
     
   return $coupon;
+}
+
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function uc_coupon_field_extra_fields() {
+  $extra = array();
+
+  $extra['uc_coupon']['uc_coupon']['display']['admin_summary'] = array(
+    'label' => t('Administrative Summary'),
+    'description' => t('A summary of all coupon details.'),
+    'weight' => 0,
+  );
+
+  return $extra;
 }

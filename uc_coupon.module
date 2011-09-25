@@ -155,6 +155,13 @@ function uc_coupon_menu() {
     'file' => 'uc_coupon.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
+  $items['admin/store/settings/coupon/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Edit the basic coupon settings.',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  
 
   $items['admin/store/reports/coupon'] = array(
     'title' => 'Coupon usage reports',
@@ -1793,6 +1800,15 @@ function uc_coupon_uc_checkout_complete($order, $account) {
  */
 function template_preprocess_uc_coupon_certificate(&$variables) {
   $coupon = $variables['coupon'];
+  
+  // Create variables for each user-added field.
+  $fields = field_info_fields();
+  foreach ($fields as $name => $field) {
+    if (in_array('uc_coupon', array_keys($field['bundles']))) {
+      $items = field_get_items('uc_coupon', $coupon, $name);
+      $variables[$name] = $items;
+    }
+  }
 
   $variables['value'] = theme('uc_coupon_discount', array('coupon' => $coupon));
 
