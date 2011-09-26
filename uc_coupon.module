@@ -1956,7 +1956,7 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
   // Merge in global tokens.
   $info = token_info();
   foreach ($info['types'] as $type => $type_info) {
-    if (empty($type_info['needs-data'])) {
+    if (empty($type_info['needs-data']) && $type != 'current-user' && $type != 'current-date') {
       $type_key = !empty($type_info['type']) ? $type_info['type'] : $type;
       if (!empty($info['tokens'][$type_key])) {
         foreach (array_keys($info['tokens'][$type_key]) as $token) {
