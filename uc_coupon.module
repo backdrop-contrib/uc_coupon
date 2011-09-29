@@ -1783,6 +1783,7 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
     // cf. http://drupal.org/node/1285938 and http://drupal.org/node/1288220 
     if ($order->order_id == 0 && module_exists('uc_taxes')) {
       $taxes = uc_taxes_calculate($order);
+      $adjustment = 0;
       // First update each tax line item with the correct value.
       foreach ($order->line_items as &$item) {
         if ($item['type'] == 'tax') {
