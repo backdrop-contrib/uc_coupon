@@ -1631,7 +1631,7 @@ function _uc_coupon_apply_to_order(&$order, $coupons) {
     // For orders created before multi-coupons were enabled, the code was not saved with the line item.
     // In this case, we retreive it from the uc_coupons_orders table.
     if (!isset($line['data']['code'])) {
-      $line['data']['code'] = db_query('SELECT code FROM {uc_coupons_orders} WHERE oid = :oid', array(':oit' => $order_id))->fetchField();
+      $line['data']['code'] = db_query('SELECT code FROM {uc_coupons_orders} WHERE oid = :oid', array(':oid' => $order_id))->fetchField();
     }
     $code = $line['data']['code'];
     if (isset($coupons[$code])) {
