@@ -876,7 +876,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       '#markup' => theme('token_tree', array('token_types' => array('uc_coupon'))),
     );
   }
-  
+
   field_attach_form('uc_coupon', $coupon, $form, $form_state);
 
   $form['submit'] = array(

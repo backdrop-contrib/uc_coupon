@@ -161,8 +161,6 @@ function uc_coupon_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-
-
   $items['admin/store/reports/coupon'] = array(
     'title' => 'Coupon usage reports',
     'description' => 'View coupon usage reports.',
