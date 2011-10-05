@@ -1115,17 +1115,7 @@ function uc_coupon_delete_confirm($form, &$form_state, $coupon) {
  * Delete coupon confirm form submit handler.
  */
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
-  $coupon = uc_coupon_load($form['#uc_coupon_cid']);
-
-  module_invoke_all('uc_coupon_delete', $coupon);
-
-  db_delete('uc_coupons')
-    ->condition('cid', $form['#uc_coupon_cid'])
-    ->execute();
-  db_delete('uc_coupons_orders')
-    ->condition('cid', $form['#uc_coupon_cid'])
-    ->execute();
-
+  $coupon = uc_coupon_delete($form['#uc_coupon_cid']);
   drupal_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
   $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
 }
