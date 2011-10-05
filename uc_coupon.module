@@ -942,14 +942,11 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     $total += $item->price * $included_rate;
   }
 
-  //dpm($total);
-  //dpm($included_rates);
   // Calculate the discounts per product.
   foreach ($discounts as $nid => $discount) {
     switch ($coupon->type) {
       case 'price':
         $inclusive_price = $discount->price * $included_rates[$nid];
-        //dpm($discount, "$nid: $inclusive_price");
         if ($coupon->data['apply_to'] == 'subtotal' || $coupon->data['apply_to'] == 'products_total') {
           // Apply single discount proportionally across all matching items.
           $discount->discount = $total == 0 ? 0 : min($coupon->value * ($inclusive_price / $total), $inclusive_price);
@@ -1618,32 +1615,10 @@ function uc_coupon_uc_line_item() {
     'stored' => TRUE,
     'add_list' => TRUE,
     'calculated' => TRUE,
-    'callback' => 'uc_line_item_coupon',
   );
   return $items;
 }
 
-
-function uc_line_item_coupon($op, $order) {
-  switch($op) {
-    case 'load':
-      if (empty($order->order_id)) {
-        $coupons = uc_coupon_session_validate();
-        if (!empty($coupons)) {
-          _uc_coupon_apply_to_order($order, $coupons);
-          $coupon_items = array();
-          foreach ($order->line_items as $key => $item) {
-            if ($item['type'] == 'coupon') {
-              $item['id'] = 'coupon';
-              $coupon_items[] = $item;
-              unset($order->line_items[$key]);
-            }
-          }
-          return $coupon_items;
-        }
-      }
-  }
-}
 
 /**
  * Handle tax on coupons by calculating tax for individual discounted prices.
@@ -1777,35 +1752,7 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
   if (isset($form['panes']['payment']['line_items']['#order']) && variable_get('uc_coupon_show_in_cart', TRUE) && !empty($coupons)) {
     $order =  &$form['panes']['payment']['line_items']['#order'];
     
-    // Ugly code to make sure the coupon line_item figures into tax calculations on initial 
-    // checkout.  Should be removed if orders are ever created in the form builder, or if 
-    // uc_taxes is fixed to take into account non-stored but taxable line-items.
-    // cf. http://drupal.org/node/1285938 and http://drupal.org/node/1288220 
-    if ($order->order_id == 0 && module_exists('uc_taxes')) {
-      $taxes = uc_taxes_calculate($order);
-      $adjustment = 0;
-      // First update each tax line item with the correct value.
-      foreach ($order->line_items as &$item) {
-        if ($item['type'] == 'tax') {
-          foreach ($taxes as $tax) {
-            if ($item['title'] == $tax->name) {
-              dpm($tax->amount . ' ' . $item['amount']);
-              $adjustment += $tax->amount - $item['amount'];
-              $item['amount'] = $tax->amount;
-            }
-          }
-        }
-      }
-      // Now update the total.
-      foreach ($order->line_items as &$item) {
-        if ($item['type'] == 'total') {
-          $item['amount'] += $adjustment;
-          break;
-        }
-      }
-    }
-    
-    // More ugly code to make sure the fake uc_coupon cart item doesn't add to the totals.
+    // Ugly code to make sure the fake uc_coupon cart item doesn't add to the totals.
     // Can hopefully be removed if Ubercart provides a checkout_init hook
     // or something similar.  cf. http://drupal.org/node/1290000.
     $amount = 0;
