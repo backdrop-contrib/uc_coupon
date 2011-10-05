@@ -1747,11 +1747,11 @@ function uc_coupon_theme_uc_cart_block_content($variables) {
  */
 function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
   $coupons = uc_coupon_session_validate();
-  
+
   // Make alterations to the payment preview pane.
   if (isset($form['panes']['payment']['line_items']['#order']) && variable_get('uc_coupon_show_in_cart', TRUE) && !empty($coupons)) {
     $order =  &$form['panes']['payment']['line_items']['#order'];
-    
+
     // Ugly code to make sure the fake uc_coupon cart item doesn't add to the totals.
     // Can hopefully be removed if Ubercart provides a checkout_init hook
     // or something similar.  cf. http://drupal.org/node/1290000.

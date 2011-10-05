@@ -16,7 +16,7 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#description' => t('Controls the way coupons appear in the cart and order summary. This setting be overridden by individual coupons.'),
     '#default_value' => variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]'))),
   );
-  
+
   if (module_exists('token')) {
     $form['uc_coupon_line_item_format']['#description'] .= ' ' . t('You may use any of the following replacement patterns.');
     $form['uc_coupon_line_item_format']['#suffix'] = theme('token_tree', array('token_types' => array('uc_coupon')));
@@ -27,7 +27,7 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#title' => t('Show coupons as an item in the cart.'),
     '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
   );
-  
+
   $options = array();
   for ($i = -10; $i <= 10; $i++) {
     $options[$i] = $i;
@@ -38,11 +38,11 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#description' => t('Controls the placement of the coupon line item in the order summary. Heavier items appear lower in the list.'),
     '#options' => $options,
     '#default_value' => variable_get('uc_li_coupon_weight', 0),
-  ); 
-  
+  );
+
   $form['uc_coupon_form_components'] = array(
     '#title' => t('Coupon submission form components'),
-    '#description' => t('Select what to display on the coupon submission form (this appears in the coupon block, cart and checkout panes). 
+    '#description' => t('Select what to display on the coupon submission form (this appears in the coupon block, cart and checkout panes).
     Note that you must enable the coupon code entry field in order for customers to submit coupons.  Also, if coupons are not displayed
     in the cart (see above),  you must enable either the active coupons table or the active coupons list in order for custmers to be able
     to remove coupons.'),
@@ -55,15 +55,15 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => variable_get('uc_coupon_form_components',
       drupal_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list'))),
   );
-  
+
   $form['uc_coupon_allow_multiple'] = array(
     '#type' => 'checkbox',
     '#title' => t('Allow multiple coupons to apply to a single order.'),
     '#default_value' => variable_get('uc_coupon_allow_multiple', FALSE),
-    '#description' => t('Note, you must enable this feature if you have configured multiple automatic coupons, 
+    '#description' => t('Note, you must enable this feature if you have configured multiple automatic coupons,
     		even if the restrictions for those coupons would prevent them ever applying to the same order.'),
   );
-  
+
   $form['uc_coupon_default_usage'] = array(
     '#type' => 'radios',
     '#title' => t('Default redemption setting for new coupons'),
@@ -81,28 +81,28 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => variable_get('uc_coupon_querystring', ''),
     '#size' => 15,
   );
-  
+
   $form['uc_coupon_expiry'] = array(
     '#title' => t('Coupon activation/expiration time'),
     '#type' => 'item',
-    '#description' => t('Date-restricted coupons will activate and expire at this hour on the dates specified for the 
+    '#description' => t('Date-restricted coupons will activate and expire at this hour on the dates specified for the
     	individual coupon. Note that changing this setting will not effect coupons which have already been created.  To
     	update the activation/expiration times of existing coupons, edit and save them.'),
   );
-  
+
   $form['uc_coupon_expiry']['uc_coupon_expiry_hour'] = array(
     '#type' => 'select',
     '#options' => drupal_map_assoc(range(0, 23, 1), '_uc_coupon_format_hour'),
     '#default_value' => variable_get('uc_coupon_expiry_hour', 0),
   );
-  
+
   $form['uc_coupon_expiry']['uc_coupon_expiry_timezone'] = array(
     '#type' => 'radios',
     '#options' => array( 0 => 'UTC', 1 => 'Local'),
     '#default_value' => variable_get('uc_coupon_expiry_timezone', 0),
   );
-  
-  
+
+
   return system_settings_form($form);
 }
 
@@ -149,7 +149,7 @@ function uc_coupon_display($view_type = 'active') {
     ->orderByHeader($header);
   $query->range(0, 20);
   $query->condition('c.status', $view_type == 'inactive' ? 0 : 1)->fields('c');
-  
+
   $rows = array();
   $result = $query->execute();
   foreach ($result as $coupon) {
@@ -336,7 +336,7 @@ function uc_coupon_view($coupon) {
   if ($coupon->minimum_order > 0) {
     $rows[] = array(t('Order restrictions'), t('Minimum subtotal') . ': <em>' . uc_currency_format($coupon->minimum_order) . '</em>');
   }
-  
+
   $combo_list = array();
   if (!empty($coupon->data['combinations'])) {
     $combos = db_query('SELECT cid, name FROM {uc_coupons} where cid IN (:cids)', array(':cids' => $coupon->data['combinations']));
@@ -437,7 +437,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     'users' => 'admin/store/coupons/autocomplete/user',
     'roles' => 'admin/store/coupons/autocomplete/role',
   );
-  
+
   if (empty($form_state['ajax_submission'])) {
     // Set the initial field count.
     foreach (array_keys($ajax_fields) as $field) {
@@ -496,7 +496,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#default_value' => isset($value->bulk) ? $value->bulk : FALSE,
     '#disabled' => $used,
   );
-  
+
   $form['bulk']['bulk_number'] = array(
     '#type' => 'textfield',
     '#title' => t('Number of codes to generate'),
@@ -583,7 +583,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       'month' => _uc_coupon_format_date($value->valid_from, 'n'),
       'day' => _uc_coupon_format_date($value->valid_from, 'j'),
     ),
-    '#description' => t('Coupon will activate at @hour @zone on the specified date. The time/zone may be changed on the !link', 
+    '#description' => t('Coupon will activate at @hour @zone on the specified date. The time/zone may be changed on the !link',
         array('@hour' => $hour, '@zone' => $zone, '!link' => $link)),
     '#after_build' => array('_uc_coupon_date_range'),
   );
@@ -595,7 +595,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       'month' => _uc_coupon_format_date($value->valid_until, 'n'),
       'day' => _uc_coupon_format_date($value->valid_until, 'j'),
     ),
-    '#description' => t('Coupon will expire at @hour @zone on the specified date. The time/zone may be changed on the !link', 
+    '#description' => t('Coupon will expire at @hour @zone on the specified date. The time/zone may be changed on the !link',
         array('@hour' => $hour, '@zone' => $zone, '!link' => $link)),
     '#after_build' => array('_uc_coupon_date_range'),
   );
@@ -732,7 +732,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     ),
     '#tree' => FALSE,
   );
-  
+
   foreach ($value->data['users'] as $uid) {
     $username = $uid ? db_query('SELECT name FROM {users} WHERE uid = :uid', array(':uid' => $uid))->fetchField() : t('anonymous users');
     $form['users'][] = array(
@@ -756,7 +756,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     ),
     '#tree' => FALSE,
   );
-  
+
   foreach ($value->data['roles'] as $role) {
     $form['roles'][] = array(
       '#type' => 'textfield',
@@ -764,7 +764,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       '#autocomplete_path' => 'admin/store/coupons/autocomplete/role',
     );
   }
-  
+
   $form['combinations'] = array(
     '#type' => 'fieldset',
     '#title' => t('Combinations'),
@@ -787,7 +787,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#options' => db_query('SELECT cid, name FROM {uc_coupons}')->fetchAllKeyed(),
     '#default_value' => isset($value->data['combinations']) ? $value->data['combinations'] : NULL,
   );
-  
+
   // Add common settings and ajax functionality to restriction fieldsets.
   foreach ($ajax_fields as $field => $path) {
     $form[$field] = array_merge($form[$field], array(
@@ -803,7 +803,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
         '#name' =>  'op_' . $field,
         '#limit_validation_errors' => array(),
         '#submit' => array('uc_coupon_add_form_submit'),
-        '#ajax' => array( 
+        '#ajax' => array(
           'callback' => 'uc_coupon_ajax_callback',
           'wrapper' => 'ajax-' . $field,
           'effect' => 'fade',
@@ -821,7 +821,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
       );
     }
   }
-  
+
   $form['display'] = array(
     '#type' => 'fieldset',
     '#title' => t('Display options'),
@@ -829,16 +829,16 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#collapsible' => TRUE,
     '#collapsed' => empty($value->data['line_item_format']) || empty($value->data['apply_message']),
   );
-  
+
   $form['display']['line_item_format'] = array(
     '#type' => 'textfield',
     '#size' => 60,
     '#title' => t('Line item title format.'),
-    '#description' => t('The title for this coupon when displayed in the cart and as a line-item. 
+    '#description' => t('The title for this coupon when displayed in the cart and as a line-item.
     		Leave blank to use the default format as specified on the main coupon settings page.'),
     '#default_value' => empty($value->data['line_item_format']) ? '' : $value->data['line_item_format'],
   );
-  
+
   $form['display']['apply_message'] = array(
     '#type' => 'textarea',
     '#rows' => 3,
@@ -846,7 +846,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#description' => t('The message to be displayed when this coupon is applied. Leave blank for a default message.'),
     '#default_value' => empty($value->data['apply_message']) ? '' : $value->data['apply_message'],
   );
-  
+
   if (module_exists('token')) {
     $form['display']['replacement_patterns'] = array(
       '#type' => 'item',
@@ -900,7 +900,7 @@ function uc_coupon_autocomplete_node($string) {
  * Autocomplete callback for term restrictions.
  */
 function uc_coupon_autocomplete_term($string) {
-  
+
   $matches = array();
   $result = db_query("SELECT tid, name FROM {taxonomy_term_data} WHERE name LIKE :name", array(':name' => "%$string%"));
   foreach ($result as $row) {
@@ -952,7 +952,7 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   if ($name) {
     form_set_error('code', t('Coupon code already used by %name.', array('%name' => $name)));
   }
-  
+
   if (isset($form['#uc_coupon_used']) && $form['#uc_coupon_used']
       && isset($form_state['values']['bulk_number']) && isset($form['#uc_coupon']->data['bulk_number'])
       && $form_state['values']['bulk_number'] < $form['#uc_coupon']->data['bulk_number']) {
@@ -963,7 +963,7 @@ function uc_coupon_add_form_validate($form, &$form_state) {
     form_set_error('discount', t('Invalid discount.'));
   }
 
-  if (substr($form_state['values']['discount'], 0, 1) == '=' && 
+  if (substr($form_state['values']['discount'], 0, 1) == '=' &&
     ($form_state['values']['apply_to'] == 'subtotal' || $form_state['values']['apply_to'] == 'products_total')) {
     form_set_error('apply_to', t('Set prices cannot be applied to the order subtotal or matching products total.'));
   }
@@ -987,7 +987,7 @@ function uc_coupon_add_form_validate($form, &$form_state) {
   }
 
   if ( (!isset($form['#uc_coupon_used']) || $form['#uc_coupon_used'] == 0)
-      && $form_state['values']['bulk_generate'] 
+      && $form_state['values']['bulk_generate']
       && intval($form_state['values']['bulk_number']) <= 0) {
     form_set_error('bulk_number', t('You must specify the number of codes to generate.'));
   }
@@ -1067,7 +1067,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
   $coupon->data['negate_combinations'] = $form_state['values']['negate_combinations'];
   $coupon->data['combinations'] = drupal_map_assoc(array_filter($form_state['values']['combinations']));
-  
+
   // Set coupon display info
   $coupon->data['apply_message'] = trim($form_state['values']['apply_message']);
   $coupon->data['line_item_format'] = trim($form_state['values']['line_item_format']);
@@ -1191,5 +1191,5 @@ function _uc_coupon_mktime($month, $day, $year) {
   $time = $func($hour, 0, 0, $month, $day, $year);
   //dpm($time . ' ' . date('m/d/y h:i:s T', $time), 'using ' . $func . '(' . $hour . ')');
   return $func($hour, 0, 0, $month, $day, $year);
- 
+
 }
