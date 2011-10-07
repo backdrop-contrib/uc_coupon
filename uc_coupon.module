@@ -1801,8 +1801,8 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
 
   if ($coupon->valid_until) {
     $variables['not_yet_valid'] = $coupon->valid_from > REQUEST_TIME;
-    $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
-    $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('uc_date_format_default', 'm/d/Y'));
+    $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('date_format_uc_store', 'm/d/Y'));
+    $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('date_format_uc_store', 'm/d/Y'));
   }
   else {
     $variables['not_yet_valid'] = FALSE;
@@ -1845,6 +1845,7 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
 
   // Merge in global tokens.
   $info = token_info();
+  //dpm($info);
   foreach ($info['types'] as $type => $type_info) {
     if (empty($type_info['needs-data']) && $type != 'current-user' && $type != 'current-date') {
       $type_key = !empty($type_info['type']) ? $type_info['type'] : $type;

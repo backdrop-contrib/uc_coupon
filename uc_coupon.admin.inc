@@ -159,9 +159,9 @@ function uc_coupon_display($view_type = 'active') {
       check_plain($coupon->name),
       check_plain($coupon->code) . ($coupon->bulk ? '* ' . t('(bulk)') : ''),
       theme('uc_coupon_discount', array('coupon' => $coupon)),
-      _uc_coupon_format_date($coupon->created, variable_get('uc_date_format_default', 'm/d/Y')),
-      $coupon->valid_from ? _uc_coupon_format_date($coupon->valid_from, variable_get('uc_date_format_default', 'm/d/Y H:iT')) : '-',
-      $coupon->valid_until ? _uc_coupon_format_date($coupon->valid_until, variable_get('uc_date_format_default', 'm/d/Y H:iT')) : '-',
+      _uc_coupon_format_date($coupon->created, variable_get('date_format_uc_store', 'm/d/Y')),
+      $coupon->valid_from ? _uc_coupon_format_date($coupon->valid_from, variable_get('date_format_uc_store', 'm/d/Y H:iT')) : '-',
+      $coupon->valid_until ? _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT')) : '-',
     );
   }
 
@@ -203,13 +203,13 @@ function uc_coupon_view($coupon) {
     $status = t('Active');
   }
   elseif (REQUEST_TIME < $coupon->valid_from) {
-    $status = t('Not valid until @date', array('@date' => _uc_coupon_format_date($coupon->valid_from, variable_get('uc_date_format_default', 'm/d/Y H:iT'))));
+    $status = t('Not valid until @date', array('@date' => _uc_coupon_format_date($coupon->valid_from, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
   }
   elseif (REQUEST_TIME > $coupon->valid_until) {
-    $status = t('Expired on @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('uc_date_format_default', 'm/d/Y H:iT'))));
+    $status = t('Expired on @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
   }
   else {
-    $status = t('Active until @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('uc_date_format_default', 'm/d/Y H:iT'))));
+    $status = t('Active until @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
   }
   $rows[] = array(t('Status'), $status);
 
