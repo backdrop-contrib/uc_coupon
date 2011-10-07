@@ -246,12 +246,12 @@ function uc_coupon_theme() {
     ),
     'uc_coupon_certificate' => array(
       'variables' => array('coupon' => NULL, 'code' => NULL),
-      'template' => 'uc_coupon-certificate',
+      'template' => 'uc-coupon-certificate',
       'path' => drupal_get_path('module', 'uc_coupon') . '/theme',
     ),
     'uc_coupon_page' => array(
       'variables' => array('content' => NULL),
-      'template' => 'uc_coupon-page',
+      'template' => 'uc-coupon-page',
       'path' => drupal_get_path('module', 'uc_coupon') . '/theme',
     ),
   );
@@ -1855,11 +1855,11 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
       }
     }
   }
-
+  
   if (isset($variables['coupon']->data['base_cid'])) {
-    $variables['template_files'][] = 'uc_coupon-certificate-base-' . $variables['coupon']->data['base_cid'];
+    $variables['theme_hook_suggestions'][] = 'uc_coupon_certificate__base_' . $variables['coupon']->data['base_cid'];
   }
-  $variables['template_files'][] = 'uc_coupon-certificate-' . $variables['coupon']->cid;
+  $variables['theme_hook_suggestions'][] = 'uc_coupon_certificate__' . $variables['coupon']->cid;
 }
 
 /**
