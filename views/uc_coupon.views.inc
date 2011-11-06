@@ -283,14 +283,6 @@ function uc_coupon_views_data() {
     ),
   );
 
-  $data['uc_coupons']['all_orders_count_old'] = array(
-     'title' => t('All orders count old'),
-    'help' => t('The number of orders to which this coupon was applied.'),
-    'field' => array(
-      'handler' => 'uc_coupon_handler_field_all_orders_count_old',
-    ),
-  );
-
   $data['uc_coupons']['table']['join']['uc_orders'] = array(
     'left_table' => 'uc_coupons_orders',
     'left_field' => 'oid',
@@ -447,9 +439,6 @@ function uc_coupon_views_handlers() {
         'parent' => 'views_handler_field_prerender_list',
       ),
       'uc_coupon_handler_field_all_orders_count' => array(
-        'parent' => 'views_handler_field_numeric',
-      ),
-      'uc_coupon_handler_field_all_orders_count_old' => array(
         'parent' => 'views_handler_field_numeric',
       ),
       'uc_coupon_handler_field_all_orders_total' => array(
