@@ -8,9 +8,10 @@
  * Filter coupons based on what product types they apply to
  */
 class uc_coupon_handler_filter_product_type extends views_handler_filter_in_operator {
+
   function get_value_options() {
     $this->value_options = array();
-    foreach (module_invoke_all('product_types') as $type) {
+    foreach (module_invoke_all('uc_product_types') as $type) {
       $this->value_options[$type] = $type;
     }
   }
