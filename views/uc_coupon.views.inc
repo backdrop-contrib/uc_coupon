@@ -264,6 +264,10 @@ function uc_coupon_views_data() {
       'handler' => 'uc_coupon_handler_filter_product_type',
       'label' => 'Is a product type',
     ),
+    'argument' => array(
+      'handler' => 'uc_coupon_handler_argument_product_type',
+      'label' => 'Is a product type',
+    ),
   );
 
   $data['uc_coupons']['bulk_number'] = array(
@@ -434,6 +438,9 @@ function uc_coupon_views_handlers() {
       ),
       'uc_coupon_handler_filter_product_type' => array(
         'parent' => 'views_handler_filter_in_operator',
+      ),
+      'uc_coupon_handler_argument_product_type' => array(
+        'parent' => 'views_handler_argument',
       ),
       'uc_coupon_handler_field_product_type' => array(
         'parent' => 'views_handler_field_prerender_list',
