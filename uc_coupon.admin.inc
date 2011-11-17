@@ -418,6 +418,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   }
   else {
     $use_validity = FALSE;
+    $value = new stdClass;
     $value->minimum_order = 0;
     $value->data['apply_to'] = 'subtotal';
     $value->max_uses = variable_get('uc_coupon_default_usage', 'single') == 'single' ? 1 : 0;
