@@ -1146,7 +1146,7 @@ function theme_uc_coupon_actions($variables) {
   $coupon = $variables['coupon'];
   $actions = array();
   foreach (module_invoke_all('uc_coupon_actions', $coupon) as $action) {
-    $icon = theme('image', array('path' => $action['icon'], 'width' => $action['title']));
+    $icon = theme('image', array('path' => $action['icon'], 'alt' => $action['title']));
     $actions[] = l($icon, $action['url'], array('attributes' => array('title' => $action['title']), 'html' => TRUE));
   }
   return implode(' ', $actions);
