@@ -301,6 +301,7 @@ function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
   $form['status']['#description'] .= '<br />' . t('Only inactive coupons can be selected as the base for a purchased coupon, subsequent purchased coupons will automatically be activated.');
 
   $form['#validate'][] = 'uc_coupon_purchase_uc_coupon_add_form_validate';
+  $form['#entity_builders'][] = 'uc_coupon_purchase_build_coupon';
 }
 
 /**
@@ -313,14 +314,17 @@ function uc_coupon_purchase_uc_coupon_add_form_validate($form, &$form_state) {
 }
 
 /**
- * Implements hook_uc_coupon_presave().
+ * Entity builder callback for the uc_coupon edit form.
  */
-function uc_coupon_purchase_uc_coupon_presave(&$coupon, $edit) {
-  if (isset($edit['purchase_suffix_length'])) {
-    $coupon->data['purchase_suffix_length'] = $edit['purchase_suffix_length'];
-  }
-  if (isset($edit['purchase_relative']) && $edit['purchase_relative']) {
-    $coupon->data['purchase_relative'] = TRUE;
+function uc_coupon_purchase_build_coupon($type, $coupon, $form, $form_state) {
+  if ($type == 'uc_coupon') {
+    $edit = $form_state['values'];
+    if (isset($edit['purchase_suffix_length'])) {
+      $coupon->data['purchase_suffix_length'] = $edit['purchase_suffix_length'];
+    }
+    if (isset($edit['purchase_relative']) && $edit['purchase_relative']) {
+      $coupon->data['purchase_relative'] = TRUE;
+    }
   }
 }
 
