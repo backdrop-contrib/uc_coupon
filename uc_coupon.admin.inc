@@ -74,6 +74,15 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => variable_get('uc_coupon_default_usage', 'single'),
   );
 
+  $form['uc_coupon_used_order_status'] = array(
+    '#type' => 'select',
+    '#title' => t('Order status to mark a coupon used'),
+    '#options' => uc_order_status_options_list(),
+    '#default_value' => variable_get('uc_coupon_used_order_status', 'processing'),
+    '#description' => t('A coupon will be considered used when it has been applied to an order that reaches this status 
+       (or a later one).  If the order status subsequenty reverts to an earlier status, the coupon use will also be reverted.'),
+  );
+
   $form['uc_coupon_querystring'] = array(
     '#type' => 'textfield',
     '#title' => t('Query string parameter'),
