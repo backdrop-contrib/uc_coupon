@@ -921,10 +921,10 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
       // Adjust the price for any stacked coupons.
       $prior_discount = 0;
-      if (!empty($order->coupons)) {
-        foreach ($order->coupons as $stacked) {
+      if (!empty($order->data['coupons'])) {
+        foreach ($order->data['coupons'] as $stacked) {
           if (isset($stacked[$item->nid])) {
-            $prior_discount += $stacked_coupons[$item->nid]->pretax_discount;
+            $prior_discount += $stacked[$item->nid]->pretax_discount;
           }
         }
       }
