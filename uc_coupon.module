@@ -1377,8 +1377,19 @@ function uc_checkout_pane_coupon_automatic($op, &$order, $form = NULL, &$form_st
  */
 function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL) {
   switch ($op) {
-    case 'view':
+    case 'prepare':
+      // Make sure any fake cart items don't get saved with the order if the checkout page is skipped
+      // (e.g. Paypal Express Checkout, Google Checkout)
+      foreach ($order->products as $key => $product) {
+        if (isset($product->module) && $product->module == 'uc_coupon') {
+          unset($order->products[$key]);
+        }
+      }
+      // Apply the currently validated session coupons to the order.
       _uc_coupon_apply_to_order($order, uc_coupon_session_validate());
+      break;
+
+    case 'view':
       drupal_add_css('#coupon-messages { clear: both; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
       $ajax = array(
         'callback' => 'uc_coupon_checkout_update',
@@ -1723,30 +1734,6 @@ function uc_coupon_theme_uc_cart_block_content($variables) {
  * Collapse coupon checkout pane, if configured to do so.
  */
 function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
-  $coupons = uc_coupon_session_validate();
-
-  // Make alterations to the payment preview pane.
-  if (isset($form['panes']['payment']['line_items']['#order']) && variable_get('uc_coupon_show_in_cart', TRUE) && !empty($coupons)) {
-    $order =  &$form['panes']['payment']['line_items']['#order'];
-
-    // Ugly code to make sure the fake uc_coupon cart item doesn't add to the totals.
-    // Can hopefully be removed if Ubercart provides a checkout_init hook
-    // or something similar.  cf. http://drupal.org/node/1290000.
-    $amount = 0;
-    foreach ($order->products as $key => $product) {
-      if ($product->module == 'uc_coupon') {
-        $amount += $order->products[$key]->price * $order->products[$key]->qty;
-      }
-    }
-    if ($amount != 0) {
-      foreach ($order->line_items as &$item) {
-        if ($item['type'] == 'tax_subtotal' || $item['type'] == 'subtotal' || $item['type'] == 'total') {
-          $item['amount'] -= $amount;
-        }
-      }
-    }
-  }
-
   if (variable_get('uc_coupon_collapse_pane', FALSE) && isset($form['panes']['coupon'])) {
     $form['panes']['coupon']['#collapsed'] = TRUE;
   }
