@@ -1663,19 +1663,29 @@ function uc_coupon_uc_cart_alter(&$items) {
   if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($coupons)) {
     // If there are some valid coupons, then add them to the cart.
     foreach ($coupons as $code => $coupon) {
-      $items[] = (object) array(
-        'cart_item_id' => 0,
-        'module' => 'uc_coupon',
-        'title' => $coupon->title,
-        'nid' => 0,
-        'qty' => 1,
-        'price' => -$coupon->amount,
-        'data' => array('module' => 'uc_coupon', 'shippable' => FALSE, 'code' => $coupon->code, 'remove' => uc_coupon_session_get($code)),
-        'model' => 0,
-        'weight' => 0
-      );
+      $items[] = _uc_coupon_cart_item($coupon);
     }
   }
+}
+
+/**
+ * Creates a fake cart-item corrresponding to this coupon, allowing this coupon to be displayed in the cart.
+ *
+ * @param $coupon
+ *   The coupon to be displayed in the cart.
+ */
+function _uc_coupon_cart_item($coupon) {
+  return (object) array(
+    'cart_item_id' => 0,
+    'module' => 'uc_coupon',
+    'title' => $coupon->title,
+    'nid' => 0,
+    'qty' => 1,
+    'price' => -$coupon->amount,
+    'data' => array('module' => 'uc_coupon', 'shippable' => FALSE, 'code' => $coupon->code, 'remove' => uc_coupon_session_get($coupon->code)),
+    'model' => 0,
+    'weight' => 0
+  );
 }
 
 /**
@@ -1736,6 +1746,15 @@ function uc_coupon_theme_uc_cart_block_content($variables) {
 function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
   if (variable_get('uc_coupon_collapse_pane', FALSE) && isset($form['panes']['coupon'])) {
     $form['panes']['coupon']['#collapsed'] = TRUE;
+  }
+
+  // Show current session copuons in the cart pane (since now they will have been removed from the order).
+  if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($form['panes']['cart'])) {
+    $coupons = uc_coupon_session_validate();
+    // If there are some valid coupons, then add them to the cart.
+    foreach ($coupons as $code => $coupon) {
+      $form['panes']['cart']['cart_review_table']['#items'][] = _uc_coupon_cart_item($coupon);
+    }
   }
 }
 
