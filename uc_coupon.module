@@ -494,24 +494,6 @@ function uc_coupon_session_get($code = NULL) {
 }
 
 /**
- * Suspend or resume application of the current session coupons when an order is saved.  Should
- * be called whenever processing old orders, to prevent the current session coupons from being
- * erroneously applied.
- *
- * @param $setting
- *     TRUE to suspend application, FALSE to resume.  NULL to query the current state.
- * @return
- *     TRUE if suspended, FALSE otherwise.
- */
-function uc_coupon_session_suspend($setting = NULL) {
-  static $suspend = FALSE;
-  if (isset($setting)) {
-    $suspend = $setting;
-  }
-  return $suspend;
-}
-
-/**
  * Validates all coupons in the current session.  The validated coupons are statically
  * cached for each request.  The cache is rebuilt the first time this function is called,
  * or every time the cart contents are rebuilt.
@@ -1287,13 +1269,15 @@ function uc_coupon_form($form, $form_state, $context = 'block', $ajax = FALSE) {
 /**
  * Implements hook_uc_order().
  *
- * This makes sure the active, validated coupons are saved to the order.  It also tweaks the order
- * total to be correct when tax-inclusive coupons are applied.
+ * This makes sure the active, validated coupons are saved to the order.
+ * It also prevents any fake coupon cart-items from being saved to the order.
  */
 function uc_coupon_uc_order($op, &$order) {
   if ($op == 'presave') {
-    // Apply any session coupons to the order.
-    if (!uc_coupon_session_suspend()) {
+    // Apply any session coupons to the current cart order.
+    global $user;
+    if (isset($_SESSION['cart_order']) && $order->order_id == $_SESSION['cart_order']
+        && uc_order_status_data($order->order_status, 'state') == 'in_checkout' && $user->uid == $order->uid) {
       _uc_coupon_apply_to_order($order, uc_coupon_session_validate());
     }
     // Make sure any fake cart items don't get saved with the order if the checkout page is skipped
@@ -1304,16 +1288,6 @@ function uc_coupon_uc_order($op, &$order) {
       }
     }
   }
-}
-
-/**
- * Implementation of hook_form_FORM_ID_alter() for the order edit form.
- *
- * Clear the session coupons when the order edit form is built to avoid inadvertently
- * saving them to an old order.
- */
-function uc_coupon_form_uc_order_edit_form_alter(&$form, $form_state) {
-  uc_coupon_session_suspend(TRUE);
 }
 
 /**
