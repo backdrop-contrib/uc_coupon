@@ -27,7 +27,7 @@ function uc_coupon_workflow_permission() {
 function uc_coupon_workflow_uc_coupon_revalidate($products) {
   if (isset($_SESSION['cart_order'])) {
     // If checkkout is in progress, use the cart_order to provide additional information.
-    $order = uc_order_load($_SESSION['cart_order']);
+    $order = clone uc_order_load($_SESSION['cart_order']);
   }
   else {
     // Otherwise create an empty order
