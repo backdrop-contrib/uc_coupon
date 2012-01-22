@@ -1411,7 +1411,7 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
       if (substr($trigger, 0, 9) == 'uc-coupon') {
         $form_state['rebuild'] = TRUE;
         uc_coupon_form_submit($form, $form_state);
-        uc_cart_get_contents(NULL, TRUE); // Rebuild the cart contents to force revalidation.
+        uc_coupon_session_validate($order->products);
         return FALSE; // Prevent redirection.
       }
       else {
