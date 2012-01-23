@@ -832,8 +832,9 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
     // Include this item. Coupons that apply to the order subtotal affect all products.
     if ($include || $coupon->data['apply_to'] == 'subtotal') {
-      $item->type = $node->type;
-      $items = array_pad($items, count($items) + $qty, $item);
+      $clone = clone $item;
+      $clone->type = $node->type;
+      $items = array_pad($items, count($items) + $qty, $clone);
     }
   }
 
