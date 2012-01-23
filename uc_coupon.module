@@ -1700,6 +1700,7 @@ function uc_coupon_uc_cart_display($item) {
     'qty' => array('#type' => 'hidden', '#value' => 1, '#default_value' => 1),
     '#total' => $item->price,
     'data' => array('#type' => 'hidden', '#value' => serialize($item->data)),
+    '#suffixes' => array(),
   );
   if ($item->data['remove']) {
     $display_item['remove'] = array('#type' => 'submit', '#value' => t('Remove'));
