@@ -577,9 +577,8 @@ function uc_coupon_session_validate($products = NULL) {
 
   // If no argument specified and the cache has not been built, we rebuild the cart to force validation.
   elseif (!isset($valids)) {
-    uc_cart_get_contents(NULL, 'rebuild');
+    uc_cart_get_contents();
   }
-
   return $valids;
 }
 
