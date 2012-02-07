@@ -228,7 +228,7 @@ function hook_uc_coupon_remove($coupon) {
  *   NULL to allow other modules to determine validation.
  *   Otherwise, a string describing the reason for failure.
  */
-function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
+function hook_uc_coupon_validate(&$coupon, $order, $account) {
   // Check for allowed combinations.
   if (!empty($order->data['coupons'])) {
     foreach (array_keys($order->data['coupons']) as $code) {
