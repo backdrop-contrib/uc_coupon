@@ -5,7 +5,7 @@
  * @file
  * Filter based on coupon order gross (total+value)
  */
-class uc_coupon_handler_filter_gross extends views_handler_filter_float {
+class uc_coupon_handler_filter_gross extends views_handler_filter_numeric {
 
   function query() {
     $this->ensure_my_table();

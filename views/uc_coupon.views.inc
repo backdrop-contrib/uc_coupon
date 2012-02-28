@@ -192,10 +192,10 @@ function uc_coupon_views_data() {
       'handler' => 'views_handler_sort',
     ),
     'filter' => array(
-      'handler' => 'views_handler_filter_float',
+      'handler' => 'views_handler_filter_numeric',
     ),
     'argument' => array(
-      'handler' => 'views_handler_argument_float',
+      'handler' => 'views_handler_argument_numeric',
     ),
   );
 
@@ -211,10 +211,10 @@ function uc_coupon_views_data() {
       'handler' => 'views_handler_sort',
     ),
     'filter' => array(
-      'handler' => 'views_handler_filter_float',
+      'handler' => 'views_handler_filter_numeric',
     ),
     'argument' => array(
-      'handler' => 'views_handler_argument_float',
+      'handler' => 'views_handler_argument_numeric',
     ),
   );
 
@@ -461,7 +461,7 @@ function uc_coupon_views_handlers() {
         'parent' => 'uc_order_handler_field_money_amount',
       ),
       'uc_coupon_handler_filter_gross' => array(
-          'parent' => 'views_handler_filter_float',
+          'parent' => 'views_handler_filter_numeric',
       ),
     ),
   );
