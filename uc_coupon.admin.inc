@@ -795,7 +795,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'select',
     '#multiple' => 'true',
     '#options' => db_query('SELECT cid, name FROM {uc_coupons}')->fetchAllKeyed(),
-    '#default_value' => isset($value->data['combinations']) ? $value->data['combinations'] : NULL,
+    '#default_value' => isset($value->data['combinations']) ? $value->data['combinations'] : array(),
   );
 
   // Add common settings and ajax functionality to restriction fieldsets.
@@ -1086,7 +1086,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   $coupon->data = array_filter($coupon->data);
 
   // Handle AJAX submissions.
-  if (substr($elem = $form_state['triggering_element']['#name'], 0, 3) === 'op_') {
+  if (!empty($form_state['triggering_element']) && substr($elem = $form_state['triggering_element']['#name'], 0, 3) === 'op_') {
     $form_state['ajax_submission'] = substr($elem, 3);
     $form_state['coupon_data'] = $coupon->data;
     $form_state['rebuild'] = TRUE;
