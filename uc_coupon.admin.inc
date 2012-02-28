@@ -538,9 +538,9 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#default_value' => isset($coupon->value) ? _uc_coupon_format_discount($value, FALSE) : '',
     '#size' => 6,
     '#description' => t('Three discount types are possible:') . theme('item_list', array('items' => array(
-        t('Fixed price discount; enter "15" for $15.00 off.'),
+        t('Fixed value discount; enter "15" for @p off.', array('@p' => uc_currency_format(15))),
         t('Percentage discount; enter "15%" for 15% off.'),
-        t('Set product price; enter "=15" to make all matching products $15.00 after discount.'),
+        t('Set product price; enter "=15" to make all matching products @p after discount.', array('@p' => uc_currency_format(15))),
       ))),
     '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
     '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
