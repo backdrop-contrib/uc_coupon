@@ -1276,8 +1276,7 @@ function uc_coupon_uc_order($op, &$order) {
   if ($op == 'presave') {
     // Apply any session coupons to the current cart order.
     global $user;
-    if (isset($_SESSION['cart_order']) && $order->order_id == $_SESSION['cart_order']
-        && uc_order_status_data($order->order_status, 'state') == 'in_checkout' && $user->uid == $order->uid) {
+    if (_uc_coupon_is_checkout_order($order)) {
       _uc_coupon_apply_to_order($order, uc_coupon_session_validate());
     }
     // Make sure any fake cart items don't get saved with the order if the checkout page is skipped
@@ -1908,4 +1907,17 @@ function uc_coupon_views_api() {
     'api' => '2.0',
     'path' => drupal_get_path('module', 'uc_coupon') . '/views',
   );
+}
+
+/**
+ * Check whether an order is the order being checked out by the current user.
+ * @param $order
+ */
+function _uc_coupon_is_checkout_order($order) {
+  global $user;
+  return isset($_SESSION['cart_order'])
+    && isset($order->order_id)
+    && $order->order_id == $_SESSION['cart_order']
+    && uc_order_status_data($order->order_status, 'state') == 'in_checkout'
+    && $user->uid == $order->uid;
 }
