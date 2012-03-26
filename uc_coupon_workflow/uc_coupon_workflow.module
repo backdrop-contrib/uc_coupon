@@ -25,9 +25,9 @@ function uc_coupon_workflow_permission() {
  * 		The list of products to valiate against (usually the current cart contents).
  */
 function uc_coupon_workflow_uc_coupon_revalidate($products) {
-  if (isset($_SESSION['cart_order'])) {
-    // If checkkout is in progress, use the cart_order to provide additional information.
-    $order = clone uc_order_load($_SESSION['cart_order']);
+  if (isset($_SESSION['cart_order']) && ($order = uc_order_load($_SESSION['cart_order']))) {
+    // If checkout is in progress, use the cart_order to provide additional information.
+    $order = clone $order;
   }
   else {
     // Otherwise create an empty order
