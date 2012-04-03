@@ -41,6 +41,54 @@ function uc_coupon_purchase_default_rules_configuration() {
     ));
 
   $configs['uc_coupon_purchase_bulk'] = $rule;
+
+  $configs['uc_coupon_gift_single'] = rules_import('{ "uc_coupon_gift_single" : {
+      "LABEL" : "Notify recipient when a single coupon is purchased as a gift.",
+      "PLUGIN" : "reaction rule",
+      "REQUIRES" : [ "uc_coupon", "rules", "uc_coupon_purchase" ],
+      "ON" : [ "uc_coupon_purchase" ],
+      "IF" : [
+        { "NOT uc_coupon_condition_is_bulk" : { "coupon" : [ "coupon" ] } },
+        { "NOT data_is_empty" : { "data" : [ "recipient" ] } }
+      ],
+      "DO" : [
+        { "uc_coupon_purchase_email" : {
+            "order" : [ "order" ],
+            "coupon" : [ "coupon" ],
+            "from" : [ "order:primary-email" ],
+            "addresses" : [ "recipient" ],
+            "subject" : "[store:name]: Gift Certificate",
+            "message" : "Hello!\r\n\r\n[order:first-name] [order:last-name] has sent you a gift certificate worth [coupon:value] for use at [store:name].\n\nJust enter the code [coupon:code] at checkout to receive your discount.\n\nThanks,\n\n[store:name]\n[site:slogan]",
+            "format" : "filtered_html"
+          }
+        }
+      ]
+    }
+  }');
+
+  $configs['uc_coupon_gift_multiple'] = rules_import('{ "uc_coupon_gift_multiple" : {
+      "LABEL" : "Notify recipient when a bulk coupon is purchased as a gift.",
+      "PLUGIN" : "reaction rule",
+      "REQUIRES" : [ "uc_coupon", "rules", "uc_coupon_purchase" ],
+      "ON" : [ "uc_coupon_purchase" ],
+      "IF" : [
+        { "uc_coupon_condition_is_bulk" : { "coupon" : [ "coupon" ] } },
+        { "NOT data_is_empty" : { "data" : [ "recipient" ] } }
+      ],
+      "DO" : [
+        { "uc_coupon_purchase_email" : {
+            "order" : [ "order" ],
+            "coupon" : [ "coupon" ],
+            "from" : [ "order:primary-email" ],
+            "addresses" : [ "recipient" ],
+            "subject" : "[store:name]: Gift Certificate",
+            "message" : "Hello!\n\n[order:first-name] [order:last-name] has sent you a set of gift certificates, each worth [coupon:value], for use at [store:name].\n\nJust enter one of the codes below at checkout to receive your discount.\n\n[coupon:codes]\n\nThanks,\n\n[store:name]\r\n[site:slogan]",
+            "format" : "filtered_html"
+          }
+        }
+      ]
+    }
+  }');
   
   return $configs;
 }

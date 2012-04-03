@@ -1,4 +1,5 @@
 <?php
+define('UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE', 'uc_coupon_purchase_recipient');
 
 /**
  * Implements hook_permission().
@@ -345,9 +346,20 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
           ($order_user = user_load($order->uid)) !== FALSE) {
         foreach ($order->products as $product) {
           $result = db_query("SELECT * FROM {uc_coupon_purchase} WHERE nid = :nid", array(':nid' => $product->nid));
+          $recipient = '';
           foreach ($result as $row) {
             if ($row->model == $product->model || empty($row->model)) {
               $coupon = uc_coupon_load($row->base_cid);
+              dpm($product, 'prod');
+              foreach (uc_product_get_attributes($product->nid) as $attribute) {
+                if ($attribute->name === UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE) {
+                  dpm($attribute, 'attr');
+                  if (!empty($product->data['attributes'][$attribute->label][0])) {
+                    $recipient = trim($product->data['attributes'][$attribute->label][0]);
+                    dpm("Recipient = $recipient");
+                  }
+                }
+              }
 
               // Append purchaser data to the coupon name.
               $purchaser = trim(!empty($order->billing_company) ? $order->billing_company : ($order->billing_first_name . ' ' . $order->billing_last_name));
@@ -362,8 +374,9 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
               uc_order_comment_save($order->order_id, 0, t('Coupon created with code %code.', array('%code' => $new_coupon->code)));
 
               // Fire hook and conditional actions to send emails for this coupon purchase.
-              module_invoke_all('uc_coupon_purchase', $order, $new_coupon);
-              rules_invoke_event('uc_coupon_purchase', $order, $new_coupon);
+              module_invoke_all('uc_coupon_purchase', $order, $new_coupon, $recipient);
+              dpm('Invoking rule');
+              rules_invoke_event('uc_coupon_purchase', $order, $new_coupon, $recipient);
             }
           }
         }
@@ -430,4 +443,97 @@ function uc_coupon_purchase_views_api() {
     'api' => '2.0',
     'path' => drupal_get_path('module', 'uc_coupon_purchase') . '/views',
   );
+}
+
+function _uc_coupon_purchase_create_recipient_attribute() {
+  $attribute = array(
+    'name' => UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE,
+    'label' => t('Gift Certificate Recipient'),
+    'description' => t('The e-mail address of the recipient of this gift certificate'),
+    'required' => FALSE,
+    'display' => 0,
+    'ordering' => 0,
+  );
+  $attribute = (object) $attribute;
+  uc_attribute_save($attribute);
+  return $attribute;
+}
+
+function _uc_coupon_purchase_load_recipient_attribute() {
+  $name = UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE;
+  $aid = db_query('SELECT aid FROM {uc_attributes} WHERE name = :name', array(':name' => $name))->fetchField(0);
+  $attribute = uc_attribute_load($aid);
+  //dpm($attribute);
+  return $attribute;
+}
+
+function uc_coupon_purchase_form_uc_attribute_form_alter(&$form, &$form_state) {
+  // If our reserved attribute is being edited, prevent the name from being changed.
+  if (!empty($form['aid']['#value']) 
+      && ($attribute = uc_attribute_load($form['aid']['#value']))
+      && $attribute->name === UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE) {
+    $form['name']['#disabled'] = TRUE;
+    $form['name']['#description'] .= ' ' . t('This attribute is used by uc_coupon_purchase to send additional notifications to purchased coupon recipients. The name cannot be altered.');
+  }
+  $form['#validate'][] = 'uc_coupon_purchase_attribute_form_validate';
+}
+
+function uc_coupon_purchase_attribute_form_validate($form, $form_state) {
+  // For a new attribute, prevent use of the reserved name.
+  if (empty($form['aid']) && $form_state['values']['name'] === UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE) {
+    form_set_error('name', t('The name is reserved for use by uc_coupon_purchase.'));
+  }
+}
+
+function uc_coupon_purchase_form_uc_product_add_to_cart_form_alter(&$form, &$form_state) {
+  $form['#validate'][] = 'uc_coupon_purchase_add_to_cart_form_validate';
+}
+
+function uc_coupon_purchase_add_to_cart_form_validate($form, $form_state) {
+  $attribute = _uc_coupon_purchase_load_recipient_attribute();
+  if ($attribute && !empty($form['attributes'][$attribute->aid])) {
+    $email = trim($form_state['values']['attributes'][$attribute->aid]);
+    if (!empty($email) && !valid_email_address($email)) {
+      form_set_error("attributes][{$attribute->aid}", t('You must specify a valid e-mail address.'));
+    }
+  }
+}
+
+function uc_coupon_purchase_form_uc_coupon_settings_form_alter(&$form, &$form_state) {
+  $form['uc_coupon_purchase'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Coupon purchase settings'),
+  );
+  
+  $form['uc_coupon_purchase']['uc_coupon_purchase_recipient'] = array(
+    '#type' => 'item',
+    '#title' => t('Gift coupon recipient field'),
+    'uc_coupon_purchase_recipient_enabled' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable the "uc_coupon_purchase_recipient" product attribute.'),
+      '#description' => t('When checked, a "uc_coupon_purchase_recipient" product attribute wil be created.
+        When you attach this attribute to a product with the "create coupon" feature, customers will be able
+        to enter the e-mail address of a recipient. You can then configure a rule to send a customized
+        e-mail notification to the recipient.'),
+      '#default_value' => variable_get('uc_coupon_purchase_recipient_enabled', FALSE),
+      '#access' => module_exists('uc_attribute'),
+    ),
+    '#description' => module_exists('uc_attribute') ? NULL : t('You must enable the uc_attribute module to activate this feature.'),
+  ); 
+  $form['#submit'][] = 'uc_coupon_purchase_coupon_settings_form_submit';
+}
+
+function uc_coupon_purchase_coupon_settings_form_submit($form, $form_state) {
+  if (!empty($form_state['values']['uc_coupon_purchase_recipient_enabled'])) {
+    if (module_exists('uc_attribute')) {
+      if (!$attribute = _uc_coupon_purchase_load_recipient_attribute()) {
+        _uc_coupon_purchase_create_recipient_attribute();
+        drupal_set_message(t('The "uc_coupon_purchase_recipient" attribute has been created'));
+      }
+      
+    }
+  }
+  else {
+    dpm('not enabled');
+  }
 }

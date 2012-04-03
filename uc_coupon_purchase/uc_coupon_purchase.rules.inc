@@ -21,6 +21,10 @@ function uc_coupon_purchase_rules_event_info() {
         'type' => 'uc_coupon',
         'label' => t('Coupon'),
       ),
+      'recipient' => array(
+        'type' => 'text',
+        'label' => t('Recipient'),
+      ),
     ),
   );
   return $events;
@@ -136,6 +140,7 @@ function uc_coupon_purchase_email($order, $coupon, $from, $addresses, $subject, 
 
   // Send the e-mails.
   foreach ($recipients as $email) {
+    dpm($settings, "sending to $email");
     $sent = drupal_mail('uc_order', 'action-mail', $email, uc_store_mail_recipient_language($email), $settings, empty($settings['from']) ? uc_store_email_from() : $settings['from']);
     if (!$sent['result']) {
       watchdog('uc_order', 'Attempt to e-mail @email concerning order @order_id failed.', array('@email' => $email, '@order_id' => $order->order_id), WATCHDOG_ERROR);
