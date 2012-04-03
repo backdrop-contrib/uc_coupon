@@ -36,6 +36,10 @@ function uc_coupon_token_info() {
         'description' => t('The value of the coupon.  If the coupon has already been applied to an order, this will be
         	the actual currency value of the coupon.  Otherwise, it will be the nominal discount.'),
       ),
+      'credit' => array(
+        'name' => t('Remaining credit'),
+        'description' => t('For store credit/gift certificate type coupons which have been applied to an order, the unused credit remaining.'), 
+      ),
     ),
   
     'uc_order' => array(
@@ -87,6 +91,27 @@ function uc_coupon_tokens($type, $tokens, $data = array(), $options = array()) {
         if (array_key_exists('value', $tokens)) {
           $values[$tokens['value']] = isset($coupon->amount) ?
             theme('uc_price', array('price' => $coupon->amount)) : theme('uc_coupon_discount', array('coupon' => $coupon));
+        }
+        if (array_key_exists('credit', $tokens)) {
+          if ($coupon->type !== 'credit') {
+            if ($coupon->bulk && !$coupon->valid) {
+              $values[$tokens['credit']] = t('n/a');
+            }
+            else {
+              $amt = $coupon->value;
+              $usage = isset($coupon->usage) ? $coupon->usage : uc_coupon_count_usage($coupon->cid);
+              if (isset($usage['value'][$coupon->code])) {
+                $amt -= $usage['value'][$coupon->code];
+              }
+              if (isset($coupon->amount)) {
+                $amt -= $coupon->amount;
+              }
+              $values[$tokens['credit']] = uc_currency_format($amt);
+            }
+          }
+          else {
+            $values[$tokens['credit']] = t('n/a');
+          }
         }
       }
       break;

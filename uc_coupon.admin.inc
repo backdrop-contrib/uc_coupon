@@ -537,14 +537,27 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#title' => t('Discount'),
     '#default_value' => isset($coupon->value) ? _uc_coupon_format_discount($value, FALSE) : '',
     '#size' => 6,
-    '#description' => t('Three discount types are possible:') . theme('item_list', array('items' => array(
+    '#description' => t('Four discount types are possible:') . theme('item_list', array('items' => array(
         t('Fixed value discount; enter "15" for @p off.', array('@p' => uc_currency_format(15))),
+        t('Store credit coupons; enter "15" and check the box below for store credit of @p.', array('@p' => uc_currency_format(15))),
         t('Percentage discount; enter "15%" for 15% off.'),
         t('Set product price; enter "=15" to make all matching products @p after discount.', array('@p' => uc_currency_format(15))),
       ))),
     '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
     '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
     '#required' => TRUE,
+  );
+
+  $form['store_credit'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Store Credit'),
+    '#default_value' => (!empty($value->type) && $value->type === 'credit') ? 1 : 0,
+    '#description' => t('When checked, the coupon value is applied cumulatively across multiple orders,
+          and the coupon is valid until this has been exhausted. There are no additional limits
+          on the number of times the coupon can be used. Usage is always reckoned per-code,
+          (i.e., each bulk code is good for the full face value of the coupon).  '),
+    '#prefix' => '<div id="store-credit-wrapper">',
+    '#suffix' => '</div>'
   );
 
   $form['apply_to'] = array(
@@ -574,8 +587,10 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   );
 
   $form['date_restrictions'] = array(
-    '#type' => 'item',
+    '#type' => 'fieldset',
     '#title' => t('Date restrictions'),
+    '#collapsible' => TRUE,
+    '#collapsed' => $use_validity == 0,
   );
   $form['date_restrictions']['use_validity'] = array(
     '#type' => 'checkbox',
@@ -610,14 +625,22 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#after_build' => array('_uc_coupon_date_range'),
   );
 
-  $form['max_uses'] = array(
+  $form['usage_limits'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($value->max_uses) && empty($value->data['max_uses_per_user']),
+    '#title' => t('Coupon usage limits'),
+    '#tree' => FALSE,
+  );
+
+  $form['usage_limits']['max_uses'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per code)'),
     '#default_value' => $value->max_uses ? $value->max_uses : '',
     '#description' => t('If set, the coupon can only be used this number of times. For bulk coupons, this applies to each available code.'),
     '#size' => 5,
   );
-  $form['max_uses_per_user'] = array(
+  $form['usage_limits']['max_uses_per_user'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of redemptions (per user)'),
     '#default_value' => isset($value->data['max_uses_per_user']) ? $value->data['max_uses_per_user'] : '',
@@ -1040,12 +1063,17 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     $coupon->valid_from = $coupon->valid_until = 0;
   }
   $coupon->status = $form_state['values']['status'];
-  $coupon->type = 'price';
-  if (substr($form_state['values']['discount'], -1) == '%') {
+  if (substr(trim($form_state['values']['discount']), -1) == '%') {
     $coupon->type = 'percentage';
   }
-  if (substr($form_state['values']['discount'], 0, 1) == '=') {
+  elseif (substr(trim($form_state['values']['discount']), 0, 1) == '=') {
     $coupon->type = 'set_price';
+  }
+  elseif (!empty($form_state['values']['store_credit'])) {
+    $coupon->type = 'credit';
+  }
+  else {
+    $coupon->type = 'price';
   }
   $coupon->value = str_replace(array('%', '='), '', $form_state['values']['discount']);
   $coupon->minimum_order = $form_state['values']['minimum_order'] ? $form_state['values']['minimum_order'] : 0;

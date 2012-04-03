@@ -274,24 +274,28 @@ function uc_coupon_theme_registry_alter(&$registry) {
  *   The coupon id to count.
  * @param $uid
  *   (optional) The user id to count. Defaults to the current user.
+ * @param array $exclude_oids
+ *   (optional) If supplied, will exclude usage for the specified order ids.
  *
  * @return
  *   An associative array containing:
  *   - codes: An associative array of code => usage count.
  *   - user: The usage count by the specified (or current) user.
  */
-function uc_coupon_count_usage($cid, $uid = NULL) {
+function uc_coupon_count_usage($cid, $uid = NULL, $exclude_oids = array()) {
   global $user;
 
   $weight = uc_order_status_data(variable_get('uc_coupon_used_order_status', 'processing'), 'weight');
-  $usage = array('codes' => array());
-  $result = db_query("SELECT uco.code, COUNT(*) AS uses FROM {uc_coupons_orders} AS uco
+  $usage = array('codes' => array(), 'value' => array('codes' => array()));
+  $exclude_where = empty($exclude_oids) ? '' : 'AND uo.order_id NOT IN (:oids)';
+  $result = db_query("SELECT uco.code, COUNT(*) AS uses, SUM(uco.value) AS value FROM {uc_coupons_orders} AS uco
     LEFT JOIN {uc_orders} AS uo ON uco.oid = uo.order_id
     LEFT JOIN {uc_order_statuses} AS uos ON uo.order_status = uos.order_status_id
-    WHERE uos.weight >= :weight AND uco.cid = :cid GROUP BY uco.code",
-    array( ':weight' => $weight, ':cid' => $cid));
+    WHERE uos.weight >= :weight AND uco.cid = :cid $exclude_where GROUP BY uco.code",
+    array( ':weight' => $weight, ':cid' => $cid, ':oids' => $exclude_oids));
   foreach ($result as $row) {
     $usage['codes'][$row->code] = $row->uses;
+    $usage['value']['codes'][$row->code] = $row->value;
   }
 
   if (is_null($uid)) {
@@ -327,6 +331,7 @@ function theme_uc_coupon_discount($variables) {
 function _uc_coupon_format_discount($coupon, $currency = TRUE) {
   switch ($coupon->type) {
     case 'price':
+    case 'credit':
       return $currency ? uc_currency_format($coupon->value) : $coupon->value;
 
     case 'percentage':
@@ -635,7 +640,10 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   // Assume the coupon is valid, unless a validation hook fails.
   $coupon->code = $code;
   $coupon->valid = TRUE;
-  $coupon->usage = uc_coupon_count_usage($coupon->cid, $account ? $account->uid : NULL);
+  $uid = !empty($account) ? $account->uid : NULL;
+  // If the order exists, don't count it towards coupon usage.
+  $oids = !empty($order->order_id) ? array($order->order_id) : array();
+  $coupon->usage = uc_coupon_count_usage($coupon->cid, $uid, $oids);
   unset($coupon->message);
 
   // Calculate the discount.
@@ -730,14 +738,21 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
     }
   }
 
-  // Check maximum usage per code.
-  if ($coupon->max_uses > 0 && !empty($coupon->usage['codes'][$coupon->code]) && $coupon->usage['codes'][$coupon->code] >= $coupon->max_uses) {
-    return t('This coupon has reached the maximum redemption limit.');
-  }
+  if ($coupon->type !== 'credit') {
+    // Check maximum usage per code.
+    if ($coupon->max_uses > 0 && !empty($coupon->usage['codes'][$coupon->code]) && $coupon->usage['codes'][$coupon->code] >= $coupon->max_uses) {
+      return t('This coupon has reached the maximum redemption limit.');
+    }
 
-  // Check maximum usage per user.
-  if ($account && isset($coupon->data['max_uses_per_user']) && $coupon->usage['user'] >= $coupon->data['max_uses_per_user']) {
-    return t('This coupon has reached the maximum redemption limit.');
+    // Check maximum usage per user.
+    if ($account && isset($coupon->data['max_uses_per_user']) && $coupon->usage['user'] >= $coupon->data['max_uses_per_user']) {
+      return t('This coupon has reached the maximum redemption limit.');
+    }
+  }
+  else {
+    if (!empty($coupon->usage['value']['codes'][$coupon->code]) && $coupon->usage['value']['codes'][$coupon->code] >= $coupon->value) {
+      return t('This coupon has reached the maximum redemption limit.');
+    }
   }
 
   // Check user ID.
@@ -928,19 +943,35 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   }
 
   // Calculate the discounts per product.
+  $value = $coupon->value;
+  if ($coupon->type === 'credit' && !empty($coupon->usage['value']['codes'][$coupon->code])) {
+    $value -= $coupon->usage['value']['codes'][$coupon->code];
+  }
   foreach ($discounts as $nid => $discount) {
     switch ($coupon->type) {
+      case 'credit':
+        if ($value <= 0) {
+          unset($discounts[$nid]);
+          break;
+        }
       case 'price':
         $inclusive_price = $discount->price * $included_rates[$nid];
         if ($coupon->data['apply_to'] == 'subtotal' || $coupon->data['apply_to'] == 'products_total') {
           // Apply single discount proportionally across all matching items.
-          $discount->discount = $total == 0 ? 0 : min($coupon->value * ($inclusive_price / $total), $inclusive_price);
+          $discount->discount = $total == 0 ? 0 : min($value * ($inclusive_price / $total), $inclusive_price);
+        }
+        elseif ($coupon->type === 'credit') {
+          // Apply as much of the discount as possible to each product.
+          $discount->discount = min($value, $inclusive_price);
         }
         else {
-          // Apply discount to each product.
-          $discount->discount = min($coupon->value * $discount->qty, $inclusive_price);
+          // Apply full discount value
+          $discount->discount = min($value * $discount->qty, $inclusive_price);
         }
         $discount->pretax_discount = $discount->discount / $included_rates[$nid];
+        if ($coupon->type === 'credit') {
+          $value -= $discount->discount;
+        }
         break;
 
       case 'percentage':
@@ -955,7 +986,6 @@ function uc_coupon_calculate_discounts($coupon, $order) {
     unset($discount->price);
     unset($discount->qty);
   }
-
   return $discounts;
 }
 
@@ -1839,7 +1869,7 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
       }
     }
   }
-  
+
   if (isset($variables['coupon']->data['base_cid'])) {
     $variables['theme_hook_suggestions'][] = 'uc_coupon_certificate__base_' . $variables['coupon']->data['base_cid'];
   }

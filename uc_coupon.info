@@ -26,6 +26,7 @@ files[] = views/uc_coupon_handler_field_all_orders_gross.inc
 files[] = views/uc_coupon_handler_field_all_orders_value.inc
 files[] = views/uc_coupon_handler_field_gross.inc
 files[] = views/uc_coupon_handler_filter_gross.inc
+files[] = tests/uc_coupon.test
 
 
 
