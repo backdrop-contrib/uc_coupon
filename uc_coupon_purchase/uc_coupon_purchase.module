@@ -350,13 +350,10 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
           foreach ($result as $row) {
             if ($row->model == $product->model || empty($row->model)) {
               $coupon = uc_coupon_load($row->base_cid);
-              dpm($product, 'prod');
               foreach (uc_product_get_attributes($product->nid) as $attribute) {
                 if ($attribute->name === UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE) {
-                  dpm($attribute, 'attr');
                   if (!empty($product->data['attributes'][$attribute->label][0])) {
                     $recipient = trim($product->data['attributes'][$attribute->label][0]);
-                    dpm("Recipient = $recipient");
                   }
                 }
               }
@@ -375,7 +372,6 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
 
               // Fire hook and conditional actions to send emails for this coupon purchase.
               module_invoke_all('uc_coupon_purchase', $order, $new_coupon, $recipient);
-              dpm('Invoking rule');
               rules_invoke_event('uc_coupon_purchase', $order, $new_coupon, $recipient);
             }
           }
@@ -445,28 +441,55 @@ function uc_coupon_purchase_views_api() {
   );
 }
 
+/**
+ * Helper function to create the product attribute specifying gift certificate
+ * recipients. Will only create the attribute if it does not already exist.
+ *
+ * @return
+ *   The recipient attribute.
+ */
 function _uc_coupon_purchase_create_recipient_attribute() {
-  $attribute = array(
-    'name' => UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE,
-    'label' => t('Gift Certificate Recipient'),
-    'description' => t('The e-mail address of the recipient of this gift certificate'),
-    'required' => FALSE,
-    'display' => 0,
-    'ordering' => 0,
-  );
-  $attribute = (object) $attribute;
-  uc_attribute_save($attribute);
+  if (!$attribute = _uc_coupon_purchase_load_recipient_attribute()) {
+    $attribute = array(
+      'name' => UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE,
+      'label' => t('Gift Certificate Recipient'),
+      'description' => t('The e-mail address of the recipient of this gift certificate'),
+      'required' => FALSE,
+      'display' => 0,
+      'ordering' => 0,
+    );
+    $attribute = (object) $attribute;
+    uc_attribute_save($attribute);
+    // Flush the cache.
+    $attribute = _uc_coupon_purchase_load_recipient_attribute(TRUE);
+  }
   return $attribute;
 }
 
-function _uc_coupon_purchase_load_recipient_attribute() {
-  $name = UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE;
-  $aid = db_query('SELECT aid FROM {uc_attributes} WHERE name = :name', array(':name' => $name))->fetchField(0);
-  $attribute = uc_attribute_load($aid);
-  //dpm($attribute);
+/**
+ * Helper function to load the attribute which we use for gift certificate recipients.
+ *
+ * @reset
+ *   TRUE to flush the cache.
+ * @return
+ *   The loaded attribute object, or FALSE if not found. 
+ */
+function _uc_coupon_purchase_load_recipient_attribute($reset = FALSE) {
+  static $attribute = NULL;
+  
+  if (!module_exists('uc_attribute')) {
+    return FALSE;
+  }
+  elseif (is_null($attribute) || $reset) {
+    $aid = db_query('SELECT aid FROM {uc_attributes} WHERE name = :name', array(':name' => UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE))->fetchField(0);
+    $attribute = $aid ? uc_attribute_load($aid) : FALSE;
+  }
   return $attribute;
 }
 
+/**
+ * Implements hook_form_FORM_ID_alter() for uc_attribute_form.
+ */
 function uc_coupon_purchase_form_uc_attribute_form_alter(&$form, &$form_state) {
   // If our reserved attribute is being edited, prevent the name from being changed.
   if (!empty($form['aid']['#value']) 
@@ -478,6 +501,9 @@ function uc_coupon_purchase_form_uc_attribute_form_alter(&$form, &$form_state) {
   $form['#validate'][] = 'uc_coupon_purchase_attribute_form_validate';
 }
 
+/**
+ * Extra validation callback for uc_attribute_form.
+ */
 function uc_coupon_purchase_attribute_form_validate($form, $form_state) {
   // For a new attribute, prevent use of the reserved name.
   if (empty($form['aid']) && $form_state['values']['name'] === UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE) {
@@ -485,11 +511,18 @@ function uc_coupon_purchase_attribute_form_validate($form, $form_state) {
   }
 }
 
+/**
+ * Implements hook_form_FORM_ID_alter() for uc_prodcut_add_to_cart_form.
+ */
 function uc_coupon_purchase_form_uc_product_add_to_cart_form_alter(&$form, &$form_state) {
   $form['#validate'][] = 'uc_coupon_purchase_add_to_cart_form_validate';
 }
 
+/**
+ * Extra validation callback for uc_product_add_to_cart_form.
+ */
 function uc_coupon_purchase_add_to_cart_form_validate($form, $form_state) {
+  // Ensure that the recipient (if specified) is a valid e-mail address.
   $attribute = _uc_coupon_purchase_load_recipient_attribute();
   if ($attribute && !empty($form['attributes'][$attribute->aid])) {
     $email = trim($form_state['values']['attributes'][$attribute->aid]);
@@ -499,6 +532,9 @@ function uc_coupon_purchase_add_to_cart_form_validate($form, $form_state) {
   }
 }
 
+/**
+ * Implements hook_form_FORM_ID_alter() for uc_coupon_settings_form.
+ */
 function uc_coupon_purchase_form_uc_coupon_settings_form_alter(&$form, &$form_state) {
   $form['uc_coupon_purchase'] = array(
     '#type' => 'fieldset',
@@ -523,17 +559,18 @@ function uc_coupon_purchase_form_uc_coupon_settings_form_alter(&$form, &$form_st
   $form['#submit'][] = 'uc_coupon_purchase_coupon_settings_form_submit';
 }
 
+/**
+ * Submit handler for uc_coupon_settings_form.
+ */
 function uc_coupon_purchase_coupon_settings_form_submit($form, $form_state) {
+  // Create the recipient attribute.
   if (!empty($form_state['values']['uc_coupon_purchase_recipient_enabled'])) {
     if (module_exists('uc_attribute')) {
       if (!$attribute = _uc_coupon_purchase_load_recipient_attribute()) {
-        _uc_coupon_purchase_create_recipient_attribute();
-        drupal_set_message(t('The "uc_coupon_purchase_recipient" attribute has been created'));
+        $attribute = _uc_coupon_purchase_create_recipient_attribute();
+        drupal_set_message(t('The "@name" attribute has been created', array('@name' => $attribute->name)));
       }
       
     }
-  }
-  else {
-    dpm('not enabled');
   }
 }
