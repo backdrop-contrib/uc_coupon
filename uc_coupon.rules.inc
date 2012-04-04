@@ -69,7 +69,6 @@ function uc_coupon_condition_order_has_coupon($order, $codes=array()) {
   elseif (isset($order->data['coupons'])) {
     $check_codes = drupal_map_assoc(array_keys($order->data['coupons']));
   }
-  //dpm($check_codes,'here');
   if (count($check_codes) > 0) {
     $codes = array_filter($codes);
     // If no codes specified, match any coupon.

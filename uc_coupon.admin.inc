@@ -1227,7 +1227,6 @@ function _uc_coupon_mktime($month, $day, $year) {
   $func = variable_get('uc_coupon_expiry_timezone', 0) ? 'mktime' : 'gmmktime';
   $hour = variable_get('uc_coupon_expiry_hour', 0);
   $time = $func($hour, 0, 0, $month, $day, $year);
-  //dpm($time . ' ' . date('m/d/y h:i:s T', $time), 'using ' . $func . '(' . $hour . ')');
   return $func($hour, 0, 0, $month, $day, $year);
 
 }
