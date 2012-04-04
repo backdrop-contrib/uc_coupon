@@ -132,14 +132,14 @@ function hook_uc_coupon_actions($coupon) {
  * Modules implementing this hook may add or remove coupon codes from the session via calls to
  * uc_coupon_session_add() or uc_coupon_session_clear().
  * 
- * @param $products
- * 		The array of products against which the coupon will be validated - usually the current cart contents.
+ * @param $order
+ *   The order against which the coupon will be validated.
  */
-function hook_uc_coupon_revalidate($products) {
+function hook_uc_coupon_revalidate($order) {
   // Add a code if there are both a widget and a doohickey in the cart.
   $gotwidget = FALSE;
   $gotdoohickey = FALSE;
-  foreach ($products as $product) {
+  foreach ($order->products as $product) {
     $node = node_load($product->nid);
     if ($node) {
       if ($node->type == 'widget') {

@@ -564,18 +564,19 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#type' => 'radios',
     '#title' => t('Apply discount to'),
     '#options' => array(
-      'subtotal' => t('Order subtotal'),
-      'products_total' => t('Total of matching product(s)'),
-      'products' => t('All matching product(s)'),
-      'cheapest' => t('The cheapest matching product(s)'),
-      'expensive' => t('The most expensive matching product(s)'),
+      'subtotal' => t('Order subtotal.'),
+      'products_total' => t('Total of all matching products and line items.'),
+      'products' => t('All matching products and line items.  Face value will be applied to each.'),
+      'cheapest' => t('The cheapest matching products and all matching line items.  Face value will be applied to each.'),
+      'expensive' => t('The most expensive matching products and all matching line items. Face value will be applied to each.'),
     ),
-    '#description' => t('Coupons with no restrictions will match all products.'),
+    '#description' => t('Coupons with no restrictions (as specified below) will match all products. However, you must explicitly specify any line items you wish to discount.'),
     '#default_value' => $value->data['apply_to'],
   );
   $form['apply_count'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of products to discount'),
+    '#description' => t('Note: this number applies only to products. Applicable line items (as specified below) will always be discounted.'),
     '#default_value' => isset($value->data['apply_count']) ? $value->data['apply_count'] : '',
     '#size' => 5,
   );
@@ -677,6 +678,24 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#description' => t('If checked, only applicable products as configured below will count towards the minimum quantity or total.'),
   );
 
+  $form['line_items'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Applicable line items'),
+    '#description' => t('Select any line items to which this coupon should apply.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($value->data['line_items']),
+  );
+  $options = array();
+  foreach (_uc_line_item_list() as $id => $line_item) {
+    if (!in_array($id, array('subtotal', 'tax_subtotal', 'total', 'tax_display', 'coupon', 'tax'))) {
+      $options[$id] = $line_item['title'];
+    }
+  }
+  $form['line_items']['line_items'] = array(
+    '#type' => 'checkboxes',
+    '#options' => $options,
+    '#default_value' => isset($value->data['line_items']) ? $value->data['line_items'] : array(),
+  );
 
   $form['product_types'] = array(
     '#type' => 'fieldset',
@@ -1093,6 +1112,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   array_walk($form_state['values']['users'], '_uc_coupon_map_restriction', 'uid');
 
   // Set coupon restrictions.
+  $coupon->data['line_items'] = drupal_map_assoc(array_filter($form_state['values']['line_items']));
   $coupon->data['product_types'] = drupal_map_assoc(array_filter($form_state['values']['product_types']));
   $coupon->data['negate_products'] = $form_state['values']['negate_products'];
   $coupon->data['products'] = drupal_map_assoc(array_filter($form_state['values']['products']));

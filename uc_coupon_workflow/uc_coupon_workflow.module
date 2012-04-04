@@ -21,19 +21,11 @@ function uc_coupon_workflow_permission() {
 
 /**
  * Implements hook_uc_coupon_revalidate().
- * @param $products
- * 		The list of products to valiate against (usually the current cart contents).
+ *
+ * @param $order
+ *   The order to valiate against.
  */
-function uc_coupon_workflow_uc_coupon_revalidate($products) {
-  if (isset($_SESSION['cart_order']) && ($order = uc_order_load($_SESSION['cart_order']))) {
-    // If checkout is in progress, use the cart_order to provide additional information.
-    $order = clone $order;
-  }
-  else {
-    // Otherwise create an empty order
-    $order = new UcOrder();
-  }
-  $order->products = $products;
+function uc_coupon_workflow_uc_coupon_revalidate($order) {
   rules_invoke_event('uc_coupon_workflow_automatic', $order);
 }
 
