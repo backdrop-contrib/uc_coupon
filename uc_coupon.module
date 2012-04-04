@@ -653,7 +653,6 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
     $discounts = uc_coupon_calculate_discounts($coupon, $order, TRUE);
     if (!is_array($discounts)) {
       $coupon->discounts = array();
-      $coupon->valid = FALSE;
       $coupon->message = $discounts;
     }
     else {
@@ -708,15 +707,19 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
 /**
  * Implements hook_uc_coupon_validate().
  *
+ * We implement our own hook to allow other modules a chance to run before us.
+ *
  * @param $coupon
  *   The coupon object to validate, with special fields set as follows:
  *   - $coupon->code: The specific code to be applied (even for bulk coupons).
  *   - $coupon->amount: If $order !== FALSE, the discount that should be applied.
  *   - $coupon->usage: Coupon usage data from uc_coupon_count_usage().
  * @param $order
- *   The order against which this coupon is to be applied, or FALSE to bypass order validation.
+ *   The order against which this coupon is to be applied, or FALSE to bypass
+ *   order validation.
  * @param $account
- *   The account of the user trying to use the coupon, or FALSE to bypass user validation.
+ *   The account of the user trying to use the coupon, or FALSE to bypass user
+ *   validation.
  *
  * @return
  *   TRUE if the coupon should be accepted.
@@ -724,6 +727,12 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
  *   Otherwise, a string describing the reason for failure.
  */
 function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
+  // Coupons which produce no discount are not valid unless they are store credit
+  // type, or have no face value (e.g. free shipping).
+  if ($coupon->type !== 'credit' && $coupon->value != 0 && $coupon->amount == 0) {
+    $coupon->valid = FALSE;
+    return !empty($coupon->message) ? $coupon->message : t('This coupon is not applicable to your order.');
+  }
   // Check for allowed combinations.
   if (!empty($order->data['coupons'])) {
     foreach (array_keys($order->data['coupons']) as $code) {
@@ -1201,6 +1210,12 @@ function _uc_coupon_options_list($coupons, $in_session = TRUE) {
     foreach ($coupons as $coupon) {
       if (!$in_session xor uc_coupon_session_get($coupon->code)) {
         $options[$coupon->code] = $coupon->title;
+        if ($coupon->type === 'credit') {
+          $credit = empty($coupon->usage['value']['codes'][$coupon->code]) ? 0 : $coupon->usage['value']['codes'][$coupon->code];
+          $credit += empty($coupon->amount) ? 0 : $coupon->amount;
+          $credit = $credit > $coupon->value ? 0 : $coupon->value - $credit;
+          $options[$coupon->code] .= ' (' . t('@credit credit remaining', array('@credit' => uc_currency_format($credit))) . ')';
+        }
       }
     }
   }
@@ -1541,8 +1556,13 @@ function _uc_coupon_apply_to_order(&$order, $coupons) {
   unset($order->data['coupons']);
   if (!empty($coupons)) {
     $order->data['coupons'] = array();
-    foreach($coupons as $coupon) {
-      $order->data['coupons'][$coupon->code] = $coupon->discounts;
+    foreach($coupons as $code => $coupon) {
+      if ($coupon->amount != 0) {
+        $order->data['coupons'][$coupon->code] = $coupon->discounts;
+      }
+      else {
+        unset($coupons[$code]);
+      }
     }
   }
 
@@ -1690,9 +1710,12 @@ function uc_coupon_uc_store_status() {
 function uc_coupon_uc_cart_alter(&$items) {
   $coupons = uc_coupon_session_validate($items); // Validate all codes in the session against the cart contents.
   if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($coupons)) {
-    // If there are some valid coupons, then add them to the cart.
+    // If there are some valid coupons, then add them to the cart (but only if
+    // they have a non-zero value.
     foreach ($coupons as $code => $coupon) {
-      $items[] = _uc_coupon_cart_item($coupon);
+      if ($coupon->amount != 0) {
+        $items[] = _uc_coupon_cart_item($coupon);
+      }
     }
   }
 }
@@ -1783,7 +1806,9 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
     $coupons = uc_coupon_session_validate();
     // If there are some valid coupons, then add them to the cart.
     foreach ($coupons as $code => $coupon) {
-      $form['panes']['cart']['cart_review_table']['#items'][] = _uc_coupon_cart_item($coupon);
+      if ($coupon->amount != 0) {
+        $form['panes']['cart']['cart_review_table']['#items'][] = _uc_coupon_cart_item($coupon);
+      }
     }
   }
 }
@@ -1858,7 +1883,6 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
 
   // Merge in global tokens.
   $info = token_info();
-  //dpm($info);
   foreach ($info['types'] as $type => $type_info) {
     if (empty($type_info['needs-data']) && $type != 'current-user' && $type != 'current-date') {
       $type_key = !empty($type_info['type']) ? $type_info['type'] : $type;
