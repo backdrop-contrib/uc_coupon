@@ -983,31 +983,6 @@ function uc_coupon_calculate_discounts($coupon, $order) {
   }
   foreach ($discounts as $id => $discount) {
     switch ($coupon->type) {
-      case 'credit':
-        if ($value <= 0) {
-          unset($discounts[$id]);
-          break;
-        }
-      case 'price':
-        $inclusive_price = $discount->price * $included_rates[$id];
-        if ($coupon->data['apply_to'] == 'subtotal' || $coupon->data['apply_to'] == 'products_total') {
-          // Apply single discount proportionally across all matching items.
-          $discount->discount = $total == 0 ? 0 : min($value * ($inclusive_price / $total), $inclusive_price);
-        }
-        elseif ($coupon->type === 'credit') {
-          // Apply as much of the discount as possible to each product.
-          $discount->discount = min($value, $inclusive_price);
-        }
-        else {
-          // Apply full discount value
-          $discount->discount = min($value * $discount->qty, $inclusive_price);
-        }
-        $discount->pretax_discount = $discount->discount / $included_rates[$id];
-        if ($coupon->type === 'credit') {
-          $value -= $discount->discount;
-        }
-        break;
-
       case 'percentage':
         $discount->discount = $discount->pretax_discount = $discount->price * $coupon->value / 100;
         break;
@@ -1016,6 +991,18 @@ function uc_coupon_calculate_discounts($coupon, $order) {
         $discount->discount = max($discount->price - ($coupon->value * $discount->qty), 0);
         $discount->pretax_discount = $discount->discount / $included_rates[$id];
         break;
+
+      default:
+        $inclusive_price = $discount->price * $included_rates[$id];
+        if ($coupon->type === 'credit' || $coupon->data['apply_to'] == 'subtotal' || $coupon->data['apply_to'] == 'products_total') {
+          // Apply single discount proportionally across all matching items.
+          $discount->discount = $total == 0 ? 0 : min($value * ($inclusive_price / $total), $inclusive_price);
+        }
+        else {
+          // Apply full discount value to each matching item.
+          $discount->discount = min($value * $discount->qty, $inclusive_price);
+        }
+        $discount->pretax_discount = $discount->discount / $included_rates[$id];
     }
     unset($discount->price);
     unset($discount->qty);
