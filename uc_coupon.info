@@ -1,6 +1,7 @@
 name = Discount Coupons
 description = Allow administrators to manage store coupons
 dependencies[] = uc_cart
+dependencies[] = entity
 package = Ubercart - payment
 core = 7.x
 

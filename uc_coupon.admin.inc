@@ -201,175 +201,7 @@ function uc_coupon_display($view_type = 'active') {
  *   Coupon to view.
  */
 function uc_coupon_view($coupon) {
-  $rows = array();
-
-  $rows[] = array(t('Name'), check_plain($coupon->name));
-
-  if (!$coupon->status) {
-    $status = t('Inactive');
-  }
-  elseif (!$coupon->valid_until) {
-    $status = t('Active');
-  }
-  elseif (REQUEST_TIME < $coupon->valid_from) {
-    $status = t('Not valid until @date', array('@date' => _uc_coupon_format_date($coupon->valid_from, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
-  }
-  elseif (REQUEST_TIME > $coupon->valid_until) {
-    $status = t('Expired on @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
-  }
-  else {
-    $status = t('Active until @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
-  }
-  $rows[] = array(t('Status'), $status);
-
-  if (!$coupon->bulk) {
-    $rows[] = array(t('Code'), check_plain($coupon->code) . ' (' . l(t('Print'), 'admin/store/coupons/' . $coupon->cid . '/print') . ')');
-    if ($coupon->max_uses) {
-      $rows[] = array(t('Maximum uses'), $coupon->max_uses);
-    }
-  }
-  else {
-    $codes = '<strong>' . check_plain($coupon->code) . ' &times; ' . check_plain($coupon->data['bulk_number']) . '</strong>';
-    $codes .= ' (' . l(t('Download codes'), 'admin/store/coupons/' . $coupon->cid . '/codes') . ')';
-    $codes .= ' (' . l(t('Print all'), 'admin/store/coupons/' . $coupon->cid . '/print') . ')';
-    for ($id = 0; $id < $coupon->data['bulk_number']; $id++) {
-      $code = uc_coupon_get_bulk_code($coupon, $id);
-      $codes .= '<br />' . check_plain($code) . ' (' . l(t('Print'), 'admin/store/coupons/' . $coupon->cid . '/print/' . $code) . ')';
-    }
-
-    $rows[] = array(t('Codes'), $codes);
-    //$rows[] = array(t('Bulk seed'), check_plain($coupon->bulk_seed));
-    if ($coupon->max_uses) {
-      $rows[] = array(t('Maximum uses per code'), $coupon->max_uses);
-    }
-  }
-
-  $rows[] = array(t('Discount value'), theme('uc_coupon_discount', array('coupon' => $coupon)));
-
-  switch ($coupon->data['apply_to']) {
-    case 'subtotal':
-      $applies = t('Order subtotal');
-      break;
-    case 'products_total':
-      $applies = t('Total of matching products');
-      break;
-    case 'products':
-      $applies = t('Matching products');
-      break;
-    case 'cheapest':
-      $applies = format_plural($coupon->data['apply_count'], 'Cheapest product', '@count cheapest products');
-      break;
-    case 'expensive':
-      $applies = format_plural($coupon->data['apply_count'], 'Most expensive product', '@count most expensive products');
-      break;
-  }
-  $rows[] = array(t('Applied to'), $applies);
-
-  if ($coupon->data['apply_to'] != 'subtotal') {
-    $restrict = array();
-    if (isset($coupon->data['product_types'])) {
-      $key = format_plural(count($coupon->data['product_types']), 'All products in class', 'All products in classes');
-      $restrict[$key] = $coupon->data['product_types'];
-    }
-    if (isset($coupon->data['products'])) {
-      $products = array();
-      foreach ($coupon->data['products'] as $nid) {
-        $products[] = check_plain(db_query("SELECT title FROM {node} WHERE nid = :nid", array(':nid' => $nid))->fetchField());
-      }
-      if (isset($coupon->data['negate_products'])) {
-        $restrict[t('All products except')] = $products;
-      }
-      else {
-        $restrict[format_plural(count($products), 'Product', 'Products')] = $products;
-      }
-    }
-    if (isset($coupon->data['skus'])) {
-      $restrict[format_plural(count($coupon->data['skus']), 'SKU', 'SKUs')] = $coupon->data['skus'];
-    }
-    if (isset($coupon->data['terms'])) {
-      $terms = array();
-      foreach ($coupon->data['terms'] as $tid) {
-        $terms[] = check_plain(db_query("SELECT name FROM {taxonomy_term_data} WHERE tid = :tid", array(':tid' => $tid))->fetchField());
-      }
-      if (isset($coupon->data['negate_terms'])) {
-        $restrict[t('All taxonomy terms except')] = $terms;
-      }
-      else {
-        $restrict[format_plural(count($terms), 'Taxonomy term', 'Taxonomy terms')] = $terms;
-      }
-    }
-    if ($restrict) {
-      $or = FALSE;
-      foreach ($restrict as $title => &$restriction) {
-        if ($or) {
-          $title = t('or') . ' ' . $title;
-        }
-        $restriction = $title . ': <em>' . implode('</em>, <em>', $restriction) . '</em>';
-        $or = TRUE;
-      }
-      $rows[] = array(t('Product restrictions'), implode($restrict, '<br />'));
-    }
-  }
-
-  $restrict = array();
-  if (isset($coupon->data['users'])) {
-    $users = array();
-    foreach ($coupon->data['users'] as $uid) {
-      $users[] = check_plain(db_query("SELECT name FROM {users} WHERE uid = :uid", array(':uid' => $uid))->fetchField());
-    }
-    if (isset($coupon->data['negate_users'])) {
-      $restrict[t('All users except')] = $users;
-    }
-    else {
-      $restrict[format_plural(count($users), 'User', 'Users')] = $users;
-    }
-  }
-  if (isset($coupon->data['max_uses_per_user'])) {
-    $restrict['Maximum uses per user'] = array($coupon->data['max_uses_per_user']);
-  }
-  if (isset($coupon->data['roles'])) {
-    if (isset($coupon->data['negate_roles'])) {
-      $restrict[t('All roles except')] = $coupon->data['roles'];
-    }
-    else {
-      $restrict[format_plural(count($users), 'Role', 'Roles')] = $coupon->data['roles'];
-    }
-  }
-  if ($restrict) {
-    foreach ($restrict as $title => &$restriction) {
-      $restriction = $title . ': <em>' . implode('</em>, <em>', $restriction) . '</em>';
-    }
-    $rows[] = array(t('User restrictions'), implode($restrict, '<br />'));
-  }
-
-  if ($coupon->minimum_order > 0) {
-    $rows[] = array(t('Order restrictions'), t('Minimum subtotal') . ': <em>' . uc_currency_format($coupon->minimum_order) . '</em>');
-  }
-
-  $combo_list = array();
-  if (!empty($coupon->data['combinations'])) {
-    $combos = db_query('SELECT cid, name FROM {uc_coupons} where cid IN (:cids)', array(':cids' => $coupon->data['combinations']));
-    foreach ($combos as $combo) {
-      $combo_list[] = check_plain("$combo->name [cid:$combo->cid]");
-    }
-  }
-  if (isset($coupon->data['negate_combinations'])) {
-    $ctext = empty($combo_list) ? t('Any.') : t('Any but:') . ' ' . implode(', ', $combo_list);
-  }
-  else {
-    $ctext = empty($combo_list) ? t('None.') : t('Only:') . ' ' . implode(', ', $combo_list);
-  }
-  $rows[] = array(t('Allowed Combinations'), $ctext);
-
-  foreach ($rows as &$row) {
-    $row[0] = array(
-      'header' => TRUE,
-      'data' => $row[0],
-    );
-  }
-
-  $output = theme('table', array('header' => array(), 'rows' => $rows));
-  return $output;
+  return entity_view('uc_coupon', array($coupon));
 }
 
 /**
@@ -907,6 +739,8 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     );
   }
 
+  field_attach_form('uc_coupon', $coupon, $form, $form_state);
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save coupon'),
@@ -1140,6 +974,16 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     $form_state['rebuild'] = TRUE;
   }
   else {
+    field_attach_submit('uc_coupon', $coupon, $form, $form_state);
+
+    // Invoke all specified builders for copying form values to entity properties.
+    // !TODO - Make full use of the EntityUIController class for uc_coupon
+    if (isset($form['#entity_builders'])) {
+      foreach ($form['#entity_builders'] as $function) {
+        $function('uc_coupon', $coupon, $form, $form_state);
+      }
+    }
+
     uc_coupon_save($coupon, $form_state['values']);
     drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
     $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
@@ -1165,7 +1009,7 @@ function _uc_coupon_map_restriction(&$value, $key, $prefix) {
  *  Return a drupal confirm form.
  */
 function uc_coupon_delete_confirm($form, &$form_state, $coupon) {
-  $form['#uc_coupon_cid'] = $coupon->cid;
+  $form['#uc_coupon'] = $coupon;
   return confirm_form($form, t('Are you sure you want to delete coupon %name with code %code?', array('%name' => $coupon->name, '%code' => $coupon->code)), 'admin/store/coupons', t('This action cannot be undone. Deleting this coupon will remove all records of past uses as well.'), t('Delete'));
 }
 
@@ -1173,7 +1017,8 @@ function uc_coupon_delete_confirm($form, &$form_state, $coupon) {
  * Delete coupon confirm form submit handler.
  */
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
-  $coupon = uc_coupon_delete($form['#uc_coupon_cid']);
+  $coupon = $form['#uc_coupon'];
+  uc_coupon_delete($coupon->cid);
   drupal_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
   $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
 }
