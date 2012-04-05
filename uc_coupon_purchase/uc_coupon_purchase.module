@@ -20,8 +20,8 @@ function uc_coupon_purchase_menu() {
   $items = array();
 
   $items['user/%user/coupons'] = array(
-    'title' => 'Coupons',
-    'description' => 'View your purchased coupons.',
+    'title' => 'Coupons & Credits',
+    'description' => 'View your discount coupons and credits.',
     'page callback' => 'uc_coupon_purchase_view',
     'access callback' => 'uc_coupon_purchase_can_view',
     'page arguments' => array(1),

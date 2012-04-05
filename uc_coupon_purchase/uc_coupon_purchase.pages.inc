@@ -8,11 +8,11 @@
  * Display a list of purchased coupons.
  */
 function uc_coupon_purchase_view($account) {
-  drupal_set_title(t('My coupons'));
+  drupal_set_title(t('My coupons and credits'));
 
   $result = db_query('SELECT c.* FROM {uc_coupon_purchase_users} u INNER JOIN {uc_coupons} c ON u.cid = c.cid WHERE u.uid = :uid ORDER BY valid_until ASC, code ASC', array(':uid' => $account->uid));
 
-  $header = array(t('Code'), t('Value'), t('Validity'), t('Max uses'), t('Used'));
+  $header = array(t('Code'), t('Value'), t('Validity'), t('Used'), t('Remaining'));
   $rows = array();
   foreach ($result as $coupon) {
     if ($coupon->bulk) {
@@ -26,7 +26,7 @@ function uc_coupon_purchase_view($account) {
       $codes = array($coupon->code);
     }
 
-    $value = $coupon->type == 'percentage' ? $coupon->value . '%' : uc_currency_format($coupon->value);
+    $value = theme('uc_coupon_discount', array('coupon' => $coupon));
     if (!$coupon->status) {
       $valid = t('Inactive');
     }
@@ -38,32 +38,40 @@ function uc_coupon_purchase_view($account) {
       $valid_until = format_date($coupon->valid_until, 'custom', variable_get('date_format_uc_store', 'm/d/Y'));
       $valid = $valid_from . ' - ' . $valid_until;
     }
-    $uses = $coupon->max_uses > 0 ? $coupon->max_uses : t('Unlimited');
     $usage = uc_coupon_count_usage($coupon->cid);
 
     $icon = theme('image', array('path' => drupal_get_path('module', 'uc_store') . '/images/print.gif', 'width' => t('Print')));
     foreach ($codes as $code) {
       if (substr($code, -1) == '*') {
-        $link = l($code, 'user/' . $account->uid . '/coupons/' . $coupon->cid);
+        // For the base code of bulk coupons, just give a link to print all.
+        $title = t('All %code', array('%code' => $code));
+        $link = l($title, 'user/' . $account->uid . '/coupons/' . $coupon->cid);
         $link .= ' ' . l($icon, 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/print', array('html' => TRUE));
-        $used = '';
+        $rows[] = array($link, '', '', '', '');
       }
       else {
         $link = l($code, 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/view/' . $code);
         $link .= ' ' . l($icon, 'user/' . $account->uid . '/coupons/' . $coupon->cid . '/print/' . $code, array('html' => TRUE));
-        $used = empty($usage['codes'][$code]) ? '' : $usage['codes'][$code];
+        if ($coupon->type === 'credit') {
+          $used = empty($usage['value']['codes'][$code]) ? 0 : $usage['value']['codes'][$code];
+          $remaining = uc_currency_format($coupon->value - $used);
+          $used = uc_currency_format($used);
+        }
+        else {
+          $used = empty($usage['codes'][$code]) ? 0 : $usage['codes'][$code];
+          $remaining = $coupon->max_uses > 0 ? $coupon->max_uses - $used : t('Unlimited');
+        }
+        $rows[] = array($link, $value, $valid, $used, $remaining);
       }
-
-      $rows[] = array($link, $value, $valid, $uses, $used);
     }
   }
 
   if (count($rows)) {
-    $output = "<p>" . t("The table below lists the coupons you have purchased.  Please take care that you do not provide any one code to more customers than are allowed in the 'max uses' column") . "</p>";
+    $output = "<p>" . t("The table below lists the discount coupons and credits available to you.") . "</p>";
     $output .= theme('table', array('header' => $header, 'rows' => $rows));
   }
   else {
-    $output = "<p>" . t('You currently have no coupons available.') . "</p>";
+    $output = "<p>" . t('You currently have no coupons or credits available.') . "</p>";
   }
 
   return $output;
