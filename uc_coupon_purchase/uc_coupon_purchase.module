@@ -424,12 +424,8 @@ function uc_coupon_purchase_create($coupon, $qty, $uid = NULL) {
 
   // Associate this coupon with its owner.
   if (!is_null($uid)) {
-    $id = db_insert('uc_coupon_purchase_users')
-      ->fields(array(
-        'uid' => $uid,
-        'cid' => $coupon->cid,
-      ))
-      ->execute();
+    $record = array('uid' => $uid, 'cid' => $coupon->cid);
+    drupal_write_record('uc_coupon_purchase_users', $record);
   }
 
   return $coupon;
