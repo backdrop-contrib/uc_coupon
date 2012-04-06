@@ -1275,9 +1275,78 @@ function uc_coupon_form($form, $form_state, $context = 'block', $ajax = FALSE) {
 function uc_coupon_uc_order($op, &$order) {
   if ($op == 'presave') {
     // Apply any session coupons to the current cart order.
-    global $user;
     if (_uc_coupon_is_checkout_order($order)) {
-      _uc_coupon_apply_to_order($order, uc_coupon_session_validate());
+      $coupons = uc_coupon_session_validate();
+      // Index existing line items by coupon code.
+      $items = array();
+      foreach ($order->line_items as $index => $line) {
+        if ($line['type'] == 'coupon') {
+          // For orders created before multi-coupons were enabled, the code was not saved with the line item.
+          // In this case, we retreive it from the uc_coupons_orders table.
+          $code = isset($line['data']['code']) ? $line['data']['code'] :
+              db_query('SELECT code FROM {uc_coupons_orders} WHERE oid = :oid', array(':oid' => $order_id))->fetchField();
+          $items[$code] = $index;
+        }
+      }
+
+      // Index existing entries in {uc_coupons_orders} by coupon code.
+      $entries = db_query('SELECT code, cuid FROM {uc_coupons_orders} WHERE oid = :oid',
+        array(':oid' => $order->order_id))->fetchAllKeyed(0,1);
+
+      // Update, insert or delete line items and entries in uc_coupons_orders.
+      $insert = array();
+      $order->data['coupons'] = array();
+      foreach($coupons as $coupon) {
+        $order->data['coupons'][$coupon->code] = $coupon->discounts;
+        // Handle entries in {uc_coupons_orders}.
+        if (isset($entries[$coupon->code])) {
+          db_update('uc_coupons_orders')->condition('cuid', $entries[$coupon->code])
+            ->fields(array('cid' => $coupon->cid, 'value' => $coupon->amount))
+            ->execute();
+          unset($entries[$coupon->code]);
+        }
+        else {
+          $insert[] = array($coupon->cid, $order->order_id, $coupon->code, $coupon->value);
+        }
+        // Handle line items.
+        if (isset($items[$coupon->code])) {
+          $line =& $order->line_items[$items[$coupon->code]];
+          $line['title'] = $coupon->title;
+          $line['amount'] = -$coupon->pretax_amount;
+          $line['data']['code'] = $coupon->code;
+          uc_order_update_line_item($line['line_item_id'], $line['title'], $line['amount'], $line['data']);
+          unset($items[$coupon->code]);
+        }
+        else {
+          // Create a new line item.
+          $order->line_items[] = uc_order_line_item_add($order->order_id, 'coupon',
+            $coupon->title,
+            -$coupon->pretax_amount,
+            _uc_line_item_data('coupon', 'weight'),
+            array('code' => $coupon->code)
+          );
+        }
+      }
+
+      // Insert new entries in {uc_coupons_orders}
+      if (!empty($insert)) {
+        $query = db_insert('uc_coupons_orders');
+        $query->fields(array('cid', 'oid', 'code', 'value'));
+        foreach ($insert as $fields) {
+          $query->values($fields);
+        }
+        $query->execute();
+      }
+      // Delete orphaned entries in {uc_coupons_orders}
+      if (!empty($entries)) {
+        db_delete('uc_coupons_orders')->condition('cuid', $entries)->execute();
+      }
+      // Remove orphaned line-items.
+      foreach ($items as $index) {
+        uc_order_delete_line_item($order->line_items[$index]['line_item_id']);
+        unset($order->line_items[$index]);
+      }
+      usort($order->line_items, 'uc_weight_sort');
     }
     // Make sure any fake cart items don't get saved with the order if the checkout page is skipped
     // (e.g. Paypal Express Checkout, Google Checkout)
@@ -1377,15 +1446,12 @@ function uc_checkout_pane_coupon_automatic($op, &$order, $form = NULL, &$form_st
 function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL) {
   switch ($op) {
     case 'prepare':
-      // Make sure any fake cart items don't get saved with the order if the checkout page is skipped
-      // (e.g. Paypal Express Checkout, Google Checkout)
+      // Remove fake cart items from the order.
       foreach ($order->products as $key => $product) {
         if (isset($product->module) && $product->module == 'uc_coupon') {
           unset($order->products[$key]);
         }
       }
-      // Apply the currently validated session coupons to the order.
-      _uc_coupon_apply_to_order($order, uc_coupon_session_validate());
       break;
 
     case 'view':
@@ -1492,101 +1558,6 @@ function uc_coupon_form_submit($form, $form_state) {
       drupal_set_message(t("You must enter a valid coupon code."), 'error');
     }
   }
-}
-
-/**
- * Apply a set of coupons to an order.
- *
- * Line items and entries in the uc_coupons_orders table will be added for each coupon.  Any coupon line items
- * or entries which are not in the list of coupons will be removed.  Additionally, the coupons' discount
- * arrays will be added to the order object's data array.
- *
- * @param $order
- *     The order to which the coupons should be applied.
- * @param $coupons
- *    An associative array of fully validated coupon objects, keyed by the coupon code.
- */
-function _uc_coupon_apply_to_order(&$order, $coupons) {
-  // Save the discounts into the $order object's data array.
-  unset($order->data['coupons']);
-  if (!empty($coupons)) {
-    $order->data['coupons'] = array();
-    foreach($coupons as $coupon) {
-      $order->data['coupons'][$coupon->code] = $coupon->discounts;
-    }
-  }
-
-  // Remove existing coupon line items from the order object.
-  foreach ($order->line_items as $index => $line) {
-    if ($line['type'] == 'coupon') {
-      unset($order->line_items[$index]);
-    }
-  }
-
-  // Update or remove existing stored line items and entries in {uc_coupons_orders}.
-  $order_id = $order->order_id;
-  $lines = empty($order->order_id) ? array() : db_query("SELECT * FROM {uc_order_line_items} WHERE order_id = :order_id AND type = :type",
-      array(':order_id' => $order_id, ':type' => 'coupon'))->fetchAllAssoc('line_item_id', PDO::FETCH_ASSOC);
-  foreach ($lines as $lid => $line) {
-    if (isset($line['data'])) {
-      $line['data'] = unserialize($line['data']);
-    }
-    // For orders created before multi-coupons were enabled, the code was not saved with the line item.
-    // In this case, we retreive it from the uc_coupons_orders table.
-    if (!isset($line['data']['code'])) {
-      $line['data']['code'] = db_query('SELECT code FROM {uc_coupons_orders} WHERE oid = :oid', array(':oid' => $order_id))->fetchField();
-    }
-    $code = $line['data']['code'];
-    if (isset($coupons[$code])) {
-      $coupon = $coupons[$code];
-      db_update('uc_coupons_orders')
-        ->fields(array(
-            'cid' => $coupon->cid,
-            'value' => $coupon->amount,
-          ))
-        ->condition('oid', $order_id)
-        ->condition('code', $code)
-        ->execute();
-      $line['title'] = $coupon->title;
-      //$line['amount'] = -$coupon->amount;
-      $line['amount'] = -$coupon->pretax_amount;
-      uc_order_update_line_item($lid, $line['title'], $line['amount'], $line['data']);
-      $order->line_items[] = $line;
-    }
-    else {
-      db_delete('uc_coupons_orders')
-        ->condition('oid', $order_id)
-        ->condition('code', $code)
-        ->execute();
-      uc_order_delete_line_item($lid);
-    }
-    unset($coupons[$code]);
-  }
-
-  // Create new line items and entries in {uc_coupons_orders} for any coupons not yet dealt with.
-  foreach ($coupons as $code => $coupon) {
-    $line = array(
-      'type' => 'coupon',
-      'title' => $coupon->title,
-      //'amount' => -$coupon->amount,
-      'amount' => -$coupon->pretax_amount,
-      'weight' => _uc_line_item_data('coupon', 'weight'),
-      'data' => array('code' => $code),
-    );
-    if (!empty($order->order_id)) {
-      db_insert('uc_coupons_orders')
-        ->fields(array(
-            'cid' => $coupon->cid,
-            'oid' => $order_id,
-            'code' => $code,
-            'value' => $coupon->amount,
-          ))
-        ->execute();
-      uc_order_line_item_add($order_id, $line['type'], $line['title'], $line['amount'], $line['weight'], $line['data']);
-    }
-    $order->line_items[] = $line;
-  }
-  usort($order->line_items, 'uc_weight_sort');
 }
 
 /**
