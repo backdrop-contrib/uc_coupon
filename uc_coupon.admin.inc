@@ -739,7 +739,20 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     );
   }
 
-  field_attach_form('uc_coupon', $coupon, $form, $form_state);
+  $form['fields'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Custom fields'),
+    '#description' => t('Custom fields can be configured at !link.', array(
+      '!link' => l('admin/store/settings/coupon/fields', 'admin/store/settings/coupon/fields'),
+    )),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  if (count(field_info_instances('uc_coupon', 'uc_coupon')) == 0) {
+    $form['fields']['#description'] = t('There are no custom fields defined.') . ' ' . $form['fields']['#description'];
+    $form['fields']['#collapsed'] = TRUE;
+  }
+  field_attach_form('uc_coupon', $coupon, $form['fields'], $form_state);
 
   $form['submit'] = array(
     '#type' => 'submit',
