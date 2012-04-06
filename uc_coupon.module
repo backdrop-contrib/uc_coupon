@@ -1674,8 +1674,10 @@ function uc_coupon_uc_cart_alter(&$items) {
  *   The coupon to be displayed in the cart.
  */
 function _uc_coupon_cart_item($coupon) {
+  // Assign this a unique cart_item_id so it will be keyed properly by entity_view().
+  $id = -hexdec(substr(sha1($coupon->code), -8));
   return (object) array(
-    'cart_item_id' => 0,
+    'cart_item_id' => $id,
     'module' => 'uc_coupon',
     'title' => $coupon->title,
     'nid' => 0,
@@ -1748,12 +1750,14 @@ function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
     $form['panes']['coupon']['#collapsed'] = TRUE;
   }
 
-  // Show current session copuons in the cart pane (since now they will have been removed from the order).
+  // Show current session coupons in the cart pane (since now they will have been removed from the order).
   if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($form['panes']['cart'])) {
     $coupons = uc_coupon_session_validate();
     // If there are some valid coupons, then add them to the cart.
     foreach ($coupons as $code => $coupon) {
-      $form['panes']['cart']['cart_review_table']['#items'][] = _uc_coupon_cart_item($coupon);
+      $item = _uc_coupon_cart_item($coupon);
+      $item->order_product_id = $item->cart_item_id;
+      $form['panes']['cart']['cart_review_table']['#items'][] = $item;
     }
   }
 }
