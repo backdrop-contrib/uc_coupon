@@ -1,19 +1,11 @@
 name = Discount Coupons
-description = Allow administrators to manage store coupons
+description = Discount Coupons and Gift Certificates for Ubercart 3
 dependencies[] = uc_cart
 dependencies[] = entity
 package = Ubercart - payment
 core = 7.x
 
-files[] = uc_coupon.admin.inc
-files[] = uc_coupon.ca.inc
-files[] = uc_coupon.install
-files[] = uc_coupon.module
-files[] = uc_coupon.reports.inc
-files[] = theme/uc_coupon-certificate.tpl.php
-files[] = theme/uc_coupon-page.tpl.php
-files[] = views/uc_coupon.views.inc
-files[] = views/uc_coupon.views_default.inc
+files[] = uc_coupon.entity.inc
 files[] = views/uc_coupon_handler_field_actions.inc
 files[] = views/uc_coupon_handler_field_bulk_number.inc
 files[] = views/uc_coupon_handler_field_codes.inc
