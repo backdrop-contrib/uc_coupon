@@ -890,7 +890,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       // tax-inclusively also; that is, the actual discount is reduced so that the face value is
       // realized after taxes. (This already happens automatically for percentage based coupons).
       $included_rate = 1;
-      if ($coupon->type != 'percentage' && module_exists('uc_taxes')) {
+      if (module_exists('uc_taxes')) {
         foreach (uc_taxes_rate_load() as $tax) {
           if ($tax->display_include
               && is_array($tax->taxed_line_items) && in_array('coupon', $tax->taxed_line_items)
@@ -929,9 +929,9 @@ function uc_coupon_calculate_discounts($coupon, $order) {
 
   // Calculate the discounts per product.
   foreach ($discounts as $nid => $discount) {
+    $inclusive_price = $discount->price * $included_rates[$nid];
     switch ($coupon->type) {
       case 'price':
-        $inclusive_price = $discount->price * $included_rates[$nid];
         if ($coupon->data['apply_to'] == 'subtotal' || $coupon->data['apply_to'] == 'products_total') {
           // Apply single discount proportionally across all matching items.
           $discount->discount = $total == 0 ? 0 : min($coupon->value * ($inclusive_price / $total), $inclusive_price);
@@ -940,18 +940,17 @@ function uc_coupon_calculate_discounts($coupon, $order) {
           // Apply discount to each product.
           $discount->discount = min($coupon->value * $discount->qty, $inclusive_price);
         }
-        $discount->pretax_discount = $discount->discount / $included_rates[$nid];
         break;
 
       case 'percentage':
-        $discount->discount = $discount->pretax_discount = $discount->price * $coupon->value / 100;
+        $discount->discount = $inclusive_price * $coupon->value / 100;
         break;
 
       case 'set_price':
-        $discount->discount = max($discount->price - ($coupon->value * $discount->qty), 0);
-        $discount->pretax_discount = $discount->discount / $included_rates[$nid];
+        $discount->discount = max($inclusive_price - ($coupon->value * $discount->qty), 0);
         break;
     }
+    $discount->pretax_discount = $discount->discount / $included_rates[$nid];
     unset($discount->price);
     unset($discount->qty);
   }
