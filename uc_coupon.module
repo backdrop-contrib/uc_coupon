@@ -1,18 +1,21 @@
 <?php
 /**
  * @file
- * Provides discount coupons for Ubercart.
+ * Provides discount codes and gift certificates for Ubercart.
  *
  * Version: 2.x
  * Drupal Core: 7.x
  * Ubercart Core: 3.x
  *
  * Original code by Blake Lucchesi (www.boldsource.com)
- * Maintained by David Long (dave@longwaveconsulting.com) and Chris Oden (wodenx@gmail.com)
  *
- * Send any suggestions and feedback to the above address.
+ * Maintained by
+ *   Chris Oden (wodenx@gmail.com)
+ *   David Long (dave@longwaveconsulting.com)
+ *
+ * Please submit issues, questions or feedback to the issue queue at
+ * http://drupal.org/project/uc_coupon
  */
-require_once('uc_coupon.entity.inc');
 
 /**
  * Implements hook_menu().
@@ -637,33 +640,14 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
     return $coupon;
   }
 
-  // Assume the coupon is valid, unless a validation hook fails.
-  $coupon->code = $code;
-  $coupon->valid = TRUE;
+  // Count usage for this coupon.
   $uid = !empty($account) ? $account->uid : NULL;
   // If the order exists, don't count it towards coupon usage.
   $oids = !empty($order->order_id) ? array($order->order_id) : array();
   $coupon->usage = uc_coupon_count_usage($coupon->cid, $uid, $oids);
-  unset($coupon->message);
 
-  // Calculate the discount.
-  if ($order) {
-    $coupon->amount = 0;
-    $coupon->pretax_amount = 0;
-    $discounts = uc_coupon_calculate_discounts($coupon, $order, TRUE);
-    if (!is_array($discounts)) {
-      $coupon->discounts = array();
-      $coupon->message = $discounts;
-    }
-    else {
-      $coupon->discounts = $discounts;
-      foreach ($coupon->discounts as $item) {
-        $coupon->amount += $item->discount;
-        $coupon->pretax_amount += isset($item->pretax_discount) ? $item->pretax_discount : $item->discount;
-      }
-      $coupon->amount = round($coupon->amount, variable_get('uc_currency_prec', 2));
-    }
-  }
+  // Calculate the discounts (if any).
+  uc_coupon_apply($coupon, $code, uc_coupon_calculate_discounts($coupon, $order));
 
   // Invoke validation hook.
   foreach (module_implements('uc_coupon_validate') as $module) {
@@ -681,11 +665,6 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
     }
   }
 
-  // Create the line item title for this coupon.
-  $format = !empty($coupon->data['line_item_format']) ? $coupon->data['line_item_format'] :
-       variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]')));
-  $coupon->title = token_replace(check_plain($format), array('uc_coupon' => $coupon));
-
   // Create a success message.
   if ($coupon->valid && !isset($coupon->message)) {
     if (isset($coupon->data['apply_message'])) {
@@ -701,6 +680,47 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
       }
     }
   }
+  return $coupon;
+}
+
+/**
+ * Applies an array of discounts to a coupon.
+ *
+ * @param $coupon
+ *   A raw coupon object.
+ * @param $discounts
+ *   An associative array of the discounts to be applied, keyed by nid or -lid. Or a string
+ *   containing a message indicating why there are no discounts available.
+ *
+ * @return
+ *   A fully validated coupon object with all additional properties set.  This is returned
+ *   for convenience, as the $coupon provided is passed by reference and modified directly.
+ *
+ * @see uc_coupon_validate().
+ */
+function uc_coupon_apply($coupon, $code, $discounts) {
+  $coupon->code = $code;
+  $coupon->valid = TRUE;
+  $coupon->amount = 0;
+  $coupon->pretax_amount = 0;
+  if (!is_array($discounts)) {
+    $coupon->discounts = array();
+    $coupon->message = $discounts;
+  }
+  else {
+    $coupon->discounts = $discounts;
+    foreach ($coupon->discounts as $item) {
+      $coupon->amount += $item->discount;
+      $coupon->pretax_amount += isset($item->pretax_discount) ? $item->pretax_discount : $item->discount;
+    }
+    $coupon->amount = round($coupon->amount, variable_get('uc_currency_prec', 2));
+    unset($coupon->message);
+  }
+  // Create the line item title for this coupon.
+  $format = !empty($coupon->data['line_item_format']) ? $coupon->data['line_item_format'] :
+     variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]')));
+  $coupon->title = token_replace(check_plain($format), array('uc_coupon' => $coupon));
+
   return $coupon;
 }
 
@@ -788,12 +808,21 @@ function uc_coupon_uc_coupon_validate(&$coupon, $order, $account) {
 
 /**
  * Find items that a coupon will apply to and calculate the discounts.
+ *
  * @param $coupon
- *     A coupon object to apply, or a coupon code as a string.
+ *   A coupon object to apply, or a coupon code as a string.
  * @param $order
- *     The order object to which the coupon should be applied.
+ *   The order object to which the coupon should be applied.
+ *
+ * @return
+ *   An array of discounts.
  */
 function uc_coupon_calculate_discounts($coupon, $order) {
+  // Can only calculate discounts if an order is provided.
+  if (empty($order)) {
+    return array();
+  }
+
   if (!is_object($coupon)) {
     // If argument is a code, load the corresponding coupon.
     $coupon = uc_coupon_find($coupon);
@@ -979,7 +1008,7 @@ function uc_coupon_calculate_discounts($coupon, $order) {
       }
     }
   }
-  
+
   // Calculate the discounts per item.
   $value = $coupon->value;
   if ($coupon->type === 'credit' && !empty($coupon->usage['value']['codes'][$coupon->code])) {

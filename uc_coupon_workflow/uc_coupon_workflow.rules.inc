@@ -48,6 +48,24 @@ function uc_coupon_workflow_rules_event_info() {
       ),
     ),
   );
+
+  // Event invoked when a coupon is submitted with an order.
+  // !TODO This functionality would be better implemented by some sort of conditional
+  // loop processing. See http://drupal.org/node/821986
+  $events['uc_coupon_workflow_checkout'] = array(
+    'label' => t('A customer checks out with a valid discount coupon'),
+    'group' => t('Coupon'),
+    'variables' => array(
+      'coupon' => array(
+        'type' => 'uc_coupon',
+        'label' => t('Coupon'),
+      ),
+      'order' => array(
+        'type' => 'uc_order',
+        'label' => t('Order'),
+      ),
+    ),
+  );
   
   return $events;
 }
