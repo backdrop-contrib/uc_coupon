@@ -155,8 +155,8 @@ function uc_coupon_display($view_type = 'active') {
 
   $query = db_select('uc_coupons', 'c')
     ->extend('TableSort')
+    ->extend('PagerDefault')
     ->orderByHeader($header);
-  $query->range(0, 20);
   $query->condition('c.status', $view_type == 'inactive' ? 0 : 1)->fields('c');
 
   $rows = array();
