@@ -90,5 +90,27 @@ function uc_coupon_purchase_default_rules_configuration() {
     }
   }');
   
+  $configs['uc_coupon_assign_on_checkout'] = rules_import('{ "uc_coupon_assign_on_checkout" : {
+      "LABEL" : "Assign a store-credit coupon to its user on checkout",
+      "PLUGIN" : "reaction rule",
+      "ACTIVE" : false,
+      "REQUIRES" : [ "rules", "uc_coupon_purchase", "uc_coupon_workflow" ],
+      "ON" : [ "uc_coupon_workflow_checkout" ],
+      "IF" : [ { "data_is" : { "data" : [ "coupon:type" ], "value" : "credit" } } ],
+      "DO" : [
+        { "uc_coupon_purchase_assign_action" : {
+            "USING" : {
+              "cid" : [ "coupon:cid" ],
+              "account" : [ "order:customer" ],
+              "restrict" : 1,
+              "sole" : 1
+            },
+            "PROVIDE" : { "coupon" : { "assigned_coupon" : "Coupon" } }
+          }
+        }
+      ]
+    }
+  }');
+  
   return $configs;
 }
