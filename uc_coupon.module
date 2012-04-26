@@ -1475,12 +1475,12 @@ function uc_coupon_uc_checkout_pane() {
  * Ajax callback for checkout form.
  */
 function uc_coupon_checkout_update($form, $form_state) {
-  $commands[] = ajax_command_replace('#coupon-pane', drupal_render($form['panes']['coupon']));
+  $commands[] = ajax_command_replace('#coupon-pane', trim(drupal_render($form['panes']['coupon'])));
   if (isset($form['panes']['coupon_automatic'])) {
-    $commands[] = ajax_command_replace('#coupon_automatic-pane', drupal_render($form['panes']['coupon_automatic']));
+    $commands[] = ajax_command_replace('#coupon_automatic-pane', trim(drupal_render($form['panes']['coupon_automatic'])));
   }
   if (isset($form['panes']['payment'])) {
-    $commands[] = ajax_command_replace('#payment-pane', drupal_render($form['panes']['payment']));
+    $commands[] = ajax_command_replace('#payment-pane', trim(drupal_render($form['panes']['payment'])));
   }
   if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($form['panes']['cart']['cart_review_table'])) {
     $commands[] = ajax_command_html('#cart-pane>div', drupal_render($form['panes']['cart']['cart_review_table']));
