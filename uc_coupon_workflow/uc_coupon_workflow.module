@@ -136,7 +136,7 @@ function uc_coupon_workflow_uc_checkout_complete($order, $account) {
     foreach ($order->data['coupons'] as $code => $discounts) {
       $coupon = uc_coupon_find($code);
       if (!empty($coupon->cid)) {
-        $coupon = uc_coupon_apply($coupon, $code, $discounts);
+        $coupon = uc_coupon_prepare($coupon, $code, $discounts);
         rules_invoke_event('uc_coupon_workflow_checkout', $coupon, $order);
       }
     }

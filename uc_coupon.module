@@ -647,8 +647,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   $coupon->usage = uc_coupon_count_usage($coupon->cid, $uid, $oids);
 
   // Calculate the discounts (if any).
-  uc_coupon_apply($coupon, $code, uc_coupon_calculate_discounts($coupon, $order));
-
+  uc_coupon_prepare($coupon, $code, uc_coupon_calculate_discounts($coupon, $order));
   // Invoke validation hook.
   foreach (module_implements('uc_coupon_validate') as $module) {
     $callback = $module . '_uc_coupon_validate';
@@ -684,7 +683,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
 }
 
 /**
- * Applies an array of discounts to a coupon.
+ * Prepares a coupon for validation and application to an order.
  *
  * @param $coupon
  *   A raw coupon object.
@@ -698,7 +697,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
  *
  * @see uc_coupon_validate().
  */
-function uc_coupon_apply($coupon, $code, $discounts) {
+function uc_coupon_prepare($coupon, $code, $discounts) {
   $coupon->code = $code;
   $coupon->valid = TRUE;
   $coupon->amount = 0;
@@ -1363,76 +1362,7 @@ function uc_coupon_uc_order($op, &$order) {
     // Apply any session coupons to the current cart order.
     if (_uc_coupon_is_checkout_order($order)) {
       $coupons = uc_coupon_session_validate($order);
-      // Index existing line items by coupon code.
-      $items = array();
-      foreach ($order->line_items as $index => $line) {
-        if ($line['type'] == 'coupon') {
-          // For orders created before multi-coupons were enabled, the code was not saved with the line item.
-          // In this case, we retreive it from the uc_coupons_orders table.
-          $code = isset($line['data']['code']) ? $line['data']['code'] :
-              db_query('SELECT code FROM {uc_coupons_orders} WHERE oid = :oid', array(':oid' => $order_id))->fetchField();
-          $items[$code] = $index;
-        }
-      }
-
-      // Index existing entries in {uc_coupons_orders} by coupon code.
-      $entries = db_query('SELECT code, cuid FROM {uc_coupons_orders} WHERE oid = :oid',
-        array(':oid' => $order->order_id))->fetchAllKeyed(0,1);
-
-      // Update, insert or delete line items and entries in uc_coupons_orders.
-      $insert = array();
-      $order->data['coupons'] = array();
-      foreach($coupons as $coupon) {
-        $order->data['coupons'][$coupon->code] = $coupon->discounts;
-        // Handle entries in {uc_coupons_orders}.
-        if (isset($entries[$coupon->code])) {
-          db_update('uc_coupons_orders')->condition('cuid', $entries[$coupon->code])
-            ->fields(array('cid' => $coupon->cid, 'value' => $coupon->amount))
-            ->execute();
-          unset($entries[$coupon->code]);
-        }
-        else {
-          $insert[] = array($coupon->cid, $order->order_id, $coupon->code, $coupon->value);
-        }
-        // Handle line items.
-        if (isset($items[$coupon->code])) {
-          $line =& $order->line_items[$items[$coupon->code]];
-          $line['title'] = $coupon->title;
-          $line['amount'] = -$coupon->pretax_amount;
-          $line['data']['code'] = $coupon->code;
-          uc_order_update_line_item($line['line_item_id'], $line['title'], $line['amount'], $line['data']);
-          unset($items[$coupon->code]);
-        }
-        else {
-          // Create a new line item.
-          $order->line_items[] = uc_order_line_item_add($order->order_id, 'coupon',
-            $coupon->title,
-            -$coupon->pretax_amount,
-            _uc_line_item_data('coupon', 'weight'),
-            array('code' => $coupon->code)
-          );
-        }
-      }
-
-      // Insert new entries in {uc_coupons_orders}
-      if (!empty($insert)) {
-        $query = db_insert('uc_coupons_orders');
-        $query->fields(array('cid', 'oid', 'code', 'value'));
-        foreach ($insert as $fields) {
-          $query->values($fields);
-        }
-        $query->execute();
-      }
-      // Delete orphaned entries in {uc_coupons_orders}
-      if (!empty($entries)) {
-        db_delete('uc_coupons_orders')->condition('cuid', $entries)->execute();
-      }
-      // Remove orphaned line-items.
-      foreach ($items as $index) {
-        uc_order_delete_line_item($order->line_items[$index]['line_item_id']);
-        unset($order->line_items[$index]);
-      }
-      usort($order->line_items, 'uc_weight_sort');
+      uc_coupon_apply_to_order($order, $coupons);
     }
     // Make sure any fake cart items don't get saved with the order if the checkout page is skipped
     // (e.g. Paypal Express Checkout, Google Checkout)
@@ -1442,6 +1372,91 @@ function uc_coupon_uc_order($op, &$order) {
       }
     }
   }
+}
+
+/**
+ * Apply a set of coupons to an order.  
+ * 
+ * Line items and entries in the uc_coupons_orders table will be added for each coupon.  Any coupon line items
+ * or entries which are not in the list of coupons will be removed.  Additionally, the coupons' discount
+ * arrays will be added to the order object's data array.
+ * 
+ * @param $order
+ *     The order to which the coupons should be applied.
+ * @param $coupons
+ *    An associative array of fully validated coupon objects, keyed by the coupon code.
+ */
+function uc_coupon_apply_to_order($order, $coupons) {
+  // Index existing line items by coupon code.
+  $items = array();
+  foreach ($order->line_items as $index => $line) {
+    if ($line['type'] == 'coupon') {
+      // For orders created before multi-coupons were enabled, the code was not saved with the line item.
+      // In this case, we retreive it from the uc_coupons_orders table.
+      $code = isset($line['data']['code']) ? $line['data']['code'] :
+          db_query('SELECT code FROM {uc_coupons_orders} WHERE oid = :oid', array(':oid' => $order_id))->fetchField();
+      $items[$code] = $index;
+    }
+  }
+
+  // Index existing entries in {uc_coupons_orders} by coupon code.
+  $entries = db_query('SELECT code, cuid FROM {uc_coupons_orders} WHERE oid = :oid',
+    array(':oid' => $order->order_id))->fetchAllKeyed(0,1);
+
+  // Update, insert or delete line items and entries in uc_coupons_orders.
+  $insert = array();
+  $order->data['coupons'] = array();
+  foreach($coupons as $coupon) {
+    $order->data['coupons'][$coupon->code] = $coupon->discounts;
+    // Handle entries in {uc_coupons_orders}.
+    if (isset($entries[$coupon->code])) {
+      db_update('uc_coupons_orders')->condition('cuid', $entries[$coupon->code])
+        ->fields(array('cid' => $coupon->cid, 'value' => $coupon->amount))
+        ->execute();
+      unset($entries[$coupon->code]);
+    }
+    else {
+      $insert[] = array($coupon->cid, $order->order_id, $coupon->code, $coupon->value);
+    }
+    // Handle line items.
+    if (isset($items[$coupon->code])) {
+      $line =& $order->line_items[$items[$coupon->code]];
+      $line['title'] = $coupon->title;
+      $line['amount'] = -$coupon->pretax_amount;
+      $line['data']['code'] = $coupon->code;
+      uc_order_update_line_item($line['line_item_id'], $line['title'], $line['amount'], $line['data']);
+      unset($items[$coupon->code]);
+    }
+    else {
+      // Create a new line item.
+      $order->line_items[] = uc_order_line_item_add($order->order_id, 'coupon',
+        $coupon->title,
+        -$coupon->pretax_amount,
+        _uc_line_item_data('coupon', 'weight'),
+        array('code' => $coupon->code)
+      );
+    }
+  }
+
+  // Insert new entries in {uc_coupons_orders}
+  if (!empty($insert)) {
+    $query = db_insert('uc_coupons_orders');
+    $query->fields(array('cid', 'oid', 'code', 'value'));
+    foreach ($insert as $fields) {
+      $query->values($fields);
+    }
+    $query->execute();
+  }
+  // Delete orphaned entries in {uc_coupons_orders}
+  if (!empty($entries)) {
+    db_delete('uc_coupons_orders')->condition('cuid', $entries)->execute();
+  }
+  // Remove orphaned line-items.
+  foreach ($items as $index) {
+    uc_order_delete_line_item($order->line_items[$index]['line_item_id']);
+    unset($order->line_items[$index]);
+  }
+  usort($order->line_items, 'uc_weight_sort');
 }
 
 /**
