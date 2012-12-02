@@ -163,7 +163,7 @@ class UcCouponController extends EntityAPIController {
         $restrict[t('All roles except')] = $coupon->data['roles'];
       }
       else {
-        $restrict[format_plural(count($users), 'Role', 'Roles')] = $coupon->data['roles'];
+        $restrict[format_plural(count($coupon->data['roles']), 'Role', 'Roles')] = $coupon->data['roles'];
       }
     }
     if ($restrict) {
