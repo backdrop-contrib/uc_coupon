@@ -350,17 +350,9 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
           ($order_user = user_load($order->uid)) !== FALSE) {
         foreach ($order->products as $product) {
           $result = db_query("SELECT * FROM {uc_coupon_purchase} WHERE nid = :nid", array(':nid' => $product->nid));
-          $recipient = '';
           foreach ($result as $row) {
             if ($row->model == $product->model || empty($row->model)) {
               $coupon = uc_coupon_load($row->base_cid);
-              foreach (uc_product_get_attributes($product->nid) as $attribute) {
-                if ($attribute->name === UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE) {
-                  if (!empty($product->data['attributes'][$attribute->label][0])) {
-                    $recipient = trim($product->data['attributes'][$attribute->label][0]);
-                  }
-                }
-              }
 
               // Append purchaser data to the coupon name.
               $purchaser = trim(!empty($order->billing_company) ? $order->billing_company : ($order->billing_first_name . ' ' . $order->billing_last_name));
@@ -375,8 +367,8 @@ function uc_coupon_purchase_uc_order($op, $order, $status) {
               uc_order_comment_save($order->order_id, 0, t('Coupon created with code %code.', array('%code' => $new_coupon->code)));
 
               // Fire hook and conditional actions to send emails for this coupon purchase.
-              module_invoke_all('uc_coupon_purchase', $order, $new_coupon, $recipient);
-              rules_invoke_event('uc_coupon_purchase', $order, $new_coupon, $recipient);
+              module_invoke_all('uc_coupon_purchase', $order, $new_coupon, $product);
+              rules_invoke_event('uc_coupon_purchase', $order, $new_coupon, $product);
             }
           }
         }
@@ -572,5 +564,42 @@ function uc_coupon_purchase_coupon_settings_form_submit($form, $form_state) {
       }
       
     }
+  }
+}
+
+// ****** NOTE THE FOLLOWING CAN HOPEFULLY BE REMOVED ONCE THIS FUNCTIONALITY
+//        IS INCLUDED IN UBERCART CORE. See http://drupal.org/node/1632540.
+function uc_coupon_purchase_entity_property_info_alter(&$info) {
+  $r = db_query('SELECT name, label from {uc_attributes}');
+  foreach ($r as $row) {
+    $entry = array(
+      'type' => 'text',
+      'label' => $row->name, // Use the name, because the label can differ among products.
+      'description' => $row->label,
+      'getter callback' => 'uc_coupon_purchase_attribute_property_getter',
+    );
+    foreach (array('uc_order_product', 'uc_cart_item') as $type) {
+      if (isset($info[$type]) && !isset($info[$type]['properties'][$row->name])) {
+        $info[$type]['properties'][$row->name] = $entry;
+      }
+    }
+  }
+}
+
+function uc_coupon_purchase_attribute_property_getter($product, $options, $name, $type, $info) {
+  if (!empty($product->data['attributes'])) {
+    if ($type == 'uc_cart_item') {
+      $product = clone $product;
+      uc_attribute_uc_order_product_alter($product, NULL);
+    }
+    $attributes = uc_attribute_load_product_attributes($product->nid);
+    $key = FALSE;
+    foreach ($attributes as $aid => $attribute) {
+      if ($attribute->name == $name) {
+        $key = $attribute->label;
+        break;
+      }
+    }
+    return ($key && !empty($product->data['attributes'][$key])) ? implode(',', $product->data['attributes'][$key]) : NULL; 
   }
 }

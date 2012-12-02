@@ -49,16 +49,16 @@ function uc_coupon_purchase_default_rules_configuration() {
       "ON" : [ "uc_coupon_purchase" ],
       "IF" : [
         { "NOT uc_coupon_condition_is_bulk" : { "coupon" : [ "coupon" ] } },
-        { "NOT data_is_empty" : { "data" : [ "recipient" ] } }
+        { "NOT data_is_empty" : { "data" : [ "product:uc-coupon-purchase-recipient" ] } }
       ],
       "DO" : [
         { "uc_coupon_purchase_email" : {
             "order" : [ "order" ],
             "coupon" : [ "coupon" ],
             "from" : [ "order:primary-email" ],
-            "addresses" : [ "recipient" ],
+            "addresses" : [ "product:uc-coupon-purchase-recipient" ],
             "subject" : "[store:name]: Gift Certificate",
-            "message" : "Hello!\r\n\r\n[order:first-name] [order:last-name] has sent you a gift certificate worth [coupon:value] for use at [store:name].\n\nJust enter the code [coupon:code] at checkout to receive your discount.\n\nThanks,\n\n[store:name]\n[site:slogan]",
+            "message" : "Hello!\r\n\r\n[order:first-name] [order:last-name] has sent you a gift certificate worth [coupon:value] for use at [store:name].\r\n\r\nJust enter the code [coupon:code] at checkout to receive your discount.\r\n\r\nThanks,\r\n\r\n[store:name]\r\n[site:slogan]",
             "format" : "filtered_html"
           }
         }
@@ -73,16 +73,16 @@ function uc_coupon_purchase_default_rules_configuration() {
       "ON" : [ "uc_coupon_purchase" ],
       "IF" : [
         { "uc_coupon_condition_is_bulk" : { "coupon" : [ "coupon" ] } },
-        { "NOT data_is_empty" : { "data" : [ "recipient" ] } }
+        { "NOT data_is_empty" : { "data" : [ "product:uc-coupon-purchase-recipient" ] } }
       ],
       "DO" : [
         { "uc_coupon_purchase_email" : {
             "order" : [ "order" ],
             "coupon" : [ "coupon" ],
             "from" : [ "order:primary-email" ],
-            "addresses" : [ "recipient" ],
+            "addresses" : [ "product:uc-coupon-purchase-recipient" ],
             "subject" : "[store:name]: Gift Certificate",
-            "message" : "Hello!\n\n[order:first-name] [order:last-name] has sent you a set of gift certificates, each worth [coupon:value], for use at [store:name].\n\nJust enter one of the codes below at checkout to receive your discount.\n\n[coupon:codes]\n\nThanks,\n\n[store:name]\r\n[site:slogan]",
+            "message" : "Hello!\r\n\r\n[order:first-name] [order:last-name] has sent you a set of gift certificates, each worth [coupon:value], for use at [store:name].\r\n\r\nJust enter one of the codes below at checkout to receive your discount.\r\n\r\n[coupon:codes]\r\n\r\nThanks,\r\n\r\n[store:name]\r\n[site:slogan]",
             "format" : "filtered_html"
           }
         }

@@ -21,9 +21,9 @@ function uc_coupon_purchase_rules_event_info() {
         'type' => 'uc_coupon',
         'label' => t('Coupon'),
       ),
-      'recipient' => array(
-        'type' => 'text',
-        'label' => t('Recipient'),
+      'product' => array(
+        'type' => 'uc_order_product',
+        'label' => t('The purchased product of which the coupon is a feature.'),
       ),
     ),
   );
@@ -180,7 +180,7 @@ function uc_coupon_purchase_assign_action_form_alter(&$form, &$form_state) {
     $form['parameter']['cid']['#description'] = t('Select the base coupon to be assigned. Note, you must choose the
       ID of the coupon (i.e. "%selector")', array('%selector' => 'coupon:cid'));
   }
-  // Hide the "quantity" field when not applicable.
+  // Hide the "quantity"  ofield when not applicable.
   $form['parameter']['quantity']['#states'] = array(
     'invisible' => array(
       'input[name="parameter[clone][settings][clone]"]' => array('checked' => FALSE),

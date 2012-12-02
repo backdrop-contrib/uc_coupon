@@ -591,6 +591,41 @@ function uc_coupon_session_validate($order = NULL) {
 }
 
 /**
+ * Validates a list of coupon codes against a specified order and account.
+ *
+ * @param $codes
+ *   The codes to be validated.
+ * @param $order
+ *   The order that the coupon is being applied to.
+ *   If NULL, the current cart contents will be used.
+ *   If FALSE, product and order validation will be bypassed.
+ * @param $account
+ *   The user who is attempting to use the coupon.
+ *   If NULL, the current user will be assumed.
+ *   If FALSE, user validation will be bypassed.
+ *
+ * @see uc_coupon_validate()
+ * @see uc_coupon_session_validate()
+ */
+function uc_coupon_validate_multiple($codes, $order, $account) {
+  $order = clone $order; // We don't want to modify the order passed in.
+  $order->data['coupons'] = array();
+  $valids = array();
+  $invalids = array();
+  foreach ($codes as $code) {
+    $coupon = uc_coupon_validate($code, $order, $account);
+    if ($coupon->valid) { // Process valid coupons.
+      $valids[$code] = $coupon;
+      $order->data['coupons'][$code] = $coupon->discounts;
+    }
+    else {
+      $invalids[$code] = $code;
+    }
+  }
+  return array('valid' => $valids, 'invalid' => $invalids);
+}
+
+/**
  * Validate a coupon, and optionally calculate the order discount.
  *
  * @param $code
@@ -1195,11 +1230,10 @@ function theme_uc_coupon_automatic_discounts($variables) {
  *
  * @param $coupons
  *     An array of coupon options of the form code => title
- * @param $ajax
- *     The #ajax array to apply to each remove button, or FALSE if the form
- *    is not ajax enabled.
+ * @param $submit
+ *     An array of additional options to attach to the form's submit elements (e.g. #ajax, #submit)
  */
-function uc_coupon_table($coupons, $ajax = FALSE) {
+function uc_coupon_table($coupons, $submit = FALSE) {
   $table = array(
     '#type' => 'tapir_table',
   );
@@ -1225,11 +1259,9 @@ function uc_coupon_table($coupons, $ajax = FALSE) {
         '#name' => 'uc-coupon-remove-' . $code,
       ),
     );
-    if ($ajax) {
+    if ($submit) {
       // Add ajax functionality to this table.
-      $table[$i]['remove'] += array(
-        '#ajax' => $ajax,
-      );
+      $table[$i]['remove'] += $submit;
     }
     $i++;
   }
@@ -1266,9 +1298,19 @@ function _uc_coupon_options_list($coupons, $in_session = TRUE) {
 }
 
 function uc_coupon_checkout_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
   unset($form_state['checkout_valid']);
   $form_state['redirect'] = 'cart/checkout';
+}
+
+function uc_coupon_order_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  uc_coupon_form_submit($form, $form_state);
+  $coupons = uc_coupon_get_order_coupons($form_state['order']);
+  uc_coupon_apply_to_order($form_state['order'], uc_coupon_get_order_coupons($form_state['order']));
+  // !TODO: Shouldn't save the order here because we prevent reverting changes
+  // made by other panes?
+  uc_order_save($form_state['order']);
 }
 
 /**
@@ -1276,11 +1318,13 @@ function uc_coupon_checkout_submit($form, &$form_state) {
  *
  * @param $context
  *     Where the form is to appear: 'cart', 'block' or 'checkout'
- * @param $ajax
- *     The #ajax array to be applied to all buttons, or FALSE for a non-ajax-enabled form.
+ * @param $submit
+ *     An array of additional options to attach to the form's submit elements (e.g. #ajax, #submit)
  */
-function uc_coupon_form($form, $form_state, $context = 'block', $ajax = FALSE) {
-  $coupons = uc_coupon_session_validate();
+function uc_coupon_form($form, $form_state, $context = 'block', $submit = FALSE) {
+  //dpm($form_state['order'], 'order build');
+  $coupons = ($context == 'order') ? uc_coupon_get_order_coupons($form_state['order']) : uc_coupon_session_validate();
+  //dpm($coupons, 'coupons build');
   $components = variable_get('uc_coupon_form_components',
     drupal_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list')));
 
@@ -1300,25 +1344,17 @@ function uc_coupon_form($form, $form_state, $context = 'block', $ajax = FALSE) {
     if (!variable_get('uc_coupon_allow_multiple', FALSE) && count(uc_coupon_session_get()) > 0) {
       $form['code']['#description'] .= ' ' . t('Apply a blank code to remove the currently applied coupon.');
     }
-    if ($ajax) {
-      // Ensure that the ajax throbber doesn't spoil the layout.
-      drupal_add_css('#uc-coupon-active-coupons, #uc-coupon-other-discounts { clear: left; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
-      $form['apply'] += array(
-        '#ajax' => $ajax,
-      );
+    drupal_add_css('#uc-coupon-active-coupons, #uc-coupon-other-discounts { clear: left; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
+    if ($submit) {
+      $form['apply'] += $submit;
     }
-    if ($context == 'checkout') {
-      $form['apply']['#limit_validation_errors'] = array();
-      $form['apply']['#submit'] = array('uc_coupon_checkout_submit');
-    }
-
   }
 
   // Add active coupons components (table and/or list).
-  $options = _uc_coupon_options_list($coupons);
+  $options = _uc_coupon_options_list($coupons, $context != 'order');
   if (!empty($options)) {
     if (!empty($components['table'])) {
-      $form['coupons_table'] = tapir_get_table('uc_coupon_table', $options, $ajax);
+      $form['coupons_table'] = tapir_get_table('uc_coupon_table', $options, $submit);
     }
     if (!empty($components['list'])) {
       $form['coupons'] = array(
@@ -1337,13 +1373,8 @@ function uc_coupon_form($form, $form_state, $context = 'block', $ajax = FALSE) {
         '#name' => 'uc-coupon-remove',
       );
 
-      if ($ajax) {
-        $form['remove']['#ajax'] = $ajax;
-      }
-
-      if ($context == 'checkout') {
-        $form['remove']['#limit_validation_errors'] = array();
-        $form['remove']['#submit'] = array('uc_coupon_checkout_submit');
+      if ($submit) {
+        $form['remove'] += $submit;
       }
     }
   }
@@ -1494,6 +1525,9 @@ function uc_coupon_checkout_update($form, $form_state) {
   if (isset($form['panes']['coupon_automatic'])) {
     $commands[] = ajax_command_replace('#coupon_automatic-pane', trim(drupal_render($form['panes']['coupon_automatic'])));
   }
+  if (isset($form['panes']['quotes'])) {
+    $commands[] = ajax_command_replace('#quotes-pane', drupal_render($form['panes']['quotes']));
+  }
   if (isset($form['panes']['payment'])) {
     $commands[] = ajax_command_replace('#payment-pane', trim(drupal_render($form['panes']['payment'])));
   }
@@ -1558,11 +1592,16 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
     case 'view':
       // Revalidate the session coupons against the actual order.
       drupal_add_css('#coupon-messages { clear: both; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
-      $ajax = array(
-        'callback' => 'uc_coupon_checkout_update',
-      );
       $description = variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.'));
-      $contents = uc_coupon_form(array(), $form_state, 'checkout', $ajax);
+      $submit = array(
+        '#limit_validation_errors' => array(),
+        '#ajax' => array(
+          'callback' => 'uc_coupon_checkout_update',
+        ),
+        '#submit' => array('uc_coupon_checkout_submit'),
+      );
+      $contents = uc_coupon_form(array(), $form_state, 'checkout', $submit);
+
       $contents['message'] = array(
         '#markup' => '<div id="coupon-messages"></div>',
         '#weight' => 2,
@@ -1577,7 +1616,7 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
       $trigger = $form_state['triggering_element']['#name'];
       if (substr($trigger, 0, 9) == 'uc-coupon') {
         $form_state['rebuild'] = TRUE;
-        uc_coupon_form_submit($form, $form_state);
+        uc_coupon_form_submit($form['panes']['coupon'], $form_state);
         return FALSE; // Prevent redirection.
       }
       else {
@@ -1603,20 +1642,33 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
 /**
  * Submit handler for the uc_coupon form.
  */
-function uc_coupon_form_submit($form, $form_state) {
+function uc_coupon_form_submit($form, &$form_state) {
   $trigger = $form_state['triggering_element']['#name'];
-  // Determine where the values are (they will be in the pane subarray if called from checkout page).
-  $values = isset($form_state['values']['panes']['coupon']) ?
-      $form_state['values']['panes']['coupon'] : $form_state['values'];
+  // Determine where the values are (they will be in a subarray if called from checkout or order page).
+  switch ($context = $form['#uc_coupon_form_context']) {
+    case 'checkout':
+      $values = $form_state['values']['panes']['coupon'];
+      break;
+    case 'order':
+      $values = $form_state['values']['coupon'];
+      break;
+    default:
+      $values = $form_state['values'];
+  }
 
   // If this was the result of a 'remove' submission.
   if (substr($trigger, 0, 16) == 'uc-coupon-remove') {
     // See if there was an individual remove button clicked.
     $code = substr($trigger, 17);
     if (!empty($code)) {
-      uc_coupon_session_clear($code);
-      drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $code)));
-      module_invoke_all('uc_coupon_remove', uc_coupon_find($code));
+      if ($context == 'order') {
+        unset($form_state['order']->data['coupons']['code']);
+      }
+      else {
+        uc_coupon_session_clear($code);
+        drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $code)));
+        module_invoke_all('uc_coupon_remove', uc_coupon_find($code));
+      }
     }
     // Otherwise see if it's a checkbox submission.
     elseif (isset($values['coupons'])) {
@@ -1624,8 +1676,13 @@ function uc_coupon_form_submit($form, $form_state) {
       foreach ($values['coupons'] as $code => $selected) {
         if (!$selected) {
           $removed[] = $code;
-          uc_coupon_session_clear($code);
-          module_invoke_all('uc_coupon_remove', uc_coupon_find($code));
+          if ($context == 'order') {
+            unset($form_state['order']->data['coupons'][$code]);
+          }
+          else {
+            uc_coupon_session_clear($code);
+            module_invoke_all('uc_coupon_remove', uc_coupon_find($code));
+          }
         }
       }
       $n = count($removed);
@@ -1641,19 +1698,35 @@ function uc_coupon_form_submit($form, $form_state) {
   }
   // Otherwise try to apply.
   else {
-    $code = strtoupper(trim($values['code']));
+    $code = empty($values['code']) ? '' : strtoupper(trim($values['code']));
     $removed = FALSE;
     // If multiple codes are not enabled, then remove any codes currently applied.
     if (!variable_get('uc_coupon_allow_multiple', FALSE) && count($session = uc_coupon_session_get()) > 0) {
-      foreach (array_keys($session) as $remove_code) {
-        uc_coupon_session_clear($remove_code);
-        drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $remove_code)));
-        module_invoke_all('uc_coupon_remove', uc_coupon_find($remove_code));
+      if ($context == 'order') {
+        unset($form_state['order']->data['coupons']);
       }
-      $removed = TRUE;
+      else {
+        foreach (array_keys($session) as $remove_code) {
+          uc_coupon_session_clear($remove_code);
+          drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $remove_code)));
+          module_invoke_all('uc_coupon_remove', uc_coupon_find($remove_code));
+        }
+        $removed = TRUE;
+      }
     }
     if (!empty($code)) {
-      uc_coupon_session_add($code, 'submit');
+      if ($context == 'order') {
+        $coupon = uc_coupon_validate($code, $form_state['order'], user_load($form_state['order']->uid));
+        if ($coupon->valid) {
+          $form_state['order']->data['coupons'][$code] = $coupon->discounts;
+        }
+        else {
+          drupal_set_message($coupon->message, 'error');
+        }
+      }
+      else {
+        uc_coupon_session_add($code, 'submit');
+      }
     }
     elseif (!$removed) {
       drupal_set_message(t("You must enter a valid coupon code."), 'error');
@@ -1672,7 +1745,7 @@ function uc_coupon_uc_line_item() {
     'weight' => 0,
     'default' => FALSE,
     'stored' => TRUE,
-    'add_list' => TRUE,
+    'add_list' => FALSE,
     'calculated' => TRUE,
   );
   return $items;
@@ -2135,4 +2208,99 @@ function uc_coupon_field_extra_fields() {
   );
 
   return $extra;
+}
+
+/**
+ * Implements hook_uc_order_pane().
+ *
+ * Defines the shipping quote order pane.
+ */
+function uc_coupon_uc_order_pane() {
+  $panes['coupon'] = array(
+    'callback' => 'uc_order_pane_coupon',
+    'title' => t('Coupon, Credit or Discount Codes'),
+    'desc' => t('Apply a coupon or discount code to the current order.'),
+    'class' => 'pos-left',
+    'weight' => 7,
+    'show' => array('edit'),
+  );
+
+  return $panes;  
+}
+
+/**
+ * Coupon order pane callback.
+ *
+ * @see uc_quote_order_pane_quotes_submit()
+ * @see uc_quote_apply_quote_to_order()
+ */
+function uc_order_pane_coupon($op, $order, &$form = NULL, &$form_state = NULL) {
+  switch ($op) {
+    case 'edit-form':
+      $submit = array(
+        '#limit_validation_errors' => array(array('coupon')),
+        '#submit' => array('uc_coupon_order_submit'),
+      );
+      $form['coupon'] = uc_coupon_form(array(), $form_state, 'order', $submit);
+      $form['#uc_coupon_form_context'] = 'order';
+      $form['coupon']['#theme'] = 'uc_coupon_form';
+      $form['coupon']['#tree'] = TRUE;
+      break;
+    case 'edit-theme':
+      return drupal_render($form['coupon']);
+  }
+}
+
+/**
+ * Implements hook_form_uc_order_edit_form_alter().
+ */
+function uc_coupon_form_uc_order_edit_form_alter(&$form, &$form_state) {
+  $order = $form_state['order'];
+  $line_items = $order->line_items;
+  foreach ($line_items as $item) {
+    // Coupon line items should be changed using the coupon order-edit pane.
+    if ($item['type'] == 'coupon') {
+      $form['line_items'][$item['line_item_id']]['title'] = array(
+        '#markup' => check_plain($item['title']),
+      );
+      $form['line_items'][$item['line_item_id']]['remove']['#access'] = FALSE;
+      $form['line_items'][$item['line_item_id']]['amount'] = array(
+        '#theme' => 'uc_price',
+        '#price' => $item['amount'],
+      );
+    }
+  }
+}
+
+
+
+/**
+ * Gets the fully validated coupon objects that have been applied to this order.
+ *
+ * @param $order
+ *   The order in question.
+ * @param $recalculate
+ *   If TRUE, the value of each coupon will be recalculated using the current state
+ *   of the order and current coupon settings.
+ *   If FALSE (default), the original coupon values will be preserved.
+ */
+function uc_coupon_get_order_coupons($order, $recalculate = FALSE) {
+  $coupons = array();
+  if (!empty($order->data['coupons'])) {
+    if ($recalculate) {
+      $dummy_order = clone $order;
+      $dummy_order->data['coupons'] = array();
+    }
+    foreach ($order->data['coupons'] as $code => $discounts) {
+      $coupon = uc_coupon_find($code);
+      if (!empty($coupon->cid)) {
+        if ($recalculate) {
+          $discounts = uc_coupon_calculate_discounts($coupon, $dummy_order);
+          $dummy_order->data['coupons'][$code] =  $coupon->discounts;
+        }
+        $coupons[] = uc_coupon_prepare($coupon, $code, $discounts);
+      }
+    }
+  }
+  return $coupons;
 }

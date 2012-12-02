@@ -34,7 +34,7 @@ function uc_coupon_recurring_form_uc_coupon_add_form_alter(&$form, &$form_state)
   $form['uc_coupon_recurring']['recurring_payments'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum number of recurring payments to discount'),
-    '#description' => t('Specify the maximum number of payments (including the first) to which the discount should be applied. Leave blank to apply to all recurring payments.  Please note this will be ignored if recurring payments are processed via Paypal WPS.'),
+    '#description' => t('Specify the maximum number of payments (after the initial order) to which the discount should be applied. Leave blank (or enter 0) to apply only to the initial order. Enter -1 to apply to all recurring payments. Please note this will be ignored if recurring payments are processed via Paypal WPS.'),
     '#default_value' => !empty($form['#uc_coupon']->data['recurring_payments']) ? $form['#uc_coupon']->data['recurring_payments'] : '',
   );
   $form['#entity_builders'][] = 'uc_coupon_recurring_build_coupon';
@@ -45,7 +45,6 @@ function uc_coupon_recurring_form_uc_coupon_add_form_alter(&$form, &$form_state)
  */
 function uc_coupon_recurring_build_coupon($type, $coupon, $form, $form_state) {
   if ($type == 'uc_coupon') {
-    dpm($form_state['values']);
     if (!empty($form_state['values']['recurring_payments'])) {
       $coupon->data['recurring_payments'] = $form_state['values']['recurring_payments'];
     }
@@ -64,7 +63,8 @@ function uc_coupon_recurring_recurring_renewal_pending(&$order, $fee) {
     $order->data['coupons'] = array();
     foreach ($codes as $code) {
       $coupon = uc_coupon_find($code);
-      if ($coupon && (empty($coupon->data['recurring_payments']) || ($coupon->data['recurring_payments'] - 1) > $fee->charged_intervals)) {
+      $limit = empty($coupon->data['recurring_payments']) ? 0 : $coupon->data['recurring_payments'];
+      if ($coupon && ($limit < 0 || $limit > $fee->charged_intervals)) {
         uc_coupon_prepare($coupon, $code, uc_coupon_calculate_discounts($coupon, $order));
         $coupons[] = $coupon;
         $order->data['coupons'][$code] =  $coupon->discounts;

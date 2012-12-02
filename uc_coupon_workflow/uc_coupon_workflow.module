@@ -132,14 +132,8 @@ function uc_coupon_workflow_suspend_element($events = FALSE) {
  * Implements hook uc_checkout_complete().
  */
 function uc_coupon_workflow_uc_checkout_complete($order, $account) {
-  if (!empty($order->data['coupons'])) {
-    foreach ($order->data['coupons'] as $code => $discounts) {
-      $coupon = uc_coupon_find($code);
-      if (!empty($coupon->cid)) {
-        $coupon = uc_coupon_prepare($coupon, $code, $discounts);
-        rules_invoke_event('uc_coupon_workflow_checkout', $coupon, $order);
-      }
-    }
+  foreach (uc_coupon_get_order_coupons($order) as $coupon) {
+    rules_invoke_event('uc_coupon_workflow_checkout', $coupon, $order);
   }
 }
 
