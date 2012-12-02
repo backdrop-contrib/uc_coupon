@@ -2,6 +2,7 @@ name = Discount Coupon Purchase
 description = Allows coupons to be purchased as a product feature.
 dependencies[] = uc_coupon
 dependencies[] = uc_coupon_workflow
+dependencies[] = uc_attribute
 package = Ubercart - payment
 core = 7.x
 
