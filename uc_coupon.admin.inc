@@ -768,7 +768,7 @@ function _uc_coupon_format_hour($hour) {
 }
 
 function _uc_coupon_date_range($form_element) {
-  $form_element['year']['#options'] = drupal_map_assoc(range(2008, 2020));
+  $form_element['year']['#options'] = drupal_map_assoc(range(2008, date('Y') + 10));
   return $form_element;
 }
 
