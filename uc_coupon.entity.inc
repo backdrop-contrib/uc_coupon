@@ -17,7 +17,7 @@ class UcCouponController extends EntityAPIController {
     ->condition('cid', $ids, 'IN')
     ->execute();
   }
-  
+
   /**
    * @see EntityAPIController::save()
    */
@@ -67,7 +67,7 @@ class UcCouponController extends EntityAPIController {
         $code = uc_coupon_get_bulk_code($coupon, $id);
         $codes .= '<br />' . check_plain($code) . ' (' . l(t('Print'), 'admin/store/coupons/' . $coupon->cid . '/print/' . $code) . ')';
       }
-  
+
       $rows[] = array(t('Codes'), $codes);
       //$rows[] = array(t('Bulk seed'), check_plain($coupon->bulk_seed));
       if ($coupon->max_uses) {
@@ -138,7 +138,7 @@ class UcCouponController extends EntityAPIController {
           $restriction = $title . ': <em>' . implode('</em>, <em>', $restriction) . '</em>';
           $or = TRUE;
         }
-        $rows[] = array(t('Product restrictions'), implode($restrict, '<br />'));
+        $rows[] = array(t('Product restrictions'), implode('<br />', $restrict));
       }
     }
 
@@ -170,7 +170,7 @@ class UcCouponController extends EntityAPIController {
       foreach ($restrict as $title => &$restriction) {
         $restriction = $title . ': <em>' . implode('</em>, <em>', $restriction) . '</em>';
       }
-      $rows[] = array(t('User restrictions'), implode($restrict, '<br />'));
+      $rows[] = array(t('User restrictions'), implode('<br />', $restrict));
     }
 
     if ($coupon->minimum_order > 0) {
