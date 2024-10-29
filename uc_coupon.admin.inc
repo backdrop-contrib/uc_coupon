@@ -226,7 +226,7 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
     $output .= theme('uc_coupon_certificate', array('coupon' => $coupon, 'code' => $code));
   }
 
-  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/css/uc_coupon.css');
 
   if ($op == 'print') {
     echo theme('uc_coupon_page', array('content' => $output));
@@ -245,8 +245,8 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
 function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
-  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
-  backdrop_add_js(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/css/uc_coupon.css');
+  backdrop_add_js(backdrop_get_path('module', 'uc_coupon') . '/js/uc_coupon.admin.js');
 
   if ($coupon) {
     $value = $coupon;
@@ -844,8 +844,8 @@ function uc_coupon_autocomplete_role($string) {
  * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form, &$form_state) {
-  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
-  backdrop_add_js(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/css/uc_coupon.css');
+  backdrop_add_js(backdrop_get_path('module', 'uc_coupon') . '/js/uc_coupon.admin.js');
 
   $name = db_query("SELECT name FROM {uc_coupons} WHERE code = :code AND cid <> :cid", array(':code' => strtoupper($form_state['values']['code']), ':cid' => isset($form['#uc_coupon_cid']) ? $form['#uc_coupon_cid'] : 0))->fetchField();
   if ($name) {

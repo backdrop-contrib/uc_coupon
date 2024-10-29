@@ -75,7 +75,7 @@ function uc_coupon_reports_form_submit($form, &$form_state) {
  * Output coupon report.
  */
 function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
-  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/reports.css', array('type' => 'uc_coupon'));
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/css/reports.css', array('type' => 'uc_coupon'));
 
   if (is_null($statuses)) {
     $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
@@ -84,7 +84,8 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
     $statuses = explode(',', $statuses);
   }
 
-  $output = backdrop_render(backdrop_get_form('uc_coupon_reports_form', $start, $end, $statuses));
+  $form = backdrop_get_form('uc_coupon_reports_form', $start, $end, $statuses);
+  $output = backdrop_render($form);
 
   if (isset($start) && isset($end)) {
     $result = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co

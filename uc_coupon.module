@@ -208,6 +208,21 @@ function uc_coupon_autoload_info() {
   return array(
     'UcCoupon' => 'uc_coupon.entity.inc',
     'UcCouponController' => 'uc_coupon.entity.inc',
+
+    // Views
+    'uc_coupon_handler_field_actions' => 'views/uc_coupon_handler_field_actions.inc',
+    'uc_coupon_handler_field_bulk_number' => 'views/uc_coupon_handler_field_bulk_number.inc',
+    'uc_coupon_handler_field_codes' => 'views/uc_coupon_handler_field_codes.inc',
+    'uc_coupon_handler_field_product_type' => 'views/uc_coupon_handler_field_product_type.inc',
+    'uc_coupon_handler_field_value' => 'views/uc_coupon_handler_field_value.inc',
+    'uc_coupon_handler_filter_product_type' => 'views/uc_coupon_handler_filter_product_type.inc',
+    'uc_coupon_handler_argument_product_type' => 'views/uc_coupon_handler_argument_product_type.inc',
+    'uc_coupon_handler_field_all_orders_count' => 'views/uc_coupon_handler_field_all_orders_count.inc',
+    'uc_coupon_handler_field_all_orders_total' => 'views/uc_coupon_handler_field_all_orders_total.inc',
+    'uc_coupon_handler_field_all_orders_gross' => 'views/uc_coupon_handler_field_all_orders_gross.inc',
+    'uc_coupon_handler_field_all_orders_value' => 'views/uc_coupon_handler_field_all_orders_value.inc',
+    'uc_coupon_handler_field_gross' => 'views/uc_coupon_handler_field_gross.inc',
+    'uc_coupon_handler_filter_gross' => 'views/uc_coupon_handler_filter_gross.inc',
   );
 }
 
@@ -1158,7 +1173,7 @@ function theme_uc_coupon_form($variables) {
  * Implements hook_uc_cart_pane().
  */
 function uc_coupon_uc_cart_pane($items) {
-  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/css/uc_coupon.css');
 
   // The coupon entry cart pane.
   $body = backdrop_get_form('uc_coupon_form', 'cart') + array(
