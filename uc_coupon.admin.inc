@@ -19,10 +19,8 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#default_value' => $config->get('uc_coupon_line_item_format'),
   );
 
-  if (module_exists('token')) {
-    $form['uc_coupon_line_item_format']['#description'] .= ' ' . t('You may use any of the following replacement patterns.');
-    $form['uc_coupon_line_item_format']['#suffix'] = theme('token_tree', array('token_types' => array('uc_coupon')));
-  }
+  $form['uc_coupon_line_item_format']['#description'] .= ' ' . t('You may use any of the following replacement patterns.');
+  $form['uc_coupon_line_item_format']['#suffix'] = theme('token_tree', array('token_types' => array('uc_coupon')));
 
   $form['uc_coupon_show_in_cart'] = array(
     '#type' => 'checkbox',
@@ -740,13 +738,11 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#default_value' => empty($value->data['apply_message']) ? '' : $value->data['apply_message'],
   );
 
-  if (module_exists('token')) {
-    $form['display']['replacement_patterns'] = array(
-      '#type' => 'item',
-      '#title' => t('Replacement Patterns'),
-      '#markup' => theme('token_tree', array('token_types' => array('uc_coupon'))),
-    );
-  }
+  $form['display']['replacement_patterns'] = array(
+    '#type' => 'item',
+    '#title' => t('Replacement Patterns'),
+    '#markup' => theme('token_tree', array('token_types' => array('uc_coupon'))),
+  );
 
   $form['fields'] = array(
     '#type' => 'fieldset',
