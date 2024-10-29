@@ -17,15 +17,15 @@ function uc_coupon_token_info() {
   );
 
   $tokens = array(
-    'uc_coupon' => array(  
+    'uc_coupon' => array(
       'name' => array(
         'name' => t('Name'),
         'description' => t('The name of the coupon.'),
       ),
       'code' => array(
         'name' => t('Code'),
-        'description' => t('The coupon code. For bulk coupons this will be the actual code applied, or the code 
-        	prefix if the coupon has not yet been applied.'),
+        'description' => t('The coupon code. For bulk coupons this will be the actual code applied, or the code
+          prefix if the coupon has not yet been applied.'),
       ),
       'codes' => array(
         'name' => t('All Codes'),
@@ -34,14 +34,14 @@ function uc_coupon_token_info() {
       'value' => array(
         'name' => t('Value'),
         'description' => t('The value of the coupon.  If the coupon has already been applied to an order, this will be
-        	the actual currency value of the coupon.  Otherwise, it will be the nominal discount.'),
+          the actual currency value of the coupon.  Otherwise, it will be the nominal discount.'),
       ),
       'credit' => array(
         'name' => t('Remaining credit'),
-        'description' => t('For store credit/gift certificate type coupons which have been applied to an order, the unused credit remaining.'), 
+        'description' => t('For store credit/gift certificate type coupons which have been applied to an order, the unused credit remaining.'),
       ),
     ),
-  
+
     'uc_order' => array(
       'coupon-code' => array(
         'name' => t('Coupon Code'),

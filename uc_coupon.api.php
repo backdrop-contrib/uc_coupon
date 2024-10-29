@@ -3,7 +3,7 @@
  * @file
  *
  * Ubercart Discount Coupon module api/hooks.
- * Version 7.x-2.x
+ * Version 1.x-3.x
  */
 
 /**
@@ -12,13 +12,13 @@
  * Allow modules to alter the usage count for a coupon.
  *
  * @param $usage
- * 		An associative array consiting of the following keys:
- * 		- 'user' => The number of times this coupon has been used by the specified user.
- * 		- 'codes' => An associative array listing the total number of uses for each code (for all users).
+ *     An associative array consiting of the following keys:
+ *     - 'user' => The number of times this coupon has been used by the specified user.
+ *     - 'codes' => An associative array listing the total number of uses for each code (for all users).
  * @param $cid
- * 		The coupon-id of the coupon in question.
+ *     The coupon-id of the coupon in question.
  * @param $uid
- * 		The user-id whose usage is to be checked.
+ *     The user-id whose usage is to be checked.
  */
 function hook_uc_coupon_usage_alter(&$usage, $cid, $uid) {
   // See if this coupon has been used in our table.
@@ -39,12 +39,12 @@ function hook_uc_coupon_usage_alter(&$usage, $cid, $uid) {
  * Allows modules to add to the list of actions available when coupons are listed in a table.
  *
  * @param $coupon
- * 		The coupon being displayed.
+ *     The coupon being displayed.
  * @return
- * 		An associative array describing the actions available. Must contain the followoing keys:
- * 		- 'url': The url where the action is processed.
- * 		- 'icon': The icon to display for this action.
- * 		- 'title': The text to display as a title for the action (usually as hover text over the icon).
+ *     An associative array describing the actions available. Must contain the followoing keys:
+ *     - 'url': The url where the action is processed.
+ *     - 'icon': The icon to display for this action.
+ *     - 'title': The text to display as a title for the action (usually as hover text over the icon).
  */
 function hook_uc_coupon_actions($coupon) {
   $actions = array();
@@ -105,7 +105,7 @@ function hook_uc_coupon_revalidate($order) {
  * may fail under some circumstances anyway.
  *
  * @param $coupon
- * 		The fully validated coupon which was applied.
+ *     The fully validated coupon which was applied.
  */
 function hook_uc_coupon_apply($coupon) {
   // Grant a role to the active user when a particular coupon is applied.
@@ -130,7 +130,7 @@ function hook_uc_coupon_apply($coupon) {
  * may fail under some circumstances anyway.
  *
  * @param $coupon
- * 		The coupon which was removed.
+ *     The coupon which was removed.
  */
 function hook_uc_coupon_remove($coupon) {
   // Revoke a role for the active user when a particular coupon is removed.

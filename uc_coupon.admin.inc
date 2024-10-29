@@ -61,7 +61,7 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#title' => t('Allow multiple coupons to apply to a single order.'),
     '#default_value' => variable_get('uc_coupon_allow_multiple', FALSE),
     '#description' => t('Note, you must enable this feature if you have configured multiple automatic coupons,
-    		even if the restrictions for those coupons would prevent them ever applying to the same order.'),
+        even if the restrictions for those coupons would prevent them ever applying to the same order.'),
   );
 
   $form['uc_coupon_default_usage'] = array(
@@ -95,8 +95,8 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#title' => t('Coupon activation/expiration time'),
     '#type' => 'item',
     '#description' => t('Date-restricted coupons will activate and expire at this hour on the dates specified for the
-    	individual coupon. Note that changing this setting will not effect coupons which have already been created.  To
-    	update the activation/expiration times of existing coupons, edit and save them.'),
+      individual coupon. Note that changing this setting will not effect coupons which have already been created.  To
+      update the activation/expiration times of existing coupons, edit and save them.'),
   );
 
   $form['uc_coupon_expiry']['uc_coupon_expiry_hour'] = array(
@@ -719,7 +719,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#size' => 60,
     '#title' => t('Line item title format.'),
     '#description' => t('The title for this coupon when displayed in the cart and as a line-item.
-    		Leave blank to use the default format as specified on the main coupon settings page.'),
+        Leave blank to use the default format as specified on the main coupon settings page.'),
     '#default_value' => empty($value->data['line_item_format']) ? '' : $value->data['line_item_format'],
   );
 
@@ -1098,7 +1098,7 @@ function theme_uc_coupon_code($variables) {
 
 function _uc_coupon_format_date($date, $format) {
   $func = variable_get('uc_coupon_expiry_timezone', 0) ? 'date' : 'gmdate';
-	return $func($format, $date);
+  return $func($format, $date);
 }
 
 function _uc_coupon_mktime($month, $day, $year) {

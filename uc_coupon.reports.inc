@@ -88,9 +88,9 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
 
   if (isset($start) && isset($end)) {
     $result = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co
-    	LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id)
-    	WHERE o.created > :start AND o.created < :end AND o.order_status IN (:statuses)
-    	ORDER BY co.cid, o.created ASC",
+      LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id)
+      WHERE o.created > :start AND o.created < :end AND o.order_status IN (:statuses)
+      ORDER BY co.cid, o.created ASC",
       array(':start' => $start, ':end' => $end, ':statuses' => $statuses));
     $total = 0;
 

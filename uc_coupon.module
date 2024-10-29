@@ -465,11 +465,11 @@ function uc_coupon_session_add($code, $op = 'submit') {
  * Removes one (or all) coupon codes from the session.
  *
  * @param $code
- *		The code to remove, or NULL to remove all codes.
+ *    The code to remove, or NULL to remove all codes.
  * @param $is_update
- * 		TRUE (the default) if removing this code represents an update of the session; that is, if the code
- *		was previously validated. FALSE otherwise (e.g. for removal of automatic discounts).  Ignored if
- *		a specific code is not specified.
+ *     TRUE (the default) if removing this code represents an update of the session; that is, if the code
+ *    was previously validated. FALSE otherwise (e.g. for removal of automatic discounts).  Ignored if
+ *    a specific code is not specified.
  */
 function uc_coupon_session_clear($code = NULL) {
   if (isset($code)) {
