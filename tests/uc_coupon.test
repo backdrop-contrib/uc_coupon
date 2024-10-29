@@ -5,27 +5,20 @@
  * Ubercart Discount Coupon Tests.
  */
 
+module_load_include('inc', 'uc_store', 'tests/test_helper');
 /**
  * SimpleTests for Ubercart Discount Coupons
  */
 class UcCouponTestCase extends UbercartTestHelper {
 
-  public static function getInfo() {
-    return array(
-      'name' => 'Discount Coupons',
-      'description' => 'Test discount coupons.',
-      'group' => 'Ubercart',
-    );
-  }
-
   /**
    * Overrides BackdropWebTestCase::setUp().
    */
-  function setUp() {
+  protected function setUp($modules = array(), $permissions = array()) {
     $modules = array('uc_coupon', 'uc_payment', 'uc_payment_pack');
     $permissions = array('manage store coupons');
     parent::setUp($modules, $permissions);
-    $this->drupalLogin($this->adminUser);
+    $this->backdropLogin($this->adminUser);
   }
 
   function createCoupon($edit = array()) {
@@ -46,11 +39,11 @@ class UcCouponTestCase extends UbercartTestHelper {
 
   public function applyCoupons($coupons, $products = array(), $total = NULL) {
     foreach ($products as $product) {
-      $this->drupalPost('node/' . $product->nid, array(), t('Add to cart'));
+      $this->backdropPost('node/' . $product->nid, array(), t('Add to cart'));
       $this->assertRaw($product->title, 'Product appears on cart page');
     }
     foreach ($coupons as $coupon) {
-      $this->drupalPost('cart', array('code' => $coupon->code), t('Apply to order'));
+      $this->backdropPost('cart', array('code' => $coupon->code), t('Apply to order'));
       if ($total !== FALSE) {
         $this->assertRaw('Coupon ' . $coupon->code, 'Applied coupon code appears on cart page.');
       }
@@ -69,7 +62,7 @@ class UcCouponTestCase extends UbercartTestHelper {
   // Our own version of the checkout sequence, optionally checking for coupons.
   function checkout($coupons = array(), $total = FALSE) {
     $total = uc_currency_format($total);
-    $this->drupalPost('cart', array('items[0][qty]' => 1), t('Checkout'));
+    $this->backdropPost('cart', array('items[0][qty]' => 1), t('Checkout'));
     foreach ($coupons as $coupon) {
       $this->assertRaw('Coupon ' . $coupon->code, "Coupon $coupon->code appears on checkout page.");
     }
@@ -77,7 +70,7 @@ class UcCouponTestCase extends UbercartTestHelper {
       $this->assertRaw($total, "The order total of $total is correct on the checkout page");
     }
     $edit = $this->populateCheckoutForm();
-    $this->drupalPost(NULL, $edit, t('Review order'));
+    $this->backdropPost(NULL, $edit, t('Review order'));
     foreach ($coupons as $coupon) {
       $this->assertRaw('Coupon ' . $coupon->code, "Coupon $coupon->code appears on review page.");
     }
@@ -85,7 +78,7 @@ class UcCouponTestCase extends UbercartTestHelper {
       $this->assertRaw($total, "The order total of $total is correct on the review page");
     }
         // Complete the review page.
-    $this->drupalPost(NULL, array(), t('Submit order'));
+    $this->backdropPost(NULL, array(), t('Submit order'));
 
     $order_id = db_query("SELECT order_id FROM {uc_orders} WHERE delivery_first_name = :name", array(':name' => $edit['panes[delivery][delivery_first_name]']))->fetchField();
     if ($order_id) {

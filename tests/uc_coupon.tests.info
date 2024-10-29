@@ -1,0 +1,5 @@
+[UcCouponTestCase]
+name = Discount Coupons
+description = 'Test discount coupons.',
+group = Ubercart
+file = uc_coupon.test
