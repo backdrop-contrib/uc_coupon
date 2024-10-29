@@ -10,7 +10,7 @@
 
 /**
  * Implements hook_rules_event_info().
- * 
+ *
  */
 function uc_coupon_workflow_rules_event_info() {
   // Event invoked when a valid coupon is applied.
@@ -24,7 +24,7 @@ function uc_coupon_workflow_rules_event_info() {
       ),
     ),
   );
-  
+
   // Event invoked when a valid coupon is applied.
   $events['uc_coupon_workflow_removed'] = array(
     'label' => t('A valid discount coupon is removed'),
@@ -36,7 +36,7 @@ function uc_coupon_workflow_rules_event_info() {
       ),
     ),
   );
-  
+
   // Event invoked when checking for automatic coupons.
   $events['uc_coupon_workflow_automatic'] = array(
     'label' => t('Check for automatic discounts.'),
@@ -66,7 +66,7 @@ function uc_coupon_workflow_rules_event_info() {
       ),
     ),
   );
-  
+
   return $events;
 }
 
@@ -86,7 +86,7 @@ function uc_coupon_workflow_rules_condition_info() {
  */
 function uc_coupon_workflow_rules_action_info() {
   $actions = array();
-  
+
   // Assign a coupon to a user.
   $actions['uc_coupon_workflow_assign'] = array(
     'label' =>  t('Authorize a user to use a coupon.'),
@@ -100,14 +100,14 @@ function uc_coupon_workflow_rules_action_info() {
     'parameter' => array(
       'account' => array(
         'type' => 'user',
-        'label' => t('Account'),    
+        'label' => t('Account'),
         'description' => t('Select the user account you wish to authorize.'),
-      ), 
+      ),
       'cid' => array(
         'type' => 'integer',
         'label' => t('Coupon'),
-        'description' => t('Select the base coupon to be assigned. 
-            The new user will be added to the list of authorized users for the selected coupon.'), 
+        'description' => t('Select the base coupon to be assigned.
+            The new user will be added to the list of authorized users for the selected coupon.'),
         'options list' => 'uc_coupon_workflow_cid_options',
         'restriction' => 'input',
       ),
@@ -153,7 +153,7 @@ function uc_coupon_workflow_rules_action_info() {
       ),
     ),
   );
-  
+
   // Apply an automatic coupon.
   $actions['uc_coupon_workflow_apply'] = array(
     'label' =>  t('Apply a coupon to the current order.'),
@@ -183,7 +183,7 @@ function uc_coupon_workflow_rules_action_info() {
       ),
     ),
   );
-  
+
   return $actions;
 }
 
@@ -215,7 +215,7 @@ function uc_coupon_workflow_message_formats() {
  * based on those events.
  */
 function uc_coupon_workflow_suspended($settings) {
-  $auth = drupal_static('uc_coupon_workflow_suspended');
+  $auth = backdrop_static('uc_coupon_workflow_suspended');
   return !empty($auth);
 }
 
@@ -248,7 +248,7 @@ function uc_coupon_workflow_email($coupon, $from, $addresses, $subject, $message
     'format' => $format,
     'replacements' => array(), // The replacements are already handled by Rules.
   );
-  
+
   // Split up our recipient e-mail addresses.
   $recipients = array();
   foreach (explode("\n", $addresses) as $address) {
@@ -257,7 +257,7 @@ function uc_coupon_workflow_email($coupon, $from, $addresses, $subject, $message
 
   // Send the e-mails.
   foreach ($recipients as  $email) {
-    $sent = drupal_mail('uc_order', 'action-mail', $email, uc_store_mail_recipient_language($email), $params, $from);
+    $sent = backdrop_mail('uc_order', 'action-mail', $email, uc_store_mail_recipient_language($email), $params, $from);
     if (!$sent['result']) {
       watchdog('uc_coupon', 'Attempt to e-mail @email concerning coupon @cid failed.', array('@email' => $email, '@cid' => $coupon->cid), WATCHDOG_ERROR);
     }
@@ -280,22 +280,22 @@ function uc_coupon_workflow_apply($cid, $mode) {
 }
 
 function uc_coupon_workflow_apply_help() {
-  return '<p>' . 
+  return '<p>' .
           t('This action can be used in two ways: to apply a coupon normally in response to a discrete event
-            (for example, when a particular user logs in), or to apply an automatic discount in response to the 
-            "%event" event, which occurs every time the current cart contents are updated (for example, to 
-            apply a discount if a particular combination of products is ordered).', 
-            array('%event' => t('Check for automatic discounts'))) . 
+            (for example, when a particular user logs in), or to apply an automatic discount in response to the
+            "%event" event, which occurs every time the current cart contents are updated (for example, to
+            apply a discount if a particular combination of products is ordered).',
+            array('%event' => t('Check for automatic discounts'))) .
           '</p><p>' .
           t('Automatic discounts are treated differently than normal coupons: they are listed in separate panes
              on the checkout and cart pages, and they may not be removed by the customer. Unlike normal coupons,
-             they are automatically removed if the rule\'s conditions are not met.') . 
+             they are automatically removed if the rule\'s conditions are not met.') .
           '</p><p>' .
           t('Note that a coupon specified in this action will only apply to an order if its restrictions
              (as specified on the coupon add/edit page) are met. That is, both the conditions of this rule
              and the coupon\'s restrictions must be satisfied.  Note also that normal coupons always take
              precedence over automatic discounts, so if a customer enters a code for a coupon which has not
-             been configured combine with a particular automatic discount, that automatic discount will 
+             been configured combine with a particular automatic discount, that automatic discount will
              be pre-empted.') .
           '</p>';
 }
@@ -305,11 +305,11 @@ function uc_coupon_workflow_apply_help() {
  */
 function uc_coupon_workflow_apply_options() {
   // Only non-bulk coupons may be applied automatically to avoid ambiguity regarding which code to apply.
-  $rows = db_query('SELECT cid, name, code FROM {uc_coupons} WHERE status = :status AND bulk = :bulk', 
+  $rows = db_query('SELECT cid, name, code FROM {uc_coupons} WHERE status = :status AND bulk = :bulk',
     array(':status' => 1, ':bulk' => 0, ));
   $ops = array();
   foreach ($rows as $row) {
-    $ops[$row->cid] = t("@name (Code: @code)", array('@name' => $row->name, '@code' => $row->code)); 
+    $ops[$row->cid] = t("@name (Code: @code)", array('@name' => $row->name, '@code' => $row->code));
   }
   return $ops;
 }
@@ -318,7 +318,7 @@ function uc_coupon_workflow_apply_modes() {
   return array(
     'retain' => t('Apply this coupon normally. It will added to the session for the current customer, and when its
                    restrictions are satisfied, it will be applied exactly as if the code had been submitted manually.'),
-    'auto' => t('Apply this coupon as an automatic discount.') . ' <strong>' . t('Only select this option if this rule 
+    'auto' => t('Apply this coupon as an automatic discount.') . ' <strong>' . t('Only select this option if this rule
                  reacts to the "%event" event.', array('%event' => t('Check for automatic discounts'))) . '</strong>. ' .
                  t('Then, this rule will be evaluated whenever the cart contents are updated, and the coupon applied
                  only if all conditions and restrictions are satisfied.'),

@@ -50,7 +50,7 @@ function uc_coupon_purchase_menu() {
     'access arguments' => array(1, 3),
     'type' => MENU_CALLBACK,
     'file' => 'uc_coupon.admin.inc',
-    'file path' => drupal_get_path('module', 'uc_coupon'),
+    'file path' => backdrop_get_path('module', 'uc_coupon'),
     'weight' => 5,
   );
 
@@ -89,20 +89,20 @@ function uc_coupon_purchase_uc_coupon_actions($coupon) {
     if (uc_coupon_purchase_can_view($account, $coupon)) {
       $actions[] = array(
         'url' => "user/$account->uid/coupons/$coupon->cid/view",
-        'icon' => drupal_get_path('module', 'uc_store') . '/images/order_view.gif',
+        'icon' => backdrop_get_path('module', 'uc_store') . '/images/order_view.gif',
         'title' => t('View coupon: @name', array('@name' => $coupon->name)),
       );
 
       $actions[] = array(
         'url' => "user/$account->uid/coupons/$coupon->cid/print",
-        'icon' => drupal_get_path('module', 'uc_store') . '/images/print.gif',
+        'icon' => backdrop_get_path('module', 'uc_store') . '/images/print.gif',
         'title' => t('Print coupon: @name', array('@name' => $coupon->name)),
       );
 
       if ($coupon->bulk) {
         $actions[] = array(
           'url' => 'admin/store/coupons/' . $coupon->cid . '/codes',
-          'icon' => drupal_get_path('module', 'uc_store') . '/images/menu_reports_small.gif',
+          'icon' => backdrop_get_path('module', 'uc_store') . '/images/menu_reports_small.gif',
           'title' => t('Download codes as CSV: @name', array('@name' => $coupon->name)),
         );
       }
@@ -177,8 +177,8 @@ function uc_coupon_purchase_feature_form($form, $form_state, $node, $feature) {
   }
 
   if (!$coupons) {
-    drupal_set_message(t('No inactive coupons found. Please <a href="!url">create an inactive coupon</a> to use as a base coupon for purchases.', array('!url' => url('admin/store/coupons/add'))), 'error');
-    drupal_goto('node/' . arg(1) . '/edit/features');
+    backdrop_set_message(t('No inactive coupons found. Please <a href="!url">create an inactive coupon</a> to use as a base coupon for purchases.', array('!url' => url('admin/store/coupons/add'))), 'error');
+    backdrop_goto('node/' . arg(1) . '/edit/features');
   }
 
   $form['title'] = array(
@@ -290,7 +290,7 @@ function uc_coupon_purchase_form_uc_coupon_add_form_alter(&$form) {
     '#title' => t('Purchased coupon code suffix length'),
     '#default_value' => isset($value->data['purchase_suffix_length']) ? $value->data['purchase_suffix_length'] : 12,
     '#description' => t('A random string of at least this many characters will be appended to the base coupon code to ensure uniqueness.'),
-    '#options' => drupal_map_assoc(range(4, 30)),
+    '#options' => backdrop_map_assoc(range(4, 30)),
   );
   $form['uc_coupon_purchase']['purchase_relative'] = array(
     '#type' => 'checkbox',
@@ -417,7 +417,7 @@ function uc_coupon_purchase_create($coupon, $qty, $uid = NULL) {
   // Associate this coupon with its owner.
   if (!is_null($uid)) {
     $record = array('uid' => $uid, 'cid' => $coupon->cid);
-    drupal_write_record('uc_coupon_purchase_users', $record);
+    backdrop_write_record('uc_coupon_purchase_users', $record);
   }
 
   return $coupon;
@@ -429,7 +429,7 @@ function uc_coupon_purchase_create($coupon, $qty, $uid = NULL) {
 function uc_coupon_purchase_views_api() {
   return array(
     'api' => '2.0',
-    'path' => drupal_get_path('module', 'uc_coupon_purchase') . '/views',
+    'path' => backdrop_get_path('module', 'uc_coupon_purchase') . '/views',
   );
 }
 
@@ -464,11 +464,11 @@ function _uc_coupon_purchase_create_recipient_attribute() {
  * @reset
  *   TRUE to flush the cache.
  * @return
- *   The loaded attribute object, or FALSE if not found. 
+ *   The loaded attribute object, or FALSE if not found.
  */
 function _uc_coupon_purchase_load_recipient_attribute($reset = FALSE) {
   static $attribute = NULL;
-  
+
   if (!module_exists('uc_attribute')) {
     return FALSE;
   }
@@ -484,7 +484,7 @@ function _uc_coupon_purchase_load_recipient_attribute($reset = FALSE) {
  */
 function uc_coupon_purchase_form_uc_attribute_form_alter(&$form, &$form_state) {
   // If our reserved attribute is being edited, prevent the name from being changed.
-  if (!empty($form['aid']['#value']) 
+  if (!empty($form['aid']['#value'])
       && ($attribute = uc_attribute_load($form['aid']['#value']))
       && $attribute->name === UC_COUPON_PURCHASE_RECIPIENT_ATTRIBUTE) {
     $form['name']['#disabled'] = TRUE;
@@ -532,7 +532,7 @@ function uc_coupon_purchase_form_uc_coupon_settings_form_alter(&$form, &$form_st
     '#type' => 'fieldset',
     '#title' => t('Coupon purchase settings'),
   );
-  
+
   $form['uc_coupon_purchase']['uc_coupon_purchase_recipient'] = array(
     '#type' => 'item',
     '#title' => t('Gift coupon recipient field'),
@@ -547,7 +547,7 @@ function uc_coupon_purchase_form_uc_coupon_settings_form_alter(&$form, &$form_st
       '#access' => module_exists('uc_attribute'),
     ),
     '#description' => module_exists('uc_attribute') ? NULL : t('You must enable the uc_attribute module to activate this feature.'),
-  ); 
+  );
   $form['#submit'][] = 'uc_coupon_purchase_coupon_settings_form_submit';
 }
 
@@ -560,9 +560,9 @@ function uc_coupon_purchase_coupon_settings_form_submit($form, $form_state) {
     if (module_exists('uc_attribute')) {
       if (!$attribute = _uc_coupon_purchase_load_recipient_attribute()) {
         $attribute = _uc_coupon_purchase_create_recipient_attribute();
-        drupal_set_message(t('The "@name" attribute has been created', array('@name' => $attribute->name)));
+        backdrop_set_message(t('The "@name" attribute has been created', array('@name' => $attribute->name)));
       }
-      
+
     }
   }
 }
@@ -600,6 +600,6 @@ function uc_coupon_purchase_attribute_property_getter($product, $options, $name,
         break;
       }
     }
-    return ($key && !empty($product->data['attributes'][$key])) ? implode(',', $product->data['attributes'][$key]) : NULL; 
+    return ($key && !empty($product->data['attributes'][$key])) ? implode(',', $product->data['attributes'][$key]) : NULL;
   }
 }

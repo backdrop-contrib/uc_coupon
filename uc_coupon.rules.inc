@@ -38,7 +38,7 @@ function uc_coupon_rules_condition_info() {
       ),
     ),
   );
-  
+
   $conditions['uc_coupon_condition_is_bulk'] = array(
     'label' => t('Check if a coupon is a bulk coupon'),
     'group' => t('Coupon'),
@@ -67,7 +67,7 @@ function uc_coupon_condition_order_has_coupon($order, $codes=array()) {
   }
   // Now add any codes alreay in the order object (these take precedence).
   elseif (isset($order->data['coupons'])) {
-    $check_codes = drupal_map_assoc(array_keys($order->data['coupons']));
+    $check_codes = backdrop_map_assoc(array_keys($order->data['coupons']));
   }
   if (count($check_codes) > 0) {
     $codes = array_filter($codes);

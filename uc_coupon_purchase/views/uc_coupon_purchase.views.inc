@@ -68,7 +68,7 @@ function uc_coupon_purchase_views_data_alter(&$data) {
 function uc_coupon_purchase_views_handlers() {
   return array(
     'info' => array(
-      'path' => drupal_get_path('module', 'uc_coupon_purchase') . '/views',
+      'path' => backdrop_get_path('module', 'uc_coupon_purchase') . '/views',
     ),
     'handlers' => array(
       'uc_coupon_purchase_handler_field_base_name' => array(

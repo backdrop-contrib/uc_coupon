@@ -53,7 +53,7 @@ function uc_coupon_settings_form($form, &$form_state) {
       'list' => t('Active coupons (list)'),
     ),
     '#default_value' => variable_get('uc_coupon_form_components',
-      drupal_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list'))),
+      backdrop_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list'))),
   );
 
   $form['uc_coupon_allow_multiple'] = array(
@@ -101,7 +101,7 @@ function uc_coupon_settings_form($form, &$form_state) {
 
   $form['uc_coupon_expiry']['uc_coupon_expiry_hour'] = array(
     '#type' => 'select',
-    '#options' => drupal_map_assoc(range(0, 23, 1), '_uc_coupon_format_hour'),
+    '#options' => backdrop_map_assoc(range(0, 23, 1), '_uc_coupon_format_hour'),
     '#default_value' => variable_get('uc_coupon_expiry_hour', 0),
   );
 
@@ -226,7 +226,7 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
     $output .= theme('uc_coupon_certificate', array('coupon' => $coupon, 'code' => $code));
   }
 
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
 
   if ($op == 'print') {
     echo theme('uc_coupon_page', array('content' => $output));
@@ -245,8 +245,8 @@ function uc_coupon_print($coupon, $code = NULL, $op = 'view') {
 function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   _uc_coupon_paypal_check();
 
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
-  drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
+  backdrop_add_js(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
   if ($coupon) {
     $value = $coupon;
@@ -353,7 +353,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#title' => t('Code length'),
     '#description' => t('The number of characters selected here will be appended to the code entered above when generating bulk coupons.'),
     '#default_value' => isset($value->data['bulk_length']) ? $value->data['bulk_length'] : NULL,
-    '#options' => drupal_map_assoc(range(8, 30)),
+    '#options' => backdrop_map_assoc(range(8, 30)),
     '#disabled' => $used,
   );
 
@@ -538,7 +538,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   );
   $form['product_types']['product_types'] = array(
     '#type' => 'checkboxes',
-    '#options' => array_map('check_plain', array_intersect_key(node_type_get_names(), drupal_map_assoc(uc_product_types()))),
+    '#options' => array_map('check_plain', array_intersect_key(node_type_get_names(), backdrop_map_assoc(uc_product_types()))),
     '#default_value' => isset($value->data['product_types']) ? $value->data['product_types'] : array(),
   );
 
@@ -768,7 +768,7 @@ function _uc_coupon_format_hour($hour) {
 }
 
 function _uc_coupon_date_range($form_element) {
-  $form_element['year']['#options'] = drupal_map_assoc(range(2008, date('Y') + 10));
+  $form_element['year']['#options'] = backdrop_map_assoc(range(2008, date('Y') + 10));
   return $form_element;
 }
 
@@ -791,7 +791,7 @@ function uc_coupon_autocomplete_node($string) {
     $title = check_plain($row->title);
     $matches[$title . ' [nid:' . $row->nid . ']'] = $title;
   }
-  print drupal_json_encode($matches);
+  print backdrop_json_encode($matches);
   exit;
 }
 
@@ -805,7 +805,7 @@ function uc_coupon_autocomplete_term($string) {
   foreach ($result as $row) {
     $matches[$row->name . ' [tid:' . $row->tid . ']'] = $row->name;
   }
-  print drupal_json_encode($matches);
+  print backdrop_json_encode($matches);
   exit;
 }
 
@@ -823,7 +823,7 @@ function uc_coupon_autocomplete_user($string) {
   foreach ($result as $row) {
     $matches[$row->name . ' [uid:' . $row->uid . ']'] = $row->name;
   }
-  print drupal_json_encode($matches);
+  print backdrop_json_encode($matches);
   exit;
 }
 
@@ -836,7 +836,7 @@ function uc_coupon_autocomplete_role($string) {
   foreach ($result as $row) {
     $matches[$row->name] = $row->name;
   }
-  print drupal_json_encode($matches);
+  print backdrop_json_encode($matches);
   exit;
 }
 
@@ -844,8 +844,8 @@ function uc_coupon_autocomplete_role($string) {
  * Coupon form validate handler.
  */
 function uc_coupon_add_form_validate($form, &$form_state) {
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
-  drupal_add_js(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
+  backdrop_add_js(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.admin.js');
 
   $name = db_query("SELECT name FROM {uc_coupons} WHERE code = :code AND cid <> :cid", array(':code' => strtoupper($form_state['values']['code']), ':cid' => isset($form['#uc_coupon_cid']) ? $form['#uc_coupon_cid'] : 0))->fetchField();
   if ($name) {
@@ -959,19 +959,19 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   array_walk($form_state['values']['users'], '_uc_coupon_map_restriction', 'uid');
 
   // Set coupon restrictions.
-  $coupon->data['line_items'] = drupal_map_assoc(array_filter($form_state['values']['line_items']));
-  $coupon->data['product_types'] = drupal_map_assoc(array_filter($form_state['values']['product_types']));
+  $coupon->data['line_items'] = backdrop_map_assoc(array_filter($form_state['values']['line_items']));
+  $coupon->data['product_types'] = backdrop_map_assoc(array_filter($form_state['values']['product_types']));
   $coupon->data['negate_products'] = $form_state['values']['negate_products'];
-  $coupon->data['products'] = drupal_map_assoc(array_filter($form_state['values']['products']));
-  $coupon->data['skus'] = drupal_map_assoc(array_filter($form_state['values']['skus']));
+  $coupon->data['products'] = backdrop_map_assoc(array_filter($form_state['values']['products']));
+  $coupon->data['skus'] = backdrop_map_assoc(array_filter($form_state['values']['skus']));
   $coupon->data['negate_terms'] = $form_state['values']['negate_terms'];
-  $coupon->data['terms'] = drupal_map_assoc(array_filter($form_state['values']['terms']));
+  $coupon->data['terms'] = backdrop_map_assoc(array_filter($form_state['values']['terms']));
   $coupon->data['negate_users'] = $form_state['values']['negate_users'];
-  $coupon->data['users'] = drupal_map_assoc(array_filter($form_state['values']['users'], 'is_numeric'));
+  $coupon->data['users'] = backdrop_map_assoc(array_filter($form_state['values']['users'], 'is_numeric'));
   $coupon->data['negate_roles'] = $form_state['values']['negate_roles'];
-  $coupon->data['roles'] = drupal_map_assoc(array_filter($form_state['values']['roles']));
+  $coupon->data['roles'] = backdrop_map_assoc(array_filter($form_state['values']['roles']));
   $coupon->data['negate_combinations'] = $form_state['values']['negate_combinations'];
-  $coupon->data['combinations'] = drupal_map_assoc(array_filter($form_state['values']['combinations']));
+  $coupon->data['combinations'] = backdrop_map_assoc(array_filter($form_state['values']['combinations']));
 
   // Set coupon display info
   $coupon->data['apply_message'] = trim($form_state['values']['apply_message']);
@@ -998,7 +998,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
     }
 
     uc_coupon_save($coupon, $form_state['values']);
-    drupal_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
+    backdrop_set_message(t('Coupon %name has been saved.', array('%name' => $coupon->name)));
     $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
   }
 }
@@ -1019,7 +1019,7 @@ function _uc_coupon_map_restriction(&$value, $key, $prefix) {
  * Coupon ID.
  *
  * @return $confirm
- *  Return a drupal confirm form.
+ *  Return a backdrop confirm form.
  */
 function uc_coupon_delete_confirm($form, &$form_state, $coupon) {
   $form['#uc_coupon'] = $coupon;
@@ -1032,7 +1032,7 @@ function uc_coupon_delete_confirm($form, &$form_state, $coupon) {
 function uc_coupon_delete_confirm_submit($form, &$form_state) {
   $coupon = $form['#uc_coupon'];
   uc_coupon_delete($coupon->cid);
-  drupal_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
+  backdrop_set_message(t('Coupon %name has been deleted.', array('%name' => $coupon->name)));
   $form_state['redirect'] = 'admin/store/coupons' . ($coupon->status ? '' : '/inactive');
 }
 
@@ -1041,7 +1041,7 @@ function uc_coupon_delete_confirm_submit($form, &$form_state) {
  */
 function uc_coupon_codes_csv($coupon) {
   if (!$coupon->bulk) {
-    drupal_not_found();
+    backdrop_not_found();
     return;
   }
 

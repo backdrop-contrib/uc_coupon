@@ -421,7 +421,7 @@ function uc_coupon_views_data() {
 function uc_coupon_views_handlers() {
   return array(
     'info' => array(
-      'path' => drupal_get_path('module', 'uc_coupon') . '/views',
+      'path' => backdrop_get_path('module', 'uc_coupon') . '/views',
     ),
     'handlers' => array(
       'uc_coupon_handler_field_value' => array(

@@ -75,7 +75,7 @@ function uc_coupon_reports_form_submit($form, &$form_state) {
  * Output coupon report.
  */
 function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/reports.css', array('type' => 'uc_coupon'));
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/reports.css', array('type' => 'uc_coupon'));
 
   if (is_null($statuses)) {
     $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
@@ -84,13 +84,13 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
     $statuses = explode(',', $statuses);
   }
 
-  $output = drupal_render(drupal_get_form('uc_coupon_reports_form', $start, $end, $statuses));
+  $output = backdrop_render(backdrop_get_form('uc_coupon_reports_form', $start, $end, $statuses));
 
   if (isset($start) && isset($end)) {
-    $result = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co 
-    	LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id) 
-    	WHERE o.created > :start AND o.created < :end AND o.order_status IN (:statuses) 
-    	ORDER BY co.cid, o.created ASC", 
+    $result = db_query("SELECT co.cid, co.oid, co.value, co.code, o.order_total, o.created FROM {uc_coupons_orders} AS co
+    	LEFT JOIN {uc_orders} AS o ON (co.oid = o.order_id)
+    	WHERE o.created > :start AND o.created < :end AND o.order_status IN (:statuses)
+    	ORDER BY co.cid, o.created ASC",
       array(':start' => $start, ':end' => $end, ':statuses' => $statuses));
     $total = 0;
 

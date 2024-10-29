@@ -1,16 +1,16 @@
 <?php
 /**
  * @file
- * 
+ *
  * Ubercart Discount Coupon module api/hooks.
  * Version 7.x-2.x
  */
 
 /**
  * hook_uc_coupon_usage_alter().
- * 
+ *
  * Allow modules to alter the usage count for a coupon.
- * 
+ *
  * @param $usage
  * 		An associative array consiting of the following keys:
  * 		- 'user' => The number of times this coupon has been used by the specified user.
@@ -35,12 +35,12 @@ function hook_uc_coupon_usage_alter(&$usage, $cid, $uid) {
 
 /**
  * hook_uc_coupon_actions().
- * 
+ *
  * Allows modules to add to the list of actions available when coupons are listed in a table.
- * 
+ *
  * @param $coupon
  * 		The coupon being displayed.
- * @return 
+ * @return
  * 		An associative array describing the actions available. Must contain the followoing keys:
  * 		- 'url': The url where the action is processed.
  * 		- 'icon': The icon to display for this action.
@@ -53,7 +53,7 @@ function hook_uc_coupon_actions($coupon) {
   if (user_access('mark coupon as used')) {
     $actions[] = array(
       'url' => 'admin/store/coupons/mark-as-used/' . $coupon->cid,
-      'icon' => drupal_get_path('module', 'mymodule') . 'mark_as_used.gif',
+      'icon' => backdrop_get_path('module', 'mymodule') . 'mark_as_used.gif',
       'title' => t('Mark coupon: @name as used', array('@name' => $coupon->name)),
     );
   };
@@ -62,12 +62,12 @@ function hook_uc_coupon_actions($coupon) {
 
 /**
  * hook_uc_coupon_revalidate().
- * 
- * Invoked whenever the coupons added to the current session are about to be validated. 
- * 
+ *
+ * Invoked whenever the coupons added to the current session are about to be validated.
+ *
  * Modules implementing this hook may add or remove coupon codes from the session via calls to
  * uc_coupon_session_add() or uc_coupon_session_clear().
- * 
+ *
  * @param $order
  *   The order against which the coupon will be validated.
  */
@@ -88,22 +88,22 @@ function hook_uc_coupon_revalidate($order) {
         uc_coupon_session_add('JACKPOT', 'auto');
         return;
       }
-    } 
+    }
   }
 }
 
 /**
  * hook_uc_coupon_apply().
- * 
- * Invoked whenever a valid coupon is applied to an order.  May be invoked than once for the same 
+ *
+ * Invoked whenever a valid coupon is applied to an order.  May be invoked than once for the same
  * coupon if it becomes invalid due to change in cart contents.
- * 
+ *
  * Note that you should not do anything in your hoook implementation which causes the
  * current cart contents to be rebuilt.  This includes calls to uc_cart_add_item() without
  * explicitly setting the $rebuild argument to false.  And, since coupons may be submitted
  * on the checkout page after the cart contents are frozen, updates to the cart contents
  * may fail under some circumstances anyway.
- * 
+ *
  * @param $coupon
  * 		The fully validated coupon which was applied.
  */
@@ -120,15 +120,15 @@ function hook_uc_coupon_apply($coupon) {
 
 /**
  * hook_uc_coupon_remove().
- * 
+ *
  * Invoked whenever a previously valid coupon is removed.
- * 
+ *
  * Note that you should not do anything in your hoook implementation which causes the
  * current cart contents to be rebuilt.  This includes calls to uc_cart_add_item() without
  * explicitly setting the $rebuild argument to false.  And, since coupons may be submitted
  * on the checkout page after the cart contents are frozen, updates to the cart contents
  * may fail under some circumstances anyway.
- * 
+ *
  * @param $coupon
  * 		The coupon which was removed.
  */
@@ -148,7 +148,7 @@ function hook_uc_coupon_remove($coupon) {
 
 /**
  * Add extra validation to a coupon.
- * 
+ *
  * @param $coupon
  *   The coupon object to validate, with special fields set as follows:
  *   - $coupon->code: The specific code to be applied (even for bulk coupons).

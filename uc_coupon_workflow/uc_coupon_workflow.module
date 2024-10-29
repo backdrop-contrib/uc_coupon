@@ -2,7 +2,7 @@
 /**
  * @file
  * Discount coupon workflow.
- * 
+ *
  * Provides rules-based workflow enhancements to uc_coupon.
  */
 
@@ -45,7 +45,7 @@ function uc_coupon_workflow_uc_coupon_remove($coupon) {
 
 /**
  * Implements hook_form_user_register_form_alter().
- * 
+ *
  * Gives administrators the option of preventing any coupon workflow rules from being executed
  * when a new user is created.
  */
@@ -65,16 +65,16 @@ function uc_coupon_workflow_form_user_register_form_alter(&$form, &$form_state) 
 
 /**
  * Implements hook_user_insert().
- * 
+ *
  * If the creator of this user has suspended coupon workflow, then set the static variable accordingly.
  */
 function uc_coupon_workflow_user_insert(&$edit, $account, $category) {
   if (user_access('suspend coupon workflow') && isset($edit['uc_coupon_workflow_suspended']) && $edit['uc_coupon_workflow_suspended'] == TRUE) {
-    $var = &drupal_static('uc_coupon_workflow_suspended');
+    $var = &backdrop_static('uc_coupon_workflow_suspended');
     $var = TRUE;
   }
   else {
-    drupal_static_reset('uc_coupon_workflow_suspended');
+    backdrop_static_reset('uc_coupon_workflow_suspended');
   }
 }
 
@@ -101,7 +101,7 @@ function uc_coupon_workflow_suspend_element($events = FALSE) {
         }
       }
     }
-    
+
     // If we've found some applicable rules, then list them and offer to suspend.
     if (count($found)) {
       $element = array(
@@ -121,7 +121,7 @@ function uc_coupon_workflow_suspend_element($events = FALSE) {
       );
       $element['uc_coupon_workflow_suspended'] = array(
         '#type' => 'checkbox',
-        '#title' => t('Prevent these actions from being executed this time.'), 
+        '#title' => t('Prevent these actions from being executed this time.'),
       );
       return $element;
     }

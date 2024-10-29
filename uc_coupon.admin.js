@@ -1,5 +1,5 @@
 (function($) {
-  Drupal.behaviors.ucCouponAdmin = {
+  Backdrop.behaviors.ucCouponAdmin = {
     attach: function(context) {
       function toggleUsageLimits() {
         if ($('#edit-store-credit').is(':checked')) {
@@ -36,7 +36,7 @@
           $('#edit-usage-limits').show();
         }
       });
-    
+
       $('input[name=apply_to]', context).click(function() {
         if (this.value == 'cheapest' || this.value == 'expensive') {
           $('.form-item-apply-count').show();
@@ -45,7 +45,7 @@
           $('.form-item-apply-count').hide();
         }
       }).filter(':checked').click();
-    
+
       if ($('input[name=use_validity]', context).change(function() {
         $('.form-item-valid-from, .form-item-valid-until').toggle();
       }).is(':not(:checked)')) {

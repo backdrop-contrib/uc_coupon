@@ -19,7 +19,7 @@ class UcCouponTestCase extends UbercartTestHelper {
   }
 
   /**
-   * Overrides DrupalWebTestCase::setUp().
+   * Overrides BackdropWebTestCase::setUp().
    */
   function setUp() {
     $modules = array('uc_coupon', 'uc_payment', 'uc_payment_pack');
@@ -36,14 +36,14 @@ class UcCouponTestCase extends UbercartTestHelper {
       'status' => 1,
     );
     $form_state = array('values' => $edit);
-    drupal_form_submit('uc_coupon_add_form', $form_state);
+    backdrop_form_submit('uc_coupon_add_form', $form_state);
     $cid = db_query('SELECT cid FROM {uc_coupons} WHERE code = :code', array(':code' => trim(strtoupper($edit['code']))))->fetchField();
     $this->assertTrue($cid, 'Coupon was created successfully');
     if (!$cid) debug(form_get_errors(), 'Form errors:');
     $coupon = uc_coupon_load($cid);
     return $coupon;
   }
-  
+
   public function applyCoupons($coupons, $products = array(), $total = NULL) {
     foreach ($products as $product) {
       $this->drupalPost('node/' . $product->nid, array(), t('Add to cart'));
@@ -65,7 +65,7 @@ class UcCouponTestCase extends UbercartTestHelper {
       $this->assertRaw(uc_currency_format($total), 'Discounted total is correct on cart page.');
     }
   }
-  
+
   // Our own version of the checkout sequence, optionally checking for coupons.
   function checkout($coupons = array(), $total = FALSE) {
     $total = uc_currency_format($total);
@@ -102,7 +102,7 @@ class UcCouponTestCase extends UbercartTestHelper {
     return $order;
   }
 
-  
+
   public function testGiftCertificate() {
     $coupon = $this->createCoupon(array(
       'discount' => '100',
@@ -140,5 +140,5 @@ class UcCouponTestCase extends UbercartTestHelper {
     uc_coupon_save($coupon);
     $this->applyCoupons(array($coupon), array(), $total);
   }
-  
+
 }

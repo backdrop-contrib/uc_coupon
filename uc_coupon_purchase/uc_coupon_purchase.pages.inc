@@ -8,7 +8,7 @@
  * Display a list of purchased coupons.
  */
 function uc_coupon_purchase_view($account) {
-  drupal_set_title(t('My coupons and credits'));
+  backdrop_set_title(t('My coupons and credits'));
 
   $result = db_query('SELECT c.* FROM {uc_coupon_purchase_users} u INNER JOIN {uc_coupons} c ON u.cid = c.cid WHERE u.uid = :uid ORDER BY valid_until ASC, code ASC', array(':uid' => $account->uid));
 
@@ -17,7 +17,7 @@ function uc_coupon_purchase_view($account) {
   foreach ($result as $coupon) {
     if ($coupon->bulk) {
       $coupon->data = unserialize($coupon->data);
-      $codes = array(); 
+      $codes = array();
       for ($id = 0; $id < $coupon->data['bulk_number']; $id++) {
         $codes[] = uc_coupon_get_bulk_code($coupon, $id);
       }
@@ -40,7 +40,7 @@ function uc_coupon_purchase_view($account) {
     }
     $usage = uc_coupon_count_usage($coupon->cid);
 
-    $icon = theme('image', array('path' => drupal_get_path('module', 'uc_store') . '/images/print.gif', 'width' => t('Print')));
+    $icon = theme('image', array('path' => backdrop_get_path('module', 'uc_store') . '/images/print.gif', 'width' => t('Print')));
     foreach ($codes as $code) {
       if (substr($code, -1) == '*') {
         // For the base code of bulk coupons, just give a link to print all.
@@ -81,7 +81,7 @@ function uc_coupon_purchase_view($account) {
  * Print a purchased coupon.
  */
 function uc_coupon_purchase_print($account, $coupon, $op = 'view', $code = NULL) {
-  drupal_set_title(t('Coupon #@cid', array('@cid' => $coupon->cid)), PASS_THROUGH);
+  backdrop_set_title(t('Coupon #@cid', array('@cid' => $coupon->cid)), PASS_THROUGH);
 
   module_load_include('inc', 'uc_coupon', 'uc_coupon.admin');
 

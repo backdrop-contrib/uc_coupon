@@ -230,7 +230,7 @@ function uc_coupon_purchase_email($order, $coupon, $from, $addresses, $subject, 
 
   // Send the e-mails.
   foreach ($recipients as $email) {
-    $sent = drupal_mail('uc_order', 'action-mail', $email, uc_store_mail_recipient_language($email), $settings, empty($settings['from']) ? uc_store_email_from() : $settings['from']);
+    $sent = backdrop_mail('uc_order', 'action-mail', $email, uc_store_mail_recipient_language($email), $settings, empty($settings['from']) ? uc_store_email_from() : $settings['from']);
     if (!$sent['result']) {
       watchdog('uc_order', 'Attempt to e-mail @email concerning order @order_id failed.', array('@email' => $email, '@order_id' => $order->order_id), WATCHDOG_ERROR);
     }
@@ -249,7 +249,7 @@ function uc_coupon_purchase_assign_action($params) {
     elseif (!db_query('SELECT cpuid FROM {uc_coupon_purchase_users} where uid = :uid AND cid = :cid',
         array(':uid' => $params['account']->uid, ':cid' => $coupon->cid))->fetchField(0)) {
       $record = array('uid' => $params['account']->uid, 'cid' => $coupon->cid);
-      drupal_write_record('uc_coupon_purchase_users', $record);
+      backdrop_write_record('uc_coupon_purchase_users', $record);
     }
     if (!empty($params['sole'])) {
       db_delete('uc_coupon_purchase_users')

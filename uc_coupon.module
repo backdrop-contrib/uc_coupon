@@ -2,19 +2,6 @@
 /**
  * @file
  * Provides discount codes and gift certificates for Ubercart.
- *
- * Version: 2.x
- * Drupal Core: 7.x
- * Ubercart Core: 3.x
- *
- * Original code by Blake Lucchesi (www.boldsource.com)
- *
- * Maintained by
- *   Chris Oden (wodenx@gmail.com)
- *   David Long (dave@longwaveconsulting.com)
- *
- * Please submit issues, questions or feedback to the issue queue at
- * http://drupal.org/project/uc_coupon
  */
 
 /**
@@ -55,7 +42,7 @@ function uc_coupon_menu() {
   $items['admin/store/coupons/add'] = array(
     'title' => 'Add new coupon',
     'description' => 'Add a new coupon.',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('uc_coupon_add_form'),
     'access arguments' => array('manage store coupons'),
     'type' => MENU_NORMAL_ITEM,
@@ -94,7 +81,7 @@ function uc_coupon_menu() {
   $items['admin/store/coupons/%uc_coupon/edit'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing coupon.',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('uc_coupon_add_form', 3),
     'access arguments' => array('manage store coupons'),
     'type' => MENU_LOCAL_TASK,
@@ -104,7 +91,7 @@ function uc_coupon_menu() {
   $items['admin/store/coupons/%uc_coupon/delete'] = array(
     'title' => 'Delete',
     'description' => 'Delete a coupon.',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('uc_coupon_delete_confirm', 3),
     'access arguments' => array('manage store coupons'),
     'type' => MENU_LOCAL_TASK,
@@ -152,7 +139,7 @@ function uc_coupon_menu() {
   $items['admin/store/settings/coupon'] = array(
     'title' => 'Coupon module settings',
     'description' => 'Configure the discount coupon module settings.',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('uc_coupon_settings_form'),
     'access arguments' => array('administer store'),
     'file' => 'uc_coupon.admin.inc',
@@ -265,12 +252,12 @@ function uc_coupon_theme() {
     'uc_coupon_certificate' => array(
       'variables' => array('coupon' => NULL, 'code' => NULL),
       'template' => 'uc-coupon-certificate',
-      'path' => drupal_get_path('module', 'uc_coupon') . '/theme',
+      'path' => backdrop_get_path('module', 'uc_coupon') . '/theme',
     ),
     'uc_coupon_page' => array(
       'variables' => array('content' => NULL),
       'template' => 'uc-coupon-page',
-      'path' => drupal_get_path('module', 'uc_coupon') . '/theme',
+      'path' => backdrop_get_path('module', 'uc_coupon') . '/theme',
     ),
   );
 }
@@ -326,7 +313,7 @@ function uc_coupon_count_usage($cid, $uid = NULL, $exclude_oids = array()) {
     array( ':weight' => $weight, ':cid' => $cid, ':uid' => $uid))->fetchField();
 
   // Allow other modules to implement usage counts.
-  drupal_alter('uc_coupon_usage', $usage, $cid, $uid);
+  backdrop_alter('uc_coupon_usage', $usage, $cid, $uid);
 
   return $usage;
 }
@@ -366,7 +353,7 @@ function _uc_coupon_format_discount($coupon, $currency = TRUE) {
 function uc_coupon_get_bulk_code($coupon, $id) {
   // If this coupon has been validated, then $coupon->code is already a bulk code.
   if (isset($coupon->valid)) {
-    $prefix = drupal_substr($coupon->code, 0, strlen($coupon->code) - $coupon->data['bulk_length']);
+    $prefix = backdrop_substr($coupon->code, 0, strlen($coupon->code) - $coupon->data['bulk_length']);
   }
   else {
     $prefix = $coupon->code;
@@ -554,7 +541,7 @@ function uc_coupon_session_validate($order = NULL) {
             case 'submit':
             case 'retain':
               // For coupons which were not valid (new submissions) we notify user and modules.
-              drupal_set_message($coupon->message);
+              backdrop_set_message($coupon->message);
               module_invoke_all('uc_coupon_apply', $coupon);
               // And we mark them for revalidation.
               uc_coupon_session_add($code, 'revalidate');
@@ -570,13 +557,13 @@ function uc_coupon_session_validate($order = NULL) {
           switch ($op) {
             case 'submit':
               // For new coupon submissions, just issue an error and remove from session.
-              drupal_set_message($coupon->message, 'error');
+              backdrop_set_message($coupon->message, 'error');
               uc_coupon_session_clear($code);
               break;
 
             case 'revalidate':
               if (!empty($products)) { // Only issue a message if the cart is not empty.
-                drupal_set_message(t('%title is no longer applicable to your order', array('%title' => $coupon->title)));
+                backdrop_set_message(t('%title is no longer applicable to your order', array('%title' => $coupon->title)));
               }
               module_invoke_all('uc_coupon_remove', $coupon);
               // Keep code in the session in case it becomes valid again.
@@ -1143,7 +1130,7 @@ function uc_coupon_block_view($delta) {
   if ($delta == 'coupon-discount') {
     $block = array(
       'subject' => t('Coupon discount'),
-      'content' => drupal_get_form('uc_coupon_form', 'block'),
+      'content' => backdrop_get_form('uc_coupon_form', 'block'),
     );
     return $block;
   }
@@ -1163,7 +1150,7 @@ function theme_uc_coupon_form($variables) {
       $form['code']['#size'] = 15;
     }
   }
-  $output .= drupal_render_children($form);
+  $output .= backdrop_render_children($form);
   return $output;
 }
 
@@ -1171,10 +1158,10 @@ function theme_uc_coupon_form($variables) {
  * Implements hook_uc_cart_pane().
  */
 function uc_coupon_uc_cart_pane($items) {
-  drupal_add_css(drupal_get_path('module', 'uc_coupon') . '/uc_coupon.css');
+  backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/uc_coupon.css');
 
   // The coupon entry cart pane.
-  $body = drupal_get_form('uc_coupon_form', 'cart') + array(
+  $body = backdrop_get_form('uc_coupon_form', 'cart') + array(
     '#prefix' => '<div id="uc-cart-pane-coupon">',
     '#suffix' => '</div>'
   );
@@ -1232,7 +1219,7 @@ function theme_uc_coupon_automatic_discounts($variables) {
     $form['discounts']['#header'] = array($title);
   }
   */
-  return drupal_render_children($form);
+  return backdrop_render_children($form);
 }
 
 /**
@@ -1336,7 +1323,7 @@ function uc_coupon_form($form, $form_state, $context = 'block', $submit = FALSE)
   $coupons = ($context == 'order') ? uc_coupon_get_order_coupons($form_state['order']) : uc_coupon_session_validate();
   //dpm($coupons, 'coupons build');
   $components = variable_get('uc_coupon_form_components',
-    drupal_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list')));
+    backdrop_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list')));
 
   // Show the coupon code entry component
   if (!empty($components['entry'])) {
@@ -1354,7 +1341,7 @@ function uc_coupon_form($form, $form_state, $context = 'block', $submit = FALSE)
     if (!variable_get('uc_coupon_allow_multiple', FALSE) && count(uc_coupon_session_get()) > 0) {
       $form['code']['#description'] .= ' ' . t('Apply a blank code to remove the currently applied coupon.');
     }
-    drupal_add_css('#uc-coupon-active-coupons, #uc-coupon-other-discounts { clear: left; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
+    backdrop_add_css('#uc-coupon-active-coupons, #uc-coupon-other-discounts { clear: left; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
     if ($submit) {
       $form['apply'] += $submit;
     }
@@ -1531,21 +1518,21 @@ function uc_coupon_uc_checkout_pane() {
  * Ajax callback for checkout form.
  */
 function uc_coupon_checkout_update($form, $form_state) {
-  $commands[] = ajax_command_replace('#coupon-pane', trim(drupal_render($form['panes']['coupon'])));
+  $commands[] = ajax_command_replace('#coupon-pane', trim(backdrop_render($form['panes']['coupon'])));
   if (isset($form['panes']['coupon_automatic'])) {
-    $commands[] = ajax_command_replace('#coupon_automatic-pane', trim(drupal_render($form['panes']['coupon_automatic'])));
+    $commands[] = ajax_command_replace('#coupon_automatic-pane', trim(backdrop_render($form['panes']['coupon_automatic'])));
   }
   if (isset($form['panes']['quotes'])) {
-    $commands[] = ajax_command_replace('#quotes-pane', drupal_render($form['panes']['quotes']));
+    $commands[] = ajax_command_replace('#quotes-pane', backdrop_render($form['panes']['quotes']));
   }
   if (isset($form['panes']['payment'])) {
-    $commands[] = ajax_command_replace('#payment-pane', trim(drupal_render($form['panes']['payment'])));
+    $commands[] = ajax_command_replace('#payment-pane', trim(backdrop_render($form['panes']['payment'])));
   }
   if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($form['panes']['cart']['cart_review_table'])) {
-    $commands[] = ajax_command_html('#cart-pane>div', drupal_render($form['panes']['cart']['cart_review_table']));
+    $commands[] = ajax_command_html('#cart-pane>div', backdrop_render($form['panes']['cart']['cart_review_table']));
   }
   // Clear the coupon code, but only if the submission was successful.
-  if (count(drupal_get_messages('error', FALSE)) == 0) {
+  if (count(backdrop_get_messages('error', FALSE)) == 0) {
     $commands[] = ajax_command_invoke('#coupon-pane input[type=text]', 'val', array(''));
   }
   // Make sure all checkboxes are checked.
@@ -1601,7 +1588,7 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
 
     case 'view':
       // Revalidate the session coupons against the actual order.
-      drupal_add_css('#coupon-messages { clear: both; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
+      backdrop_add_css('#coupon-messages { clear: both; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
       $description = variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.'));
       $submit = array(
         '#limit_validation_errors' => array(),
@@ -1676,7 +1663,7 @@ function uc_coupon_form_submit($form, &$form_state) {
       }
       else {
         uc_coupon_session_clear($code);
-        drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $code)));
+        backdrop_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $code)));
         module_invoke_all('uc_coupon_remove', uc_coupon_find($code));
       }
     }
@@ -1699,10 +1686,10 @@ function uc_coupon_form_submit($form, &$form_state) {
       if ($n > 1) {
         $last = $removed[$n - 1];
         $rest = implode(', ', array_slice($removed, 0, $n - 1));
-        drupal_set_message(t('Coupons %rest and %last have been removed from your order.', array('%rest' => $rest, '%last' => $last)));
+        backdrop_set_message(t('Coupons %rest and %last have been removed from your order.', array('%rest' => $rest, '%last' => $last)));
       }
       elseif (!empty($removed)) {
-        drupal_set_message(t('Coupon %code has been removed from your order', array('%code' => $removed[0])));
+        backdrop_set_message(t('Coupon %code has been removed from your order', array('%code' => $removed[0])));
       }
     }
   }
@@ -1718,7 +1705,7 @@ function uc_coupon_form_submit($form, &$form_state) {
       else {
         foreach (array_keys($session) as $remove_code) {
           uc_coupon_session_clear($remove_code);
-          drupal_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $remove_code)));
+          backdrop_set_message(t('Coupon "%code" has been removed from your order', array('%code' => $remove_code)));
           module_invoke_all('uc_coupon_remove', uc_coupon_find($remove_code));
         }
         $removed = TRUE;
@@ -1731,7 +1718,7 @@ function uc_coupon_form_submit($form, &$form_state) {
           $form_state['order']->data['coupons'][$code] = $coupon->discounts;
         }
         else {
-          drupal_set_message($coupon->message, 'error');
+          backdrop_set_message($coupon->message, 'error');
         }
       }
       else {
@@ -1739,7 +1726,7 @@ function uc_coupon_form_submit($form, &$form_state) {
       }
     }
     elseif (!$removed) {
-      drupal_set_message(t("You must enter a valid coupon code."), 'error');
+      backdrop_set_message(t("You must enter a valid coupon code."), 'error');
     }
   }
 }
@@ -1798,7 +1785,7 @@ function uc_coupon_tax_adjustment($price, $order, $tax) {
  */
 function _uc_coupon_paypal_check() {
   if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wps_submit_method', 'single') == 'itemized') {
-    drupal_set_message(t('To use coupons with PayPal you must select "Submit the whole order as a single line item". <a href="!url">Click here to change this setting</a>.', array('!url' => url('admin/store/settings/payment/edit/methods'))));
+    backdrop_set_message(t('To use coupons with PayPal you must select "Submit the whole order as a single line item". <a href="!url">Click here to change this setting</a>.', array('!url' => url('admin/store/settings/payment/edit/methods'))));
   }
 }
 
@@ -2046,7 +2033,7 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
  * @see uc_coupon-page.tpl.php
  */
 function template_preprocess_uc_coupon_page(&$variables) {
-  $variables['styles'] = drupal_get_css();
+  $variables['styles'] = backdrop_get_css();
 }
 
 /**
@@ -2058,20 +2045,20 @@ function uc_coupon_uc_coupon_actions($coupon) {
   if (user_access('view store coupons')) {
     $actions[] = array(
       'url' => 'admin/store/coupons/' . $coupon->cid,
-      'icon' => drupal_get_path('module', 'uc_store') . '/images/order_view.gif',
+      'icon' => backdrop_get_path('module', 'uc_store') . '/images/order_view.gif',
       'title' => t('View coupon: @name', array('@name' => $coupon->name)),
     );
 
     $actions[] = array(
       'url' => 'admin/store/coupons/' . $coupon->cid . '/print',
-      'icon' => drupal_get_path('module', 'uc_store') . '/images/print.gif',
+      'icon' => backdrop_get_path('module', 'uc_store') . '/images/print.gif',
       'title' => t('Print coupon: @name', array('@name' => $coupon->name)),
     );
 
     if ($coupon->bulk) {
       $actions[] = array(
         'url' => 'admin/store/coupons/' . $coupon->cid . '/codes',
-        'icon' => drupal_get_path('module', 'uc_store') . '/images/menu_reports_small.gif',
+        'icon' => backdrop_get_path('module', 'uc_store') . '/images/menu_reports_small.gif',
         'title' => t('Download codes as CSV: @name', array('@name' => $coupon->name)),
       );
     }
@@ -2080,13 +2067,13 @@ function uc_coupon_uc_coupon_actions($coupon) {
   if (user_access('manage store coupons')) {
     $actions[] = array(
       'url' => 'admin/store/coupons/' . $coupon->cid . '/edit',
-      'icon' => drupal_get_path('module', 'uc_store') . '/images/order_edit.gif',
+      'icon' => backdrop_get_path('module', 'uc_store') . '/images/order_edit.gif',
       'title' => t('Edit coupon: @name', array('@name' => $coupon->name)),
     );
 
     $actions[] = array(
       'url' => 'admin/store/coupons/' . $coupon->cid . '/delete',
-      'icon' => drupal_get_path('module', 'uc_store') . '/images/order_delete.gif',
+      'icon' => backdrop_get_path('module', 'uc_store') . '/images/order_delete.gif',
       'title' => t('Delete coupon: @name', array('@name' => $coupon->name)),
     );
   }
@@ -2100,7 +2087,7 @@ function uc_coupon_uc_coupon_actions($coupon) {
 function uc_coupon_views_api() {
   return array(
     'api' => '2.0',
-    'path' => drupal_get_path('module', 'uc_coupon') . '/views',
+    'path' => backdrop_get_path('module', 'uc_coupon') . '/views',
   );
 }
 
@@ -2258,7 +2245,7 @@ function uc_order_pane_coupon($op, $order, &$form = NULL, &$form_state = NULL) {
       $form['coupon']['#tree'] = TRUE;
       break;
     case 'edit-theme':
-      return drupal_render($form['coupon']);
+      return backdrop_render($form['coupon']);
   }
 }
 

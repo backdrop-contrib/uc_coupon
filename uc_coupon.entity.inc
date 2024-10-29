@@ -260,7 +260,7 @@ class UcCouponMetadataController extends EntityDefaultMetadataController {
     $prop_info = parent::entityPropertyInfo();
     $props = &$prop_info['uc_coupon']['properties'];
     //dpm($prop_info);
-    // Copy the descriptions from the schema. Drupal discards this information, so we have to
+    // Copy the descriptions from the schema. Backdrop discards this information, so we have to
     // call uc_order_schema() directly.
     module_load_include('install', 'uc_coupon', 'uc_coupon');
     $schema = uc_coupon_schema();
@@ -338,7 +338,7 @@ function uc_coupon_data_property_set($coupon, $name, $value) {
       break;
     default:
       if (is_array($value)) {
-        $coupon->data[$name] = drupal_map_assoc($value);
+        $coupon->data[$name] = backdrop_map_assoc($value);
       }
       else {
         $coupon->data[$name] = $name;
