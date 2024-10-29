@@ -1874,17 +1874,20 @@ function _uc_coupon_cart_item($coupon) {
   }
   // Assign this a unique cart_item_id so it will be keyed properly by entity_view().
   $id = -hexdec(substr(sha1($coupon->code), -8));
-  return (object) array(
+
+  $uc_cart_item = entity_create('uc_cart_item', array(
     'cart_item_id' => $id,
     'module' => 'uc_coupon',
     'title' => $coupon->title,
     'nid' => 0,
     'qty' => 1,
+    'cost' => NULL,
     'price' => -$amount,
     'data' => array('module' => 'uc_coupon', 'shippable' => FALSE, 'code' => $coupon->code, 'remove' => uc_coupon_session_get($coupon->code)),
     'model' => 0,
     'weight' => 0
-  );
+  ));
+  return $uc_cart_item;
 }
 
 /**

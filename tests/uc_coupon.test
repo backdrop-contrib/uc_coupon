@@ -43,7 +43,7 @@ class UcCouponTestCase extends UbercartTestHelper {
       $this->assertRaw($product->title, 'Product appears on cart page');
     }
     foreach ($coupons as $coupon) {
-      $this->backdropPost('cart', array('code' => $coupon->code), t('Apply to order'));
+      $this->backdropPost('cart/checkout', array('panes[coupon][code]' => $coupon->code), t('Apply to order'));
       if ($total !== FALSE) {
         $this->assertRaw('Coupon ' . $coupon->code, 'Applied coupon code appears on cart page.');
       }

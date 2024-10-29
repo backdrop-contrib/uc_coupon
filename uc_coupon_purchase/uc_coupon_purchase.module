@@ -589,6 +589,10 @@ function uc_coupon_purchase_coupon_settings_form_submit($form, $form_state) {
 
 // ****** NOTE THE FOLLOWING CAN HOPEFULLY BE REMOVED ONCE THIS FUNCTIONALITY
 //        IS INCLUDED IN UBERCART CORE. See http://drupal.org/node/1632540.
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
 function uc_coupon_purchase_entity_property_info_alter(&$info) {
   $r = db_query('SELECT name, label from {uc_attributes}');
   foreach ($r as $row) {
@@ -606,6 +610,11 @@ function uc_coupon_purchase_entity_property_info_alter(&$info) {
   }
 }
 
+/**
+ * Getter callback
+ *
+ * @see uc_coupon_purchase_entity_property_info_alter().
+ */
 function uc_coupon_purchase_attribute_property_getter($product, $options, $name, $type, $info) {
   if (!empty($product->data['attributes'])) {
     if ($type == 'uc_cart_item') {
