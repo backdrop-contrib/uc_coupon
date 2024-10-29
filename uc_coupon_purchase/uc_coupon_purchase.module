@@ -58,6 +58,15 @@ function uc_coupon_purchase_menu() {
 }
 
 /**
+ * Implements hook_autoload_info().
+ */
+function uc_coupon_purchase_autoload_info() {
+  return array(
+    'uc_coupon_purchase_handler_field_base_name' => 'views/uc_coupon_purchase_handler_field_base_name.inc',
+  );
+}
+
+/**
  * Implements hook_config_info().
  */
 function uc_coupon_purchase_config_info() {

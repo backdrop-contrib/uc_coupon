@@ -6,10 +6,3 @@ dependencies[] = uc_attribute
 package = Ubercart - payment
 backdrop = 1.x
 type = module
-
-files[] = uc_coupon_purchase.ca.inc
-files[] = uc_coupon_purchase.install
-files[] = uc_coupon_purchase.module
-files[] = uc_coupon_purchase.pages.inc
-files[] = views/uc_coupon_purchase.views.inc
-files[] = views/uc_coupon_purchase_handler_field_base_name.inc
