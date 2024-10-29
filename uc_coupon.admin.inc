@@ -829,12 +829,14 @@ function uc_coupon_autocomplete_user($string) {
  * Autocomplete callback for role restrictions.
  */
 function uc_coupon_autocomplete_role($string) {
-  $matches = array();
-  $result = db_query("SELECT name FROM {role} WHERE name LIKE :name", array(':name' => "%$string%"));
-  foreach ($result as $row) {
-    $matches[$row->name] = $row->name;
+  $suggestions = array();
+  $user_roles = user_roles(TRUE);
+  foreach ($user_roles as $role_name => $role_label) {
+    if (stripos($role_label, $string) !== FALSE) {
+      $suggestions[$role_name] = $role_label;
+    }
   }
-  print backdrop_json_encode($matches);
+  print backdrop_json_encode($suggestions);
   exit;
 }
 
