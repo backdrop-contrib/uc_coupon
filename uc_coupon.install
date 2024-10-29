@@ -146,27 +146,35 @@ function uc_coupon_schema() {
 }
 
 /**
- * Implements hook_uninstall().
+ * Convert variables to config.
  */
-function uc_coupon_uninstall() {
-  variable_del('uc_coupon_collapse_pane');
-  variable_del('uc_coupon_default_usage');
-  variable_del('uc_coupon_pane_description');
-  variable_del('uc_coupon_purchase_order_status');
-  variable_del('uc_coupon_querystring');
-  variable_del('uc_coupon_show_in_cart');
-  variable_del('uc_coupon_line_item_format');
-  variable_del('uc_coupon_line_item_weight');
-  variable_del('uc_coupon_form_components');
-  variable_del('uc_coupon_allow_multiple');
-  variable_del('uc_coupon_used_order_status');
-}
+function uc_coupon_update_1000() {
+  $config = config('uc_coupon.settings');
+  $config->set('uc_coupon_line_item_format', update_variable_get('uc_coupon_line_item_format', 'Coupon [uc_coupon:code]'));
+  $config->set('uc_coupon_show_in_cart', update_variable_get('uc_coupon_show_in_cart', 1));
+  $config->set('uc_li_coupon_weight', update_variable_get('uc_li_coupon_weight', 0));
+  $config->set('uc_coupon_form_components', update_variable_get('uc_coupon_form_components', array('entry' => 'entry')));
+  $config->set('uc_coupon_allow_multiple', update_variable_get('uc_coupon_allow_multiple', 0));
+  $config->set('uc_coupon_default_usage', update_variable_get('uc_coupon_default_usage', 'single'));
+  $config->set('uc_coupon_used_order_status', update_variable_get('uc_coupon_used_order_status', 'processing'));
+  $config->set('uc_coupon_querystring', update_variable_get('uc_coupon_querystring', ''));
+  $config->set('uc_coupon_expiry_hour', update_variable_get('uc_coupon_expiry_hour', 0));
+  $config->set('uc_coupon_expiry_timezone', update_variable_get('uc_coupon_expiry_timezone', 0));
+  $config->set('uc_coupon_collapse_pane', update_variable_get('uc_coupon_collapse_pane', FALSE));
+  $config->set('uc_coupon_pane_description', update_variable_get('uc_coupon_pane_description', 'Enter a coupon code for this order.'));
 
+  $config->save();
 
-/**
- * Implements hook_update_last_removed().
- * 
- */
-function uc_coupon_update_last_removed() {
-  return 6006;
+  update_variable_del('uc_coupon_line_item_format');
+  update_variable_del('uc_coupon_show_in_cart');
+  update_variable_del('uc_li_coupon_weight');
+  update_variable_del('uc_coupon_form_components');
+  update_variable_del('uc_coupon_allow_multiple');
+  update_variable_del('uc_coupon_default_usage');
+  update_variable_del('uc_coupon_used_order_status');
+  update_variable_del('uc_coupon_querystring');
+  update_variable_del('uc_coupon_expiry_hour');
+  update_variable_del('uc_coupon_expiry_timezone');
+  update_variable_del('uc_coupon_collapse_pane');
+  update_variable_del('uc_coupon_pane_description');
 }

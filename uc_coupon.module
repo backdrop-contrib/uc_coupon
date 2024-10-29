@@ -227,6 +227,17 @@ function uc_coupon_autoload_info() {
 }
 
 /**
+ * Implements hook_config_info().
+ */
+function uc_coupon_config_info() {
+  $prefixes['uc_coupon.settings'] = array(
+    'label' => t('Ubercart Coupon settings'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
+}
+
+/**
  * Implements hook_init().
  */
 function uc_coupon_init() {
@@ -234,7 +245,7 @@ function uc_coupon_init() {
   $conf['i18n_variables'][] = 'uc_coupon_pane_description';
 
   // Auto apply coupon from query string, if configured.
-  if ($param = variable_get('uc_coupon_querystring', '')) {
+  if ($param = config_get('uc_coupon.settings', 'uc_coupon_querystring')) {
     if (isset($_GET[$param]) && $_GET[$param]) {
       // We retain the querystring coupon so that it will validate if/when appropriate conditions are met.
       uc_coupon_session_add($_GET[$param], 'retain');
@@ -305,7 +316,7 @@ function uc_coupon_theme_registry_alter(&$registry) {
 function uc_coupon_count_usage($cid, $uid = NULL, $exclude_oids = array()) {
   global $user;
 
-  $weight = uc_order_status_data(variable_get('uc_coupon_used_order_status', 'processing'), 'weight');
+  $weight = uc_order_status_data(config_get('uc_coupon.settings', 'uc_coupon_used_order_status', 'processing'), 'weight');
   $usage = array('codes' => array(), 'value' => array('codes' => array()));
   $exclude_where = empty($exclude_oids) ? '' : 'AND uo.order_id NOT IN (:oids)';
   $result = db_query("SELECT uco.code, COUNT(*) AS uses, SUM(uco.value) AS value FROM {uc_coupons_orders} AS uco
@@ -468,7 +479,7 @@ function uc_coupon_find($code, $reset = FALSE) {
  *       additional conditions).
  */
 function uc_coupon_session_add($code, $op = 'submit') {
-  if (!variable_get('uc_coupon_allow_multiple', FALSE)) {
+  if (!config_get('uc_coupon.settings', 'uc_coupon_allow_multiple')) {
     $_SESSION['uc_coupons'] = array($code => $op);
   }
   else {
@@ -718,7 +729,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
     }
     else {
       $amount = theme('uc_price', array('price' => $coupon->amount));
-      if (isset($order) || variable_get('uc_coupon_show_in_cart', TRUE)) {
+      if (isset($order) || config_get('uc_coupon.settings', 'uc_coupon_show_in_cart')) {
         $coupon->message = t('A discount of !amount has been applied to your order.', array('!amount' => $amount));
       }
       else {
@@ -759,12 +770,12 @@ function uc_coupon_prepare($coupon, $code, $discounts) {
       $coupon->amount += $item->discount;
       $coupon->pretax_amount += isset($item->pretax_discount) ? $item->pretax_discount : $item->discount;
     }
-    $coupon->amount = round($coupon->amount, variable_get('uc_currency_prec', 2));
+    $coupon->amount = round($coupon->amount, config_get('uc_store.settings', 'uc_currency_prec'));
     unset($coupon->message);
   }
   // Create the line item title for this coupon.
   $format = !empty($coupon->data['line_item_format']) ? $coupon->data['line_item_format'] :
-     variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]')));
+     config_get('uc_coupon.settings', 'uc_coupon_line_item_format');
   $coupon->title = token_replace(check_plain($format), array('uc_coupon' => $coupon));
 
   return $coupon;
@@ -1334,11 +1345,12 @@ function uc_coupon_order_submit($form, &$form_state) {
  *     An array of additional options to attach to the form's submit elements (e.g. #ajax, #submit)
  */
 function uc_coupon_form($form, $form_state, $context = 'block', $submit = FALSE) {
-  //dpm($form_state['order'], 'order build');
   $coupons = ($context == 'order') ? uc_coupon_get_order_coupons($form_state['order']) : uc_coupon_session_validate();
-  //dpm($coupons, 'coupons build');
-  $components = variable_get('uc_coupon_form_components',
-    backdrop_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list')));
+  $config = config('uc_coupon.settings');
+  $components = $config->get('uc_coupon_form_components');
+  if (empty($components)) {
+    $components = backdrop_map_assoc($config->get('uc_coupon_allow_multiple') ? array('entry') : array('entry', 'list'));
+  }
 
   // Show the coupon code entry component
   if (!empty($components['entry'])) {
@@ -1353,7 +1365,7 @@ function uc_coupon_form($form, $form_state, $context = 'block', $submit = FALSE)
       '#value' => t('Apply to order'),
       '#name' => 'uc-coupon-apply',
     );
-    if (!variable_get('uc_coupon_allow_multiple', FALSE) && count(uc_coupon_session_get()) > 0) {
+    if (!config_get('uc_coupon.settings', 'uc_coupon_allow_multiple') && count(uc_coupon_session_get()) > 0) {
       $form['code']['#description'] .= ' ' . t('Apply a blank code to remove the currently applied coupon.');
     }
     backdrop_add_css('#uc-coupon-active-coupons, #uc-coupon-other-discounts { clear: left; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
@@ -1543,7 +1555,7 @@ function uc_coupon_checkout_update($form, $form_state) {
   if (isset($form['panes']['payment'])) {
     $commands[] = ajax_command_replace('#payment-pane', trim(backdrop_render($form['panes']['payment'])));
   }
-  if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($form['panes']['cart']['cart_review_table'])) {
+  if (config_get('uc_coupon.settings', 'uc_coupon_show_in_cart') && isset($form['panes']['cart']['cart_review_table'])) {
     $commands[] = ajax_command_html('#cart-pane>div', backdrop_render($form['panes']['cart']['cart_review_table']));
   }
   // Clear the coupon code, but only if the submission was successful.
@@ -1591,6 +1603,7 @@ function uc_checkout_pane_coupon_automatic($op, &$order, $form = NULL, &$form_st
  * can enter discount coupons.
  */
 function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL) {
+  $config = config('uc_coupon.settings');
   switch ($op) {
     case 'prepare':
       // Remove fake cart items from the order.
@@ -1604,7 +1617,7 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
     case 'view':
       // Revalidate the session coupons against the actual order.
       backdrop_add_css('#coupon-messages { clear: both; }', array('type' => 'inline', 'group' => CSS_DEFAULT));
-      $description = variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.'));
+      $description = $config->get('uc_coupon_pane_description');
       $submit = array(
         '#limit_validation_errors' => array(),
         '#ajax' => array(
@@ -1638,14 +1651,16 @@ function uc_checkout_pane_coupon($op, &$order, $form = NULL, &$form_state = NULL
 
     case 'settings':
       $form['uc_coupon_collapse_pane'] = array(
+        '#config' => 'uc_coupon.settings',
         '#type' => 'checkbox',
         '#title' => t('Collapse checkout pane by default.'),
-        '#default_value' => variable_get('uc_coupon_collapse_pane', FALSE),
+        '#default_value' => $config->get('uc_coupon_collapse_pane'),
       );
       $form['uc_coupon_pane_description'] = array(
+        '#config' => 'uc_coupon.settings',
         '#type' => 'textarea',
         '#title' => t('Checkout pane message'),
-        '#default_value' => variable_get('uc_coupon_pane_description', t('Enter a coupon code for this order.')),
+        '#default_value' => $config->get('uc_coupon_pane_description'),
       );
       return $form;
   }
@@ -1713,7 +1728,7 @@ function uc_coupon_form_submit($form, &$form_state) {
     $code = empty($values['code']) ? '' : strtoupper(trim($values['code']));
     $removed = FALSE;
     // If multiple codes are not enabled, then remove any codes currently applied.
-    if (!variable_get('uc_coupon_allow_multiple', FALSE) && count($session = uc_coupon_session_get()) > 0) {
+    if (!config_get('uc_coupon.settings', 'uc_coupon_allow_multiple') && count($session = uc_coupon_session_get()) > 0) {
       if ($context == 'order') {
         unset($form_state['order']->data['coupons']);
       }
@@ -1799,7 +1814,7 @@ function uc_coupon_tax_adjustment($price, $order, $tax) {
  * Show a message if PayPal is enabled and "itemized order" is selected.
  */
 function _uc_coupon_paypal_check() {
-  if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wps_submit_method', 'single') == 'itemized') {
+  if (config_get('uc_payment.settings', 'uc_payment_method_paypal_wps_checkout') && config_get('uc_payment.settings', 'uc_payment_method_paypal_wps_submit_method') == 'itemized') {
     backdrop_set_message(t('To use coupons with PayPal you must select "Submit the whole order as a single line item". <a href="!url">Click here to change this setting</a>.', array('!url' => url('admin/store/settings/payment/edit/methods'))));
   }
 }
@@ -1809,7 +1824,7 @@ function _uc_coupon_paypal_check() {
  */
 function uc_coupon_uc_store_status() {
   $statuses = array();
-  if (variable_get('uc_payment_method_paypal_wps_checkout', 0) && variable_get('uc_paypal_wps_submit_method', 'single') == 'itemized') {
+  if (config_get('uc_payment.settings', 'uc_payment_method_paypal_wps_checkout') && config_get('uc_payment.settings', 'uc_payment_method_paypal_wps_submit_method') == 'itemized') {
     $statuses[] = array(
       'status' => 'warning',
       'title' => t('Coupons'),
@@ -1832,7 +1847,7 @@ function uc_coupon_uc_cart_alter(&$items) {
   $order->products = $items;
   $order->data = array();
   $coupons = uc_coupon_session_validate($order);
-  if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($coupons)) {
+  if (config_get('uc_coupon.settings', 'uc_coupon_show_in_cart') && !empty($coupons)) {
     // If there are some valid coupons, then add them to the cart (but only if
     // they have a non-zero value.
     foreach ($coupons as $code => $coupon) {
@@ -1908,7 +1923,7 @@ function uc_coupon_uc_update_cart_item($nid, $data, $qty) {
  * Removes coupons from the total number of items.
  */
 function uc_coupon_theme_uc_cart_block_content($variables) {
-  if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($variables['items'])) {
+  if (config_get('uc_coupon.settings', 'uc_coupon_show_in_cart') && !empty($variables['items'])) {
     foreach ($variables['items'] as &$item) {
       if ($item['nid'] == 0 && $item['price'] <= 0) {
         $item['qty'] = '';
@@ -1929,12 +1944,12 @@ function uc_coupon_theme_uc_cart_block_content($variables) {
  * Collapse coupon checkout pane, if configured to do so.
  */
 function uc_coupon_form_uc_cart_checkout_form_alter(&$form, $form_state) {
-  if (variable_get('uc_coupon_collapse_pane', FALSE) && isset($form['panes']['coupon'])) {
+  if (config_get('uc_coupon.settings', 'uc_coupon_collapse_pane') && isset($form['panes']['coupon'])) {
     $form['panes']['coupon']['#collapsed'] = TRUE;
   }
 
   // Show current session coupons in the cart pane (since now they will have been removed from the order).
-  if (variable_get('uc_coupon_show_in_cart', TRUE) && isset($form['panes']['cart'])) {
+  if (config_get('uc_coupon.settings', 'uc_coupon_show_in_cart') && isset($form['panes']['cart'])) {
     $coupons = uc_coupon_session_validate();
     // If there are some valid coupons, then add them to the cart.
     foreach ($coupons as $code => $coupon) {
@@ -1981,9 +1996,10 @@ function template_preprocess_uc_coupon_certificate(&$variables) {
   }
 
   if ($coupon->valid_until) {
+    $date_format = _uc_coupon_store_date_format();
     $variables['not_yet_valid'] = $coupon->valid_from > REQUEST_TIME;
-    $variables['valid_from'] = format_date($coupon->valid_from, 'custom', variable_get('date_format_uc_store', 'm/d/Y'));
-    $variables['valid_until'] = format_date($coupon->valid_until, 'custom', variable_get('date_format_uc_store', 'm/d/Y'));
+    $variables['valid_from'] = format_date($coupon->valid_from, 'custom', $date_format);
+    $variables['valid_until'] = format_date($coupon->valid_until, 'custom', $date_format);
   }
   else {
     $variables['not_yet_valid'] = FALSE;
@@ -2316,4 +2332,18 @@ function uc_coupon_get_order_coupons($order, $recalculate = FALSE) {
     }
   }
   return $coupons;
+}
+
+/**
+ * Helper to deal with inconsistent location for date format.
+ */
+function _uc_coupon_store_date_format() {
+  $date_format = config_get('system.date', 'formats.uc_store.pattern');
+  if (empty($date_format)) {
+    $date_format = config_get('uc_store.settings', 'date_format_uc_store');
+  }
+  if (empty($date_format)) {
+    $date_format = 'm/d/Y';
+  }
+  return $date_format;
 }

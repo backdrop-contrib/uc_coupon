@@ -58,6 +58,17 @@ function uc_coupon_purchase_menu() {
 }
 
 /**
+ * Implements hook_config_info().
+ */
+function uc_coupon_purchase_config_info() {
+  $prefixes['uc_coupon_purchase.settings'] = array(
+    'label' => t('Ubercart Coupon Purchase settings'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
+}
+
+/**
  * Access callback for user/%/coupons.
  *
  * User must have "view purchased coupons" permission, current user must have a
@@ -261,7 +272,7 @@ function uc_coupon_purchase_feature_settings() {
   $form['uc_coupon_purchase_order_status'] = array(
     '#type' => 'select',
     '#title' => t('Order status'),
-    '#default_value' => variable_get('uc_coupon_purchase_order_status', 'completed'),
+    '#default_value' => config_get('uc_coupon_purchase.settings', 'uc_coupon_purchase_order_status', 'completed'),
     '#description' => t('Select the order status that will cause the coupon to be created. Be aware that if payments are processed automatically, this happens before anonymous customers have an account created. This order status should not be reached before the user account exists.'),
     '#options' => $statuses,
   );
@@ -344,7 +355,7 @@ function uc_coupon_purchase_uc_coupon_delete($coupon) {
 function uc_coupon_purchase_uc_order($op, $order, $status) {
   switch ($op) {
     case 'update':
-      if ($status == variable_get('uc_coupon_purchase_order_status', 'completed') &&
+      if ($status == config_get('uc_coupon_purchase.settings', 'uc_coupon_purchase_order_status') &&
           $order->order_status != $status &&
           $order->uid > 0 &&
           ($order_user = user_load($order->uid)) !== FALSE) {
@@ -543,7 +554,7 @@ function uc_coupon_purchase_form_uc_coupon_settings_form_alter(&$form, &$form_st
         When you attach this attribute to a product with the "create coupon" feature, customers will be able
         to enter the e-mail address of a recipient. You can then configure a rule to send a customized
         e-mail notification to the recipient.'),
-      '#default_value' => variable_get('uc_coupon_purchase_recipient_enabled', FALSE),
+      '#default_value' => config_get('uc_coupon_purchase.settings', 'uc_coupon_purchase_recipient_enabled'),
       '#access' => module_exists('uc_attribute'),
     ),
     '#description' => module_exists('uc_attribute') ? NULL : t('You must enable the uc_attribute module to activate this feature.'),

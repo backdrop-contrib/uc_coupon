@@ -1,0 +1,342 @@
+{
+  "_config_name": "views.view.uc_coupon",
+  "name": "uc_coupon",
+  "description": null,
+  "tag": "Ubercart",
+  "disabled": false,
+  "base_table": "uc_coupons",
+  "human_name": "Ubercart discount coupons",
+  "core": null,
+  "display": {
+    "default": {
+      "display_title": "Defaults",
+      "display_plugin": "default",
+      "display_options": {
+        "items_per_page": null,
+        "offset": null,
+        "use_pager": null,
+        "pager": {
+          "type": "full",
+          "options": {
+            "offset": 0,
+            "items_per_page": 20
+          }
+        },
+        "query": {
+          "type": "views_query",
+          "options": []
+        },
+        "fields": {
+          "actions": {
+            "label": "Actions",
+            "alter": {
+              "alter_text": 0,
+              "text": "",
+              "make_link": 0,
+              "path": "",
+              "link_class": "",
+              "alt": "",
+              "prefix": "",
+              "suffix": "",
+              "target": "",
+              "help": "",
+              "trim": 0,
+              "max_length": "",
+              "word_boundary": 1,
+              "ellipsis": 1,
+              "html": 0,
+              "strip_tags": 0
+            },
+            "empty": "",
+            "hide_empty": 0,
+            "empty_zero": 0,
+            "exclude": 0,
+            "id": "actions",
+            "table": "uc_coupons",
+            "field": "actions",
+            "relationship": "none"
+          },
+          "name": {
+            "id": "name",
+            "table": "uc_coupons",
+            "field": "name"
+          },
+          "code": {
+            "id": "code",
+            "table": "uc_coupons",
+            "field": "code"
+          },
+          "bulk": {
+            "label": "Bulk",
+            "alter": {
+              "alter_text": 0,
+              "text": "",
+              "make_link": 0,
+              "path": "",
+              "link_class": "",
+              "alt": "",
+              "prefix": "",
+              "suffix": "",
+              "target": "",
+              "help": "",
+              "trim": 0,
+              "max_length": "",
+              "word_boundary": 1,
+              "ellipsis": 1,
+              "html": 0,
+              "strip_tags": 0
+            },
+            "empty": "",
+            "hide_empty": 0,
+            "empty_zero": 0,
+            "type": "yes-no",
+            "not": 0,
+            "exclude": 0,
+            "id": "bulk",
+            "table": "uc_coupons",
+            "field": "bulk",
+            "relationship": "none"
+          },
+          "value": {
+            "id": "value",
+            "table": "uc_coupons",
+            "field": "value"
+          },
+          "created": {
+            "id": "created",
+            "table": "uc_coupons",
+            "field": "created"
+          },
+          "valid_from": {
+            "id": "valid_from",
+            "table": "uc_coupons",
+            "field": "valid_from"
+          },
+          "valid_until": {
+            "id": "valid_until",
+            "table": "uc_coupons",
+            "field": "valid_until"
+          }
+        },
+        "defaults": {
+          "fields": false,
+          "filters": false,
+          "filter_groups": false,
+          "access": false,
+          "access_options": false,
+          "cache": false,
+          "cache_options": false,
+          "title": false,
+          "empty": false,
+          "style_plugin": false,
+          "style_options": false,
+          "row_plugin": false,
+          "row_options": false
+        },
+        "filters": {
+          "status": {
+            "operator": "=",
+            "value": "1",
+            "group": "0",
+            "exposed": true,
+            "expose": {
+              "operator": "",
+              "identifier": "status",
+              "label": "Active",
+              "optional": 1,
+              "remember": 1
+            },
+            "id": "status",
+            "table": "uc_coupons",
+            "field": "status",
+            "relationship": "none"
+          },
+          "bulk": {
+            "operator": "=",
+            "value": "All",
+            "group": "0",
+            "exposed": true,
+            "expose": {
+              "operator": "",
+              "identifier": "bulk",
+              "label": "Bulk",
+              "optional": 1,
+              "remember": 0
+            },
+            "id": "bulk",
+            "table": "uc_coupons",
+            "field": "bulk",
+            "relationship": "none"
+          },
+          "code": {
+            "operator": "=",
+            "value": "",
+            "group": "0",
+            "exposed": true,
+            "expose": {
+              "use_operator": 1,
+              "operator": "code_op",
+              "identifier": "code",
+              "label": "Code",
+              "optional": 1,
+              "remember": 0
+            },
+            "case": 0,
+            "id": "code",
+            "table": "uc_coupons",
+            "field": "code",
+            "relationship": "none"
+          },
+          "name": {
+            "operator": "=",
+            "value": "",
+            "group": "0",
+            "exposed": true,
+            "expose": {
+              "use_operator": 1,
+              "operator": "name_op",
+              "identifier": "name",
+              "label": "Name",
+              "optional": 1,
+              "remember": 0
+            },
+            "case": 1,
+            "id": "name",
+            "table": "uc_coupons",
+            "field": "name",
+            "relationship": "none"
+          },
+          "value": {
+            "operator": "between",
+            "value": {
+              "value": "",
+              "min": "",
+              "max": ""
+            },
+            "group": "0",
+            "exposed": true,
+            "expose": {
+              "use_operator": 1,
+              "operator": "coupon_value_op",
+              "identifier": "coupon_value",
+              "label": "Value",
+              "optional": 1,
+              "remember": 0
+            },
+            "id": "value",
+            "table": "uc_coupons",
+            "field": "value",
+            "relationship": "none"
+          }
+        },
+        "filter_groups": {
+          "operator": "AND",
+          "groups": {
+            "1": "AND"
+          }
+        },
+        "access": {
+          "type": "perm",
+          "perm": "view store coupons"
+        },
+        "access_options": null,
+        "cache": {
+          "type": "none"
+        },
+        "cache_options": null,
+        "title": "Coupons",
+        "empty": {
+          "text": {
+            "id": "area",
+            "table": "views",
+            "field": "area",
+            "label": "",
+            "relationship": "none",
+            "group_type": "group",
+            "content": "No matching coupons found.",
+            "format": "1"
+          }
+        },
+        "empty_format": "1",
+        "style_plugin": "table",
+        "style_options": {
+          "grouping": "",
+          "override": 1,
+          "sticky": 0,
+          "order": "asc",
+          "columns": {
+            "name": "name",
+            "code": "code",
+            "value": "value",
+            "created": "created",
+            "valid_from": "valid_from",
+            "valid_until": "valid_until"
+          },
+          "info": {
+            "name": {
+              "sortable": 0,
+              "separator": ""
+            },
+            "code": {
+              "sortable": 0,
+              "separator": ""
+            },
+            "value": {
+              "sortable": 0,
+              "separator": ""
+            },
+            "created": {
+              "sortable": 0,
+              "separator": ""
+            },
+            "valid_from": {
+              "sortable": 0,
+              "separator": ""
+            },
+            "valid_until": {
+              "sortable": 0,
+              "separator": ""
+            }
+          },
+          "default": "code"
+        },
+        "row_plugin": "fields",
+        "row_options": []
+      }
+    },
+    "page_1": {
+      "display_title": "Page",
+      "display_plugin": "page",
+      "display_options": {
+        "items_per_page": null,
+        "offset": null,
+        "use_pager": null,
+        "pager": {
+          "type": "none",
+          "options": {
+            "offset": 0
+          }
+        },
+        "query": {
+          "type": "views_query",
+          "options": []
+        },
+        "path": "coupons",
+        "menu": {
+          "type": "none",
+          "title": "",
+          "description": "",
+          "weight": 0,
+          "name": "navigation"
+        },
+        "tab_options": {
+          "type": "none",
+          "title": "",
+          "description": "",
+          "weight": 0,
+          "name": "navigation"
+        }
+      }
+    }
+  }
+}

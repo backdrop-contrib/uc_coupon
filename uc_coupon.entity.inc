@@ -74,6 +74,7 @@ class UcCouponController extends EntityPlusController {
   public function buildContent($coupon, $view_mode = 'full', $langcode = NULL, $content = array()) {
     $rows = array();
     $rows[] = array(t('Name'), check_plain($coupon->name));
+    $date_format = _uc_coupon_store_date_format();
 
     if (!$coupon->status) {
       $status = t('Inactive');
@@ -82,13 +83,13 @@ class UcCouponController extends EntityPlusController {
       $status = t('Active');
     }
     elseif (REQUEST_TIME < $coupon->valid_from) {
-      $status = t('Not valid until @date', array('@date' => _uc_coupon_format_date($coupon->valid_from, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
+      $status = t('Not valid until @date', array('@date' => _uc_coupon_format_date($coupon->valid_from, $date_format)));
     }
     elseif (REQUEST_TIME > $coupon->valid_until) {
-      $status = t('Expired on @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
+      $status = t('Expired on @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, $date_format)));
     }
     else {
-      $status = t('Active until @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT'))));
+      $status = t('Active until @date', array('@date' => _uc_coupon_format_date($coupon->valid_until, $date_format)));
     }
     $rows[] = array(t('Status'), $status);
 

@@ -10,11 +10,13 @@
 function uc_coupon_settings_form($form, &$form_state) {
   global $base_url;
 
+  $config = config('uc_coupon.settings');
+  $form['#config'] = 'uc_coupon.settings';
   $form['uc_coupon_line_item_format'] = array(
     '#type' => 'textfield',
     '#title' => t('Default line item title format'),
     '#description' => t('Controls the way coupons appear in the cart and order summary. This setting be overridden by individual coupons.'),
-    '#default_value' => variable_get('uc_coupon_line_item_format', t('Coupon !code', array('!code' => '[uc_coupon:code]'))),
+    '#default_value' => $config->get('uc_coupon_line_item_format'),
   );
 
   if (module_exists('token')) {
@@ -25,7 +27,7 @@ function uc_coupon_settings_form($form, &$form_state) {
   $form['uc_coupon_show_in_cart'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show coupons as an item in the cart.'),
-    '#default_value' => variable_get('uc_coupon_show_in_cart', TRUE),
+    '#default_value' => $config->get('uc_coupon_show_in_cart'),
   );
 
   $options = array();
@@ -37,8 +39,13 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#title' => t('Line item weight'),
     '#description' => t('Controls the placement of the coupon line item in the order summary. Heavier items appear lower in the list.'),
     '#options' => $options,
-    '#default_value' => variable_get('uc_li_coupon_weight', 0),
+    '#default_value' => $config->get('uc_li_coupon_weight'),
   );
+
+  $form_components_defaults = $config->get('uc_coupon_form_components');
+  if (empty($form_components_defaults)) {
+    $form_components_defaults = backdrop_map_assoc($config->get('uc_coupon_allow_multiple') ? array('entry') : array('entry', 'list'));
+  }
 
   $form['uc_coupon_form_components'] = array(
     '#title' => t('Coupon submission form components'),
@@ -52,14 +59,13 @@ function uc_coupon_settings_form($form, &$form_state) {
       'table' => t('Active coupons (table)'),
       'list' => t('Active coupons (list)'),
     ),
-    '#default_value' => variable_get('uc_coupon_form_components',
-      backdrop_map_assoc(variable_get('uc_coupon_allow_multiple', FALSE) ? array('entry') : array('entry', 'list'))),
+    '#default_value' => $form_components_defaults,
   );
 
   $form['uc_coupon_allow_multiple'] = array(
     '#type' => 'checkbox',
     '#title' => t('Allow multiple coupons to apply to a single order.'),
-    '#default_value' => variable_get('uc_coupon_allow_multiple', FALSE),
+    '#default_value' => $config->get('uc_coupon_allow_multiple'),
     '#description' => t('Note, you must enable this feature if you have configured multiple automatic coupons,
         even if the restrictions for those coupons would prevent them ever applying to the same order.'),
   );
@@ -71,14 +77,14 @@ function uc_coupon_settings_form($form, &$form_state) {
       'single' => t('Single use per code.'),
       'multi' => t('Multiple uses per code.'),
     ),
-    '#default_value' => variable_get('uc_coupon_default_usage', 'single'),
+    '#default_value' => $config->get('uc_coupon_default_usage'),
   );
 
   $form['uc_coupon_used_order_status'] = array(
     '#type' => 'select',
     '#title' => t('Order status to mark a coupon used'),
     '#options' => uc_order_status_options_list(),
-    '#default_value' => variable_get('uc_coupon_used_order_status', 'processing'),
+    '#default_value' => $config->get('uc_coupon_used_order_status'),
     '#description' => t('A coupon will be considered used when it has been applied to an order that reaches this status
        (or a later one).  If the order status subsequenty reverts to an earlier status, the coupon use will also be reverted.'),
   );
@@ -87,7 +93,7 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Query string parameter'),
     '#description' => t('If set, coupon codes can be applied by including them in any URL. Leave blank to disable this feature.<br />Example: if set to "coupon", visiting !base_url?coupon=CODE will apply the CODE coupon.', array('!base_url' => $base_url)),
-    '#default_value' => variable_get('uc_coupon_querystring', ''),
+    '#default_value' => $config->get('uc_coupon_querystring'),
     '#size' => 15,
   );
 
@@ -102,13 +108,13 @@ function uc_coupon_settings_form($form, &$form_state) {
   $form['uc_coupon_expiry']['uc_coupon_expiry_hour'] = array(
     '#type' => 'select',
     '#options' => backdrop_map_assoc(range(0, 23, 1), '_uc_coupon_format_hour'),
-    '#default_value' => variable_get('uc_coupon_expiry_hour', 0),
+    '#default_value' => $config->get('uc_coupon_expiry_hour'),
   );
 
   $form['uc_coupon_expiry']['uc_coupon_expiry_timezone'] = array(
     '#type' => 'radios',
     '#options' => array( 0 => 'UTC', 1 => 'Local'),
-    '#default_value' => variable_get('uc_coupon_expiry_timezone', 0),
+    '#default_value' => $config->get('uc_coupon_expiry_timezone'),
   );
 
 
@@ -161,6 +167,7 @@ function uc_coupon_display($view_type = 'active') {
 
   $rows = array();
   $result = $query->execute();
+  $date_format = _uc_coupon_store_date_format();
   foreach ($result as $coupon) {
     $coupon->data = $coupon->data ? unserialize($coupon->data) : array();
     $rows[] = array(
@@ -168,9 +175,9 @@ function uc_coupon_display($view_type = 'active') {
       check_plain($coupon->name),
       check_plain($coupon->code) . ($coupon->bulk ? '* ' . t('(bulk)') : ''),
       theme('uc_coupon_discount', array('coupon' => $coupon)),
-      _uc_coupon_format_date($coupon->created, variable_get('date_format_uc_store', 'm/d/Y')),
-      $coupon->valid_from ? _uc_coupon_format_date($coupon->valid_from, variable_get('date_format_uc_store', 'm/d/Y H:iT')) : '-',
-      $coupon->valid_until ? _uc_coupon_format_date($coupon->valid_until, variable_get('date_format_uc_store', 'm/d/Y H:iT')) : '-',
+      _uc_coupon_format_date($coupon->created, $date_format),
+      $coupon->valid_from ? _uc_coupon_format_date($coupon->valid_from, $date_format) : '-',
+      $coupon->valid_until ? _uc_coupon_format_date($coupon->valid_until, $date_format) : '-',
     );
   }
 
@@ -262,7 +269,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     $value = entity_create('uc_coupon', array());
     $value->minimum_order = 0;
     $value->data['apply_to'] = 'subtotal';
-    $value->max_uses = variable_get('uc_coupon_default_usage', 'single') == 'single' ? 1 : 0;
+    $value->max_uses = config_get('uc_coupon.settings', 'uc_coupon_default_usage') == 'single' ? 1 : 0;
     $used = 0;
   }
 
@@ -364,6 +371,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#default_value' => isset($value->status) ? $value->status : FALSE,
   );
 
+  $store_config = config('uc_store.settings');
   $form['discount'] = array(
     '#type' => 'textfield',
     '#title' => t('Discount'),
@@ -375,8 +383,8 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
         t('Percentage discount; enter "15%" for 15% off.'),
         t('Set product price; enter "=15" to make all matching products @p after discount.', array('@p' => uc_currency_format(15))),
       ))),
-    '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
-    '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
+    '#field_prefix' => $store_config->get('uc_sign_after_amount') ? '' : $store_config->get('uc_currency_sign'),
+    '#field_suffix' => $store_config->get('uc_sign_after_amount') ? $store_config->get('uc_currency_sign') : '',
     '#required' => TRUE,
   );
 
@@ -430,8 +438,8 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#title' => t('Restrict coupon by date.'),
     '#default_value' => $use_validity != 0,
   );
-  $zone = variable_get('uc_coupon_expiry_timezone', 0) ? '(local time)' : '(UTC)';
-  $hour = _uc_coupon_format_hour(variable_get('uc_coupon_expiry_hour', 0));
+  $zone = config_get('uc_coupon.settings', 'uc_coupon_expiry_timezone') ? '(local time)' : '(UTC)';
+  $hour = _uc_coupon_format_hour(config_get('uc_coupon.settings', 'uc_coupon_expiry_hour', 0));
   $link = l('store-wide coupon settings page', 'admin/store/settings/coupon', array('query' => array('destination' => $_GET['q'])));
   $form['date_restrictions']['valid_from'] = array(
     '#type' => 'date',
@@ -487,14 +495,15 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
     '#collapsible' => TRUE,
     '#collapsed' => $value->minimum_order < 0.01 && !isset($value->data['minimum_qty']),
   );
+  $store_config = config('uc_store.settings');
   $form['order']['minimum_order'] = array(
     '#type' => 'textfield',
     '#title' => t('Minimum order total'),
     '#default_value' => $value->minimum_order < 0.01 ? '' : $value->minimum_order,
     '#size' => 6,
     '#description' => t('If set, the subtotal of products must be at least this amount for the coupon to be accepted.'),
-    '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
-    '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
+    '#field_prefix' => $store_config->get('uc_sign_after_amount') ? '' : $store_config->get('uc_currency_sign'),
+    '#field_suffix' => $store_config->get('uc_sign_after_amount') ? $store_config->get('uc_currency_sign') : '',
   );
   $form['order']['minimum_qty'] = array(
     '#type' => 'textfield',
@@ -1097,13 +1106,13 @@ function theme_uc_coupon_code($variables) {
 }
 
 function _uc_coupon_format_date($date, $format) {
-  $func = variable_get('uc_coupon_expiry_timezone', 0) ? 'date' : 'gmdate';
+  $func = config_get('uc_coupon.settings', 'uc_coupon_expiry_timezone') ? 'date' : 'gmdate';
   return $func($format, $date);
 }
 
 function _uc_coupon_mktime($month, $day, $year) {
-  $func = variable_get('uc_coupon_expiry_timezone', 0) ? 'mktime' : 'gmmktime';
-  $hour = variable_get('uc_coupon_expiry_hour', 0);
+  $func = config_get('uc_coupon.settings', 'uc_coupon_expiry_timezone') ? 'mktime' : 'gmmktime';
+  $hour = config_get('uc_coupon.settings', 'uc_coupon_expiry_hour');
   $time = $func($hour, 0, 0, $month, $day, $year);
   return $func($hour, 0, 0, $month, $day, $year);
 

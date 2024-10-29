@@ -34,8 +34,9 @@ function uc_coupon_purchase_view($account) {
       $valid = t('Unlimited');
     }
     else {
-      $valid_from = format_date($coupon->valid_from, 'custom', variable_get('date_format_uc_store', 'm/d/Y'));
-      $valid_until = format_date($coupon->valid_until, 'custom', variable_get('date_format_uc_store', 'm/d/Y'));
+      $date_format = _uc_coupon_store_date_format();
+      $valid_from = format_date($coupon->valid_from, 'custom', $date_format);
+      $valid_until = format_date($coupon->valid_until, 'custom', $date_format);
       $valid = $valid_from . ' - ' . $valid_until;
     }
     $usage = uc_coupon_count_usage($coupon->cid);

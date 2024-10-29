@@ -77,16 +77,14 @@ function uc_coupon_purchase_schema() {
 }
 
 /**
- * Implements hook_uninstall().
+ * Convert variables to config.
  */
-function uc_coupon_purchase_uninstall() {
-  variable_del('uc_coupon_purchase_order_status');
-}
+function uc_coupon_update_1000() {
+  $config = config('uc_coupon.settings');
+  $config->set('uc_coupon_line_item_format', update_variable_get('uc_coupon_line_item_format', 'Coupon [uc_coupon:code]'));
+  $config->set('uc_coupon_purchase_recipient_enabled', update_variable_get('uc_coupon_purchase_recipient_enabled', 0));
+  $config->save();
 
-
-/**
- * Implements hook_update_last_removed().
- */
-function uc_coupon_purchase_update_last_removed() {
-  return 6000;
+  update_variable_del('uc_coupon_purchase_order_status');
+  update_variable_del('uc_coupon_purchase_recipient_enabled');
 }

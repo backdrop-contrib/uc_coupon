@@ -16,7 +16,7 @@ function uc_coupon_reports_form($form, &$form_state, $start = NULL, $end = NULL,
     $end = REQUEST_TIME;
   }
   if (is_null($statuses)) {
-    $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
+    $statuses = config_get('uc_reports.settings', 'uc_reports_reported_statuses');
   }
 
   $options = array();
@@ -78,7 +78,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
   backdrop_add_css(backdrop_get_path('module', 'uc_coupon') . '/css/reports.css', array('type' => 'uc_coupon'));
 
   if (is_null($statuses)) {
-    $statuses = variable_get('uc_reports_reported_statuses', array('completed'));
+    $statuses = config_get('uc_reports.settings', 'uc_reports_reported_statuses');
   }
   else {
     $statuses = explode(',', $statuses);
@@ -101,6 +101,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
     $num_uses = 0;
     $coupon_sale_amount = 0;
     $coupon_amount = 0;
+    $date_format = _uc_coupon_store_date_format();
     foreach ($result as $row) {
       // Display the table of coupons if this is the next set of coupons
       if ($row->cid != $last_cid) {
@@ -117,7 +118,7 @@ function uc_coupon_reports($start = NULL, $end = NULL, $statuses = NULL) {
       if ($row->cid != $last_cid || $last_cid = 0) {
         $data .= '<div class="totals">' . t('Coupon code: !link', array('!link' => l($row->code, 'admin/store/coupons/' . $row->cid . '/edit'))) . '</div>';
       }
-      $td[] = array(l('#' . $row->oid, 'admin/store/orders/' . $row->oid), format_date($row->created, 'custom', variable_get('date_format_uc_store', 'm/d/Y')), uc_currency_format($row->order_total), uc_currency_format($row->value));
+      $td[] = array(l('#' . $row->oid, 'admin/store/orders/' . $row->oid), format_date($row->created, 'custom', $date_format), uc_currency_format($row->order_total), uc_currency_format($row->value));
       $num_uses++;
       $coupon_amount += $row->value;
       $coupon_sale_amount += $row->order_total;

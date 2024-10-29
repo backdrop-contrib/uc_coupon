@@ -1,0 +1,19 @@
+{
+    "_config_name": "uc_coupon.settings",
+    "uc_coupon_line_item_format": "Coupon [uc_coupon:code]",
+    "uc_coupon_show_in_cart": 1,
+    "uc_li_coupon_weight": "0",
+    "uc_coupon_form_components": {
+        "entry": "entry",
+        "list": 0,
+        "table": 0
+    },
+    "uc_coupon_allow_multiple": 0,
+    "uc_coupon_default_usage": "single",
+    "uc_coupon_used_order_status": "processing",
+    "uc_coupon_querystring": "",
+    "uc_coupon_expiry_hour": "0",
+    "uc_coupon_expiry_timezone": "0",
+    "uc_coupon_pane_description": "Enter a coupon code for this order.",
+    "uc_coupon_collapse_pane": 0
+}
