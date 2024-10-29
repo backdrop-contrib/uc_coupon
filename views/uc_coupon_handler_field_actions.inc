@@ -10,7 +10,7 @@
  */
 class uc_coupon_handler_field_actions extends views_handler_field {
   function render($values) {
-    $coupon = new stdClass;
+    $coupon = entity_create('uc_coupon', array());
     $coupon->cid = $values->{$this->field_alias};
     $coupon->name = $values->{$this->aliases['name']};
     $coupon->bulk = $values->{$this->aliases['bulk']};

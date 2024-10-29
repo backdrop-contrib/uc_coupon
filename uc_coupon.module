@@ -215,6 +215,16 @@ function uc_coupon_permission() {
 }
 
 /**
+ * Implements hook_autoload_info().
+ */
+function uc_coupon_autoload_info() {
+  return array(
+    'UcCoupon' => 'uc_coupon.entity.inc',
+    'UcCouponController' => 'uc_coupon.entity.inc',
+  );
+}
+
+/**
  * Implements hook_init().
  */
 function uc_coupon_init() {
@@ -472,7 +482,7 @@ function uc_coupon_session_add($code, $op = 'submit') {
  * @param $is_update
  * 		TRUE (the default) if removing this code represents an update of the session; that is, if the code
  *		was previously validated. FALSE otherwise (e.g. for removal of automatic discounts).  Ignored if
- *		a specific code is not specified.		
+ *		a specific code is not specified.
  */
 function uc_coupon_session_clear($code = NULL) {
   if (isset($code)) {
@@ -656,7 +666,7 @@ function uc_coupon_validate_multiple($codes, $order, $account) {
 function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   global $user;
   if (is_null($order)) {
-    $order = new stdClass();
+    $order = new UcOrder(array());
     $order->products = uc_cart_get_contents();
   }
 
@@ -668,7 +678,7 @@ function uc_coupon_validate($code, $order = NULL, $account = NULL) {
   $code = trim(strtoupper($code));
   $coupon = uc_coupon_find($code);
   if (!$coupon) {
-    $coupon = new stdClass();
+    $coupon = entity_create('uc_coupon', array());
     $coupon->valid = FALSE;
     $coupon->message = t('This coupon code is invalid or has expired.');
     $coupon->title = t('Unknown');
@@ -1406,12 +1416,12 @@ function uc_coupon_uc_order($op, &$order) {
 }
 
 /**
- * Apply a set of coupons to an order.  
- * 
+ * Apply a set of coupons to an order.
+ *
  * Line items and entries in the uc_coupons_orders table will be added for each coupon.  Any coupon line items
  * or entries which are not in the list of coupons will be removed.  Additionally, the coupons' discount
  * arrays will be added to the order object's data array.
- * 
+ *
  * @param $order
  *     The order to which the coupons should be applied.
  * @param $coupons
@@ -1816,7 +1826,7 @@ function uc_coupon_uc_store_status() {
  */
 function uc_coupon_uc_cart_alter(&$items) {
   // Validate all codes in the session against the cart contents.
-  $order = new UcOrder();
+  $order = new UcOrder(array());
   $order->products = $items;
   $order->data = array();
   $coupons = uc_coupon_session_validate($order);
@@ -2116,6 +2126,7 @@ function uc_coupon_entity_info() {
       'label' => t('Coupon'),
       'controller class' => 'UcCouponController',
       'metadata controller class' => 'UcCouponMetadataController',
+      'entity class' => 'UcCoupon',
       'base table' => 'uc_coupons',
       'fieldable' => TRUE,
       'entity keys' => array(
@@ -2161,8 +2172,8 @@ function uc_coupon_load($cid, $reset = FALSE) {
  *   An array of conditions on the {uc_coupons} table in the form
  *  'field' => $value.
  *
- * @return
- *   An array of order objects indexed by order_id.
+ * @return UcCoupon[]
+ *   An array of coupon entities indexed by cid.
  */
 function uc_coupon_load_multiple($ids, $conditions = array(), $reset = FALSE) {
   return entity_load('uc_coupon', $ids, $conditions, $reset);
@@ -2182,7 +2193,7 @@ function uc_coupon_load_multiple($ids, $conditions = array(), $reset = FALSE) {
  *   An optional array of extra data that other modules may need to save.
  */
 function uc_coupon_save(&$coupon, $edit = array()) {
-  entity_save('uc_coupon', $coupon);
+  entity_get_controller('uc_coupon')->save($coupon);
 }
 
 /**
@@ -2192,7 +2203,7 @@ function uc_coupon_save(&$coupon, $edit = array()) {
  *   The id of the coupon to delete.
  */
 function uc_coupon_delete($cid) {
-  entity_delete('uc_coupon', $cid);
+  entity_get_controller('uc_coupon')->delete(array($cid));
 }
 
 /**
@@ -2225,7 +2236,7 @@ function uc_coupon_uc_order_pane() {
     'show' => array('edit'),
   );
 
-  return $panes;  
+  return $panes;
 }
 
 /**

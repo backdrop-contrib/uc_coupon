@@ -4,7 +4,8 @@ dependencies[] = uc_coupon
 dependencies[] = uc_coupon_workflow
 dependencies[] = uc_attribute
 package = Ubercart - payment
-core = 7.x
+backdrop = 1.x
+type = module
 
 files[] = uc_coupon_purchase.ca.inc
 files[] = uc_coupon_purchase.install

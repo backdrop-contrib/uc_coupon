@@ -79,7 +79,7 @@ function uc_coupon_settings_form($form, &$form_state) {
     '#title' => t('Order status to mark a coupon used'),
     '#options' => uc_order_status_options_list(),
     '#default_value' => variable_get('uc_coupon_used_order_status', 'processing'),
-    '#description' => t('A coupon will be considered used when it has been applied to an order that reaches this status 
+    '#description' => t('A coupon will be considered used when it has been applied to an order that reaches this status
        (or a later one).  If the order status subsequenty reverts to an earlier status, the coupon use will also be reverted.'),
   );
 
@@ -201,7 +201,7 @@ function uc_coupon_display($view_type = 'active') {
  *   Coupon to view.
  */
 function uc_coupon_view($coupon) {
-  return entity_view('uc_coupon', array($coupon));
+  return entity_view($coupon);
 }
 
 /**
@@ -259,7 +259,7 @@ function uc_coupon_add_form($form, &$form_state, $coupon = NULL) {
   }
   else {
     $use_validity = FALSE;
-    $value = new stdClass;
+    $value = entity_create('uc_coupon', array());
     $value->minimum_order = 0;
     $value->data['apply_to'] = 'subtotal';
     $value->max_uses = variable_get('uc_coupon_default_usage', 'single') == 'single' ? 1 : 0;

@@ -3,4 +3,5 @@ description = Allows discounts to apply to recurring payments.
 dependencies[] = uc_coupon
 dependencies[] = uc_recurring
 package = Ubercart - payment
-core = 7.x
+backdrop = 1.x
+type = module

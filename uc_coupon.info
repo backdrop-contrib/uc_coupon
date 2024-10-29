@@ -3,7 +3,8 @@ description = Discount Coupons and Gift Certificates for Ubercart 3
 dependencies[] = uc_cart
 dependencies[] = entity
 package = Ubercart - payment
-core = 7.x
+backdrop = 1.x
+type = module
 
 files[] = uc_coupon.entity.inc
 files[] = views/uc_coupon_handler_field_actions.inc

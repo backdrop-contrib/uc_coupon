@@ -5,9 +5,48 @@
  */
 
 /**
+ * uc_coupon entity
+ */
+class UcCoupon extends Entity {
+
+  /**
+   * Implements EntityInterface::id().
+   */
+  public function id() {
+    return $this->cid;
+  }
+
+  /**
+   * Implements EntityInterface::entityType().
+   */
+  public function entityType() {
+    return 'uc_coupon';
+  }
+
+  /**
+   * Implements EntityInterface::label().
+   */
+  public function label() {
+    return t('Coupon @id', array('@id' => $this->cid));
+  }
+
+  /**
+   * Implements EntityInterface::uri().
+   */
+  public function uri() {
+    // return the admin page for the order.
+    return array(
+      'path' => '/admin/store/coupons/' . $this->cid,
+      'options' => array(),
+    );
+  }
+}
+
+/**
  * Controller class for uc_coupon entity.
  */
-class UcCouponController extends EntityAPIController {
+class UcCouponController extends EntityPlusController {
+
   /**
    * @see EntityAPIController::delete()
    */
@@ -213,6 +252,10 @@ class UcCouponController extends EntityAPIController {
  * Metadata Controller for uc_coupon entity
  */
 class UcCouponMetadataController extends EntityDefaultMetadataController {
+
+  /**
+   * {@inheritdoc}
+   */
   public function entityPropertyInfo() {
     $prop_info = parent::entityPropertyInfo();
     $props = &$prop_info['uc_coupon']['properties'];

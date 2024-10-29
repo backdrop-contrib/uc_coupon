@@ -10,7 +10,7 @@
  */
 class uc_coupon_handler_field_value extends views_handler_field_numeric {
   function render($values) {
-    $coupon = new stdClass;
+    $coupon = entity_create('uc_coupon', array());
     $coupon->value = $values->{$this->field_alias};
     $coupon->type = $values->{$this->aliases['type']};
     return theme('uc_coupon_discount', array('coupon' => $coupon));
