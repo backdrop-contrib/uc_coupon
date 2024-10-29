@@ -137,7 +137,7 @@ function uc_coupon_menu() {
   );
 
   $items['admin/store/settings/coupon'] = array(
-    'title' => 'Coupon module settings',
+    'title' => 'Coupons',
     'description' => 'Configure the discount coupon module settings.',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('uc_coupon_settings_form'),
