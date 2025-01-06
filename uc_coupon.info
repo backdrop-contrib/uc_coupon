@@ -1,6 +1,6 @@
 name = Discount Coupons
-description = Discount Coupons and Gift Certificates for Ubercart 3
-dependencies[] = uc_cart
+description = Discount Coupons and Gift Certificates for Ubercart
+dependencies[] = ubercart
 dependencies[] = entity
 package = Ubercart - payment
 backdrop = 1.x
