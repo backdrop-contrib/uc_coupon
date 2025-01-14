@@ -25,7 +25,7 @@ function uc_coupon_menu() {
     'page callback' => 'uc_coupon_display',
     'page arguments' => array('active'),
     'access arguments' => array('view store coupons'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_DEFAULT_LOCAL_TASK,
     'file' => 'uc_coupon.admin.inc',
     'weight' => 0,
   );
@@ -35,7 +35,7 @@ function uc_coupon_menu() {
     'page callback' => 'uc_coupon_display',
     'page arguments' => array('inactive'),
     'access arguments' => array('view store coupons'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK,
     'file' => 'uc_coupon.admin.inc',
     'weight' => 1,
   );
