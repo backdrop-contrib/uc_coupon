@@ -68,8 +68,8 @@ function uc_coupon_workflow_form_user_register_form_alter(&$form, &$form_state) 
  *
  * If the creator of this user has suspended coupon workflow, then set the static variable accordingly.
  */
-function uc_coupon_workflow_user_insert(&$edit, $account, $category) {
-  if (user_access('suspend coupon workflow') && isset($edit['uc_coupon_workflow_suspended']) && $edit['uc_coupon_workflow_suspended'] == TRUE) {
+function uc_coupon_workflow_user_insert($account) {
+  if (user_access('suspend coupon workflow') && isset($account->uc_coupon_workflow_suspended) && $account->uc_coupon_workflow_suspended == TRUE) {
     $var = &backdrop_static('uc_coupon_workflow_suspended');
     $var = TRUE;
   }
