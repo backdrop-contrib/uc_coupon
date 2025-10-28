@@ -79,9 +79,9 @@ function uc_coupon_purchase_schema() {
 /**
  * Convert variables to config.
  */
-function uc_coupon_update_1000() {
-  $config = config('uc_coupon.settings');
-  $config->set('uc_coupon_line_item_format', update_variable_get('uc_coupon_line_item_format', 'Coupon [uc_coupon:code]'));
+function uc_coupon_purchase_update_1000() {
+  $config = config('uc_coupon_purchase.settings');
+  $config->set('uc_coupon_purchase_order_status', update_variable_get('uc_coupon_purchase_order_status', 'completed'));
   $config->set('uc_coupon_purchase_recipient_enabled', update_variable_get('uc_coupon_purchase_recipient_enabled', 0));
   $config->save();
 
