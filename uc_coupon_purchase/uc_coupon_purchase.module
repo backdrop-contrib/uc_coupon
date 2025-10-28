@@ -281,7 +281,7 @@ function uc_coupon_purchase_feature_settings() {
   $form['uc_coupon_purchase_order_status'] = array(
     '#type' => 'select',
     '#title' => t('Order status'),
-    '#default_value' => config_get('uc_coupon_purchase.settings', 'uc_coupon_purchase_order_status', 'completed'),
+    '#default_value' => config_get('uc_coupon_purchase.settings', 'uc_coupon_purchase_order_status'),
     '#description' => t('Select the order status that will cause the coupon to be created. Be aware that if payments are processed automatically, this happens before anonymous customers have an account created. This order status should not be reached before the user account exists.'),
     '#options' => $statuses,
   );
