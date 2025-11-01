@@ -910,7 +910,7 @@ function uc_coupon_add_form_submit($form, &$form_state) {
   }
 
   // Ensure all fields of original coupon object propagate to presave hook.
-  $coupon = (isset($form['#uc_coupon'])) ? $form['#uc_coupon'] : new stdClass;
+  $coupon = (isset($form['#uc_coupon'])) ? $form['#uc_coupon'] : entity_create('uc_coupon', array('type' => 'uc_coupon'));
   if (isset($form['#uc_coupon_cid'])) {
     $coupon->cid = $form['#uc_coupon_cid'];
   }
